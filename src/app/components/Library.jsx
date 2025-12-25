@@ -22,19 +22,209 @@ import {
   Pin,
   BarChart3,
   TrendingUp,
+  ChevronDown,
+  Crown,
+  Zap,
+  Scroll,
 } from "lucide-react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import ConfirmModal from "./ConfirmModal";
 import { toast } from "sonner";
 import { downloadCourseAsPDF } from "@/lib/pdfUtils";
 import { useAuth } from "./AuthProvider";
 
+const staticCategories = [
+  {
+    name: "All",
+    icon: "Grid",
+    color: "gray",
+  },
+  {
+    name: "Technology",
+    topics: [
+      "Programming & Development",
+      "AI & Machine Learning",
+      "Game Development",
+      "Web Development",
+      "Mobile Apps",
+      "Cloud Computing",
+      "Cybersecurity",
+      "Blockchain",
+    ],
+    icon: "code",
+    color: "blue",
+  },
+  {
+    name: "Design",
+    topics: [
+      "UI/UX Design",
+      "Graphic Design",
+      "Design Systems",
+      "Figma",
+      "Adobe Creative",
+      "3D Modeling",
+      "Animation",
+      "Branding",
+    ],
+    icon: "palette",
+    color: "purple",
+  },
+  {
+    name: "Business",
+    topics: [
+      "Entrepreneurship",
+      "Marketing",
+      "Finance",
+      "Management",
+      "Strategy",
+      "Sales",
+      "Project Management",
+      "Leadership",
+      "E-commerce",
+    ],
+    icon: "briefcase",
+    color: "orange",
+  },
+  {
+    name: "Data Science",
+    topics: [
+      "Data Analysis",
+      "Machine Learning",
+      "Statistics",
+      "Python",
+      "R",
+      "SQL",
+      "Visualization",
+      "Big Data",
+      "AI Ethics",
+    ],
+    icon: "chart",
+    color: "green",
+  },
+  {
+    name: "AI & ML",
+    topics: [
+      "Neural Networks",
+      "Deep Learning",
+      "Computer Vision",
+      "NLP",
+      "Reinforcement Learning",
+      "AutoML",
+      "AI Ethics",
+      "Model Deployment",
+    ],
+    icon: "brain",
+    color: "indigo",
+  },
+  {
+    name: "Creative",
+    topics: [
+      "Photography",
+      "Videography",
+      "Music Production",
+      "Digital Art",
+      "Animation",
+      "Content Creation",
+      "Video Editing",
+      "Sound Design",
+    ],
+    icon: "camera",
+    color: "pink",
+  },
+  {
+    name: "Humanities",
+    topics: [
+      "Writing",
+      "Literature",
+      "History",
+      "Philosophy",
+      "Psychology",
+      "Sociology",
+      "Cultural Studies",
+      "Ethics",
+      "Critical Thinking",
+    ],
+    icon: "book",
+    color: "red",
+  },
+  {
+    name: "Languages",
+    topics: [
+      "Spanish",
+      "French",
+      "German",
+      "Japanese",
+      "Chinese",
+      "Portuguese",
+      "Italian",
+      "Korean",
+      "Arabic",
+      "Russian",
+    ],
+    icon: "globe",
+    color: "cyan",
+  },
+  {
+    name: "Science",
+    topics: [
+      "Physics",
+      "Chemistry",
+      "Biology",
+      "Astronomy",
+      "Geology",
+      "Environmental Science",
+      "Neuroscience",
+      "Engineering",
+      "Research Methods",
+    ],
+    icon: "microscope",
+    color: "teal",
+  },
+  {
+    name: "Mathematics",
+    topics: [
+      "Calculus",
+      "Statistics",
+      "Algebra",
+      "Geometry",
+      "Discrete Math",
+      "Linear Algebra",
+      "Probability",
+      "Number Theory",
+    ],
+    icon: "calculator",
+    color: "yellow",
+  },
+  {
+    name: "Health",
+    topics: [
+      "Nutrition",
+      "Fitness",
+      "Mental Health",
+      "Medicine",
+      "Nursing",
+      "Public Health",
+      "Yoga",
+      "Meditation",
+    ],
+    icon: "heart",
+    color: "rose",
+  }
+];
+
 export default function Library({ setActiveContent }) {
+  const router = useRouter();
   const [viewMode, setViewMode] = useState("grid");
   const [filterBy, setFilterBy] = useState("all");
+  const [selectedCategory, setSelectedCategory] = useState("All");
   const [searchQuery, setSearchQuery] = useState("");
   const [courses, setCourses] = useState([]);
+  const [premiumCourses, setPremiumCourses] = useState([]);
+  const [exploreCourses, setExploreCourses] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [loadingPremium, setLoadingPremium] = useState(true);
+  const [loadingExplore, setLoadingExplore] = useState(true);
   const [currentPage, setCurrentPage] = useState(1);
   const [pagination, setPagination] = useState({});
   const [stats, setStats] = useState({});
@@ -130,12 +320,58 @@ export default function Library({ setActiveContent }) {
     }
   };
 
+  // Fetch premium/trending courses
+  const fetchPremiumData = async () => {
+    try {
+      setLoadingPremium(true);
+      const isPro = !!(user?.subscription?.plan === "pro" || user?.isPremium);
+      const endpoint = isPro ? "/api/premium-courses/personalized" : "/api/premium-courses/trending";
+
+      const res = await fetch(endpoint, {
+        method: isPro ? "POST" : "GET",
+        credentials: "include"
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        setPremiumCourses(data.courses || []);
+      }
+    } catch (err) {
+      console.error("Error fetching premium data:", err);
+    } finally {
+      setLoadingPremium(false);
+    }
+  };
+
+  // Fetch explore courses (Standard courses)
+  const fetchExploreData = async () => {
+    try {
+      setLoadingExplore(true);
+      const res = await fetch("/api/premium-courses/trending", {
+        credentials: "include"
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        setExploreCourses(data.courses || []);
+      }
+    } catch (err) {
+      console.error("Error fetching explore data:", err);
+    } finally {
+      setLoadingExplore(false);
+    }
+  };
+
   // Re-fetch when page, search, filter, or user changes
   useEffect(() => {
     if (!authLoading && user) {
       fetchLibraryData();
+      fetchPremiumData();
+      fetchExploreData();
     } else if (!authLoading && !user) {
       setLoading(false);
+      setLoadingPremium(false);
+      setLoadingExplore(false);
     }
   }, [currentPage, searchQuery, filterBy, user, authLoading]);
 
@@ -301,6 +537,34 @@ export default function Library({ setActiveContent }) {
 
   const handlePageChange = (page) => setCurrentPage(page);
 
+  const handleCategoryClick = (category) => {
+    setSelectedCategory(category);
+    if (category === "All") {
+      setSearchQuery("");
+    } else {
+      setSearchQuery(category);
+    }
+  };
+
+  const IconComponent = ({ name, ...props }) => {
+    const icons = {
+      Grid,
+      code: BookOpen,
+      palette: Star,
+      briefcase: BarChart3,
+      brain: Sparkles,
+      microscope: FileText,
+      chart: TrendingUp,
+      globe: Sparkles,
+      calculator: FileText,
+      heart: Flame,
+      camera: Sparkles,
+      book: Scroll,
+    };
+    const Icon = icons[name] || Grid;
+    return <Icon {...props} />;
+  };
+
   if (authLoading) {
     return (
       <div className="flex justify-center py-20">
@@ -328,347 +592,309 @@ export default function Library({ setActiveContent }) {
   }
 
   return (
-    <div className="max-w-7xl mx-auto px-6 py-8">
-      {/* Header */}
-      <motion.div
-        initial={{ opacity: 0, y: -20 }}
-        animate={{ opacity: 1, y: 0 }}
-      >
-        <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100 mb-2">
-          My Library
-        </h1>
-        <p className="text-gray-600 dark:text-gray-400">
-          Your personal learning space
-        </p>
-      </motion.div>
-
-      {/* Stats */}
-      {stats && Object.keys(stats).length > 0 && (
-        <motion.div
-          className="bg-gradient-to-r from-blue-50 to-purple-50 dark:from-gray-800 dark:to-gray-700 rounded-xl p-6 my-8"
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5 }}
-        >
-          <h3 className="text-lg font-semibold text-gray-800 dark:text-white mb-4 text-center">
-            Your Learning Progress
-          </h3>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
-            <motion.div
-              className="bg-white dark:bg-gray-800 rounded-lg p-3 border border-gray-200 dark:border-gray-600 flex items-center gap-3"
-              transition={{ type: "spring", stiffness: 300 }}
-            >
-              <div className="bg-blue-100 dark:bg-blue-900 rounded-full w-10 h-10 flex items-center justify-center flex-shrink-0">
-                <Sparkles className="w-5 h-5 text-blue-600 dark:text-blue-400" />
-              </div>
-              <div className="flex-1 flex items-center justify-around">
-                <div className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white">
-                  {stats.courses || 0}
-                </div>
-                <div className="text-[10px] sm:text-xs text-gray-600 dark:text-gray-400 font-medium">
-                  Total Courses
-                </div>
-              </div>
-            </motion.div>
-            <motion.div
-              className="bg-white dark:bg-gray-800 rounded-lg p-3 border border-gray-200 dark:border-gray-600 flex items-center gap-3"
-              transition={{ type: "spring", stiffness: 300 }}
-            >
-              <div className="bg-green-100 dark:bg-green-900 rounded-full w-10 h-10 flex items-center justify-center flex-shrink-0">
-                <Trophy className="w-5 h-5 text-green-600 dark:text-green-400" />
-              </div>
-              <div className="flex-1 flex items-center justify-around">
-                <div className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white">
-                  {stats.completedCourses || 0}
-                </div>
-                <div className="text-[10px] sm:text-xs text-gray-600 dark:text-gray-400 font-medium">
-                  Completed
-                </div>
-              </div>
-            </motion.div>
-            <motion.div
-              className="bg-white dark:bg-gray-800 rounded-lg p-3 border border-gray-200 dark:border-gray-600 flex items-center gap-3"
-              transition={{ type: "spring", stiffness: 300 }}
-            >
-              <div className="bg-yellow-100 dark:bg-yellow-900 rounded-full w-10 h-10 flex items-center justify-center flex-shrink-0">
-                <Pin className="w-5 h-5 text-yellow-600 dark:text-yellow-400" />
-              </div>
-              <div className="flex-1 flex items-center justify-around">
-                <div className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white">
-                  {stats.pinnedCourses || 0}
-                </div>
-                <div className="text-[10px] sm:text-xs text-gray-600 dark:text-gray-400 font-medium">
-                  Pinned
-                </div>
-              </div>
-            </motion.div>
-            <motion.div
-              className="bg-white dark:bg-gray-800 rounded-lg p-3 border border-gray-200 dark:border-gray-600 flex items-center gap-3"
-              transition={{ type: "spring", stiffness: 300 }}
-            >
-              <div className="bg-orange-100 dark:bg-orange-900 rounded-full w-10 h-10 flex items-center justify-center flex-shrink-0">
-                <TrendingUp className="w-5 h-5 text-orange-600 dark:text-orange-400" />
-              </div>
-              <div className="flex-1 flex items-center justify-around">
-                <div className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white">
-                  {courses.length > 0
-                    ? Math.round(
-                      courses.reduce(
-                        (sum, course) => sum + (course.progress || 0),
-                        0
-                      ) / courses.length
-                    )
-                    : 0}
-                  %
-                </div>
-                <div className="text-[10px] sm:text-xs text-gray-600 dark:text-gray-400 font-medium">
-                  Avg Progress
-                </div>
-              </div>
-            </motion.div>
-          </div>
-        </motion.div>
-      )}
-
-      {/* Controls */}
-      <motion.div
-        className="flex flex-col md:flex-row gap-4 mb-8 justify-between items-center"
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-      >
-        <div className="relative w-full md:w-auto md:max-w-xl">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
-          <input
-            type="text"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Search your library..."
-            className="w-full pl-10 pr-4 py-2 border rounded-lg bg-white dark:bg-gray-800"
-          />
-        </div>
-
-        <div className="flex gap-3 w-full md:w-auto justify-end">
-          <select
-            value={filterBy}
-            onChange={(e) => setFilterBy(e.target.value)}
-            className="px-4 py-2 border rounded-lg bg-white dark:bg-gray-800"
-          >
-            <option value="all">All Items</option>
-            <option value="in-progress">In Progress</option>
-            <option value="completed">Completed</option>
-            <option value="pinned">Pinned</option>
-          </select>
-
-          <div className="flex bg-gray-100 dark:bg-gray-700 rounded-lg p-1">
-            <button
-              onClick={() => setViewMode("grid")}
-              className={`p-2 rounded ${viewMode === "grid" ? "bg-white dark:bg-gray-600" : ""}`}
-            >
-              <Grid className="w-4 h-4" />
-            </button>
-            <button
-              onClick={() => setViewMode("list")}
-              className={`p-2 rounded ${viewMode === "list" ? "bg-white dark:bg-gray-600" : ""}`}
-            >
-              <List className="w-4 h-4" />
-            </button>
-          </div>
-        </div>
-      </motion.div>
-
-      {/* Courses Grid/List */}
-      {loading ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {[...Array(6)].map((_, i) => (
-            <div
-              key={i}
-              className="bg-white dark:bg-gray-800 border rounded-lg p-6 animate-pulse"
-            >
-              <div className="h-4 bg-gray-300 dark:bg-gray-700 rounded mb-4 w-3/4"></div>
-              <div className="h-3 bg-gray-300 dark:bg-gray-700 rounded mb-6"></div>
-              <div className="flex gap-3">
-                <div className="h-8 w-20 bg-gray-300 dark:bg-gray-700 rounded-full"></div>
-                <div className="h-8 w-24 bg-gray-300 dark:bg-gray-700 rounded-full"></div>
-              </div>
-            </div>
-          ))}
-        </div>
-      ) : courses.length === 0 ? (
-        <motion.div
-          className="text-center py-20"
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-        >
-          <BookOpen className="w-16 h-16 text-gray-400 mx-auto mb-4" />
-          <h3 className="text-xl font-semibold mb-2">
-            {searchQuery ? "No courses found" : "Your library is empty"}
-          </h3>
-          <p className="text-gray-600 mb-6">
-            {searchQuery
-              ? `No results for "${searchQuery}"`
-              : "Start learning by generating your first course!"}
-          </p>
-          <button
-            onClick={() => setActiveContent("explore")}
-            className="text-dark hover:underline cursor-pointer"
-          >
-            Explore Courses
-          </button>
-        </motion.div>
-      ) : (
-        <AnimatePresence mode="wait">
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6 sm:py-8 space-y-12 no-scrollbar">
+      {/* Metrics Section */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 pb-4">
+        {[
+          { label: "Total Courses", value: stats.courses || 0, icon: BookOpen, color: "blue", bg: "bg-blue-50 dark:bg-blue-900/20", text: "text-blue-500" },
+          { label: "Completed", value: stats.completedCourses || 0, icon: Trophy, color: "green", bg: "bg-green-50 dark:bg-green-900/20", text: "text-green-500" },
+          { label: "Pinned", value: stats.pinnedCourses || 0, icon: Pin, color: "yellow", bg: "bg-yellow-50 dark:bg-yellow-900/20", text: "text-yellow-500" },
+          { label: "Avg Progress", value: `${courses.length > 0 ? Math.round(courses.reduce((sum, c) => sum + (c.progress || 0), 0) / courses.length) : 0}%`, icon: TrendingUp, color: "purple", bg: "bg-purple-50 dark:bg-purple-900/20", text: "text-purple-500" }
+        ].map((stat, i) => (
           <motion.div
-            key={viewMode + filterBy}
-            initial="hidden"
-            animate="visible"
-            variants={{
-              hidden: { opacity: 0 },
-              visible: { opacity: 1, transition: { staggerChildren: 0.1 } },
-            }}
-            className={
-              viewMode === "grid"
-                ? "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"
-                : "space-y-4"
-            }
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: i * 0.1 }}
+            key={i}
+            className="bg-white dark:bg-gray-800 p-4 rounded-3xl shadow-sm border border-gray-100 dark:border-gray-700/50 flex flex-col items-center text-center"
           >
-            {courses.map((course) => (
-              <motion.div
-                key={course.id}
-                variants={{
-                  hidden: { opacity: 0, y: 20 },
-                  visible: { opacity: 1, y: 0 },
-                }}
-                whileHover={{ y: -4 }}
-                className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl overflow-hidden hover:border-blue-500/50 transition-all duration-300"
+            <div className={`p-2 ${stat.bg} rounded-xl mb-2 ${stat.text}`}>
+              <stat.icon size={18} />
+            </div>
+            <div className="text-xl font-black text-gray-900 dark:text-white leading-none mb-1">{stat.value}</div>
+            <div className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">{stat.label}</div>
+          </motion.div>
+        ))}
+      </div>
+
+      {/* Discovery Hub Header & Categories */}
+      <div className="space-y-6">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <h1 className="text-2xl font-black uppercase tracking-tight text-gray-900 dark:text-white">
+            Discovery Hub
+          </h1>
+
+          <div className="relative group min-w-[300px]">
+            <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400 group-focus-within:text-indigo-600 transition-colors" />
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Search disciplines..."
+              className="w-full pl-12 pr-4 py-3 bg-white dark:bg-gray-800 border-none rounded-2xl shadow-sm focus:ring-2 focus:ring-indigo-500/20 outline-none transition-all placeholder:text-gray-400 placeholder:font-medium font-medium text-sm"
+            />
+          </div>
+        </div>
+
+        <div className="space-y-4">
+          <div className="flex items-center justify-between px-1">
+            <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-500">Categories</h3>
+          </div>
+          <div className="flex gap-3 overflow-x-auto pb-4 -mx-4 px-4 scrollbar-hide no-scrollbar scroll-smooth">
+            {staticCategories.map((cat) => (
+              <button
+                key={cat.name}
+                onClick={() => handleCategoryClick(cat.name)}
+                className={`flex-shrink-0 flex items-center gap-2 px-5 py-3 rounded-2xl font-bold text-sm transition-all active:scale-95 ${selectedCategory === cat.name
+                  ? "bg-indigo-600 text-white shadow-lg shadow-indigo-500/20"
+                  : "bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700/50"
+                  }`}
               >
-                <div className="h-2 bg-gray-200 dark:bg-gray-700">
-                  <div
-                    className="h-full bg-gradient-to-r from-blue-500 to-green-500 transition-all duration-1000"
-                    style={{ width: `${course.progress}%` }}
-                  />
-                </div>
+                <IconComponent name={cat.icon} size={16} />
+                <span>{cat.name}</span>
+              </button>
+            ))}
+          </div>
+        </div>
+      </div>
 
-                <div className="p-6">
-                  <div className="flex flex-col sm:flex-row justify-between items-start mb-3 gap-4 sm:gap-0">
-                    <div className="flex-1 min-w-0">
-                      <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 truncate">
-                        {course.title}
-                      </h3>
-                      <p className="text-sm text-gray-600 dark:text-gray-400 mt-1 line-clamp-2">
-                        {course.description}
-                      </p>
+      {/* Premium Spotlight */}
+      {premiumCourses.length > 0 && (
+        <div className="space-y-4">
+          <div className="flex items-center justify-between px-1">
+            <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-500">Premium Spotlight</h3>
+            <button onClick={() => setActiveContent("staff-picks")} className="text-[10px] font-bold text-indigo-600 uppercase tracking-widest hover:underline">View All</button>
+          </div>
+          <div className="flex gap-4 overflow-x-auto pb-4 -mx-4 px-4 scrollbar-hide no-scrollbar scroll-smooth">
+            {premiumCourses.map((course, idx) => (
+              <motion.div
+                key={course.id || idx}
+                whileHover={{ y: -4 }}
+                className="flex-shrink-0 w-[280px] bg-gradient-to-br from-indigo-600 to-purple-700 rounded-3xl p-5 text-white shadow-xl shadow-indigo-500/10 relative overflow-hidden group cursor-pointer"
+                onClick={() => router.push(`/dashboard?tab=staff-picks`)}
+              >
+                <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -translate-y-16 translate-x-16 blur-2xl group-hover:scale-110 transition-transform" />
+                <div className="relative z-10 flex flex-col h-full">
+                  <div className="flex justify-between items-start mb-4">
+                    <div className="p-2 bg-white/20 rounded-xl">
+                      <Crown size={18} className="text-yellow-300" />
                     </div>
-
-                    <div className="flex gap-1 sm:ml-4">
-                      {course.format !== "questions" && course.format !== "flashcards" && (
-                        <button
-                          onClick={() => handleDownload(course)}
-                          className={`p-2 rounded-lg transition-colors ${isPremium ? "hover:bg-slate-100 dark:hover:bg-slate-800" : "opacity-50 cursor-not-allowed"}`}
-                          title={isPremium ? "Download PDF" : "Pro Feature: Download PDF"}
-                        >
-                          <Download className="w-4 h-4" />
-                        </button>
-                      )}
-                      <button
-                        onClick={() => handlePin(course.id)}
-                        className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded"
-                        title={course.isPinned ? "Unpin" : "Pin (max 3)"}
-                      >
-                        <Pin
-                          className={`w-4 h-4 ${course.isPinned ? "fill-yellow-500 text-yellow-500" : "text-gray-400"}`}
-                        />
-                      </button>
-                      <button
-                        onClick={() => handleDelete(course.id)}
-                        className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded text-red-500"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
+                    {course.badge && (
+                      <span className="px-2 py-1 bg-white/20 rounded-full text-[9px] font-black uppercase tracking-widest">{course.badge}</span>
+                    )}
+                  </div>
+                  <h4 className="font-black text-lg leading-tight mb-2 line-clamp-2">{course.title}</h4>
+                  <p className="text-white/70 text-xs font-medium line-clamp-2 mb-4">{course.description}</p>
+                  <div className="mt-auto flex items-center gap-3">
+                    <div className="flex -space-x-2">
+                      {[1, 2, 3].map(i => <div key={i} className="w-6 h-6 rounded-full bg-white/20 border-2 border-indigo-600 flex items-center justify-center text-[8px] font-bold">{i}</div>)}
                     </div>
+                    <span className="text-[10px] font-black uppercase tracking-widest opacity-80">Join 1k+ students</span>
                   </div>
-
-                  <div className="flex flex-wrap gap-2 sm:gap-3 text-sm text-gray-600 dark:text-gray-400 mb-4">
-                    <span className="flex items-center gap-1">
-                      <BookOpen className="w-4 h-4" />
-                      {course.completedLessons}/{course.totalLessons}
-                    </span>
-                    <span className="flex items-center gap-1">
-                      <Clock className="w-4 h-4" />
-                      {course.estimatedTime}
-                    </span>
-                    <span className="px-2 py-0.5 bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300 rounded-full text-[10px] sm:text-xs">
-                      {course.difficulty || "Beginner"}
-                    </span>
-                  </div>
-
-                  <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4">
-                    <div className="text-sm flex-1">
-                      <div className="flex justify-between mb-1">
-                        <span>Progress</span>
-                        <span>{course.progress}%</span>
-                      </div>
-                      <div className="w-full sm:w-32 h-2 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
-                        <div
-                          className="h-full bg-blue-600 rounded-full transition-all duration-1000"
-                          style={{ width: `${course.progress}%` }}
-                        />
-                      </div>
-                    </div>
-
-                    <Link
-                      href={
-                        course.isGenerated
-                          ? `/learn/${encodeURIComponent(course.topic)}?format=${course.format}&difficulty=${course.difficulty}`
-                          : `/learn/${course.id}`
-                      }
-                      className="flex items-center justify-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm font-medium whitespace-nowrap"
-                    >
-                      <Play className="w-4 h-4" />
-                      {course.progress === 100 ? "Review" : "Continue"}
-                    </Link>
-                  </div>
-
-                  <p className="text-xs text-gray-500 mt-3">
-                    Last accessed:{" "}
-                    {new Date(course.lastAccessed).toLocaleDateString()}
-                  </p>
                 </div>
               </motion.div>
             ))}
-          </motion.div>
-        </AnimatePresence>
-      )}
-
-      {/* Pagination */}
-      {pagination.totalPages > 1 && (
-        <div className="flex justify-center gap-2 mt-10">
-          <button
-            onClick={() => handlePageChange(currentPage - 1)}
-            disabled={currentPage === 1}
-            className="p-2 border rounded disabled:opacity-50"
-          >
-            <ChevronLeft className="w-5 h-5" />
-          </button>
-          {[...Array(pagination.totalPages)].map((_, i) => (
-            <button
-              key={i + 1}
-              onClick={() => handlePageChange(i + 1)}
-              className={`px-3 py-1 rounded ${currentPage === i + 1 ? "bg-blue-600 text-white" : "border"}`}
-            >
-              {i + 1}
-            </button>
-          ))}
-          <button
-            onClick={() => handlePageChange(currentPage + 1)}
-            disabled={currentPage === pagination.totalPages}
-            className="p-2 border rounded disabled:opacity-50"
-          >
-            <ChevronRight className="w-5 h-5" />
-          </button>
+          </div>
         </div>
       )}
 
-      {/* Delete Modal */}
+      {/* Featured Discovery (Explore Courses) */}
+      {exploreCourses.length > 0 && (
+        <div className="space-y-4">
+          <div className="flex items-center justify-between px-1">
+            <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-500">Featured Discovery</h3>
+            <button onClick={() => setActiveContent("explore")} className="text-[10px] font-bold text-indigo-600 uppercase tracking-widest hover:underline">View All</button>
+          </div>
+          <div className="flex gap-4 overflow-x-auto pb-4 -mx-4 px-4 scrollbar-hide no-scrollbar scroll-smooth">
+            {exploreCourses.map((course, idx) => (
+              <motion.div
+                key={idx}
+                whileHover={{ y: -4 }}
+                className="flex-shrink-0 w-[260px] bg-white dark:bg-gray-800 rounded-3xl p-5 border border-gray-100 dark:border-gray-700/50 shadow-sm relative overflow-hidden group cursor-pointer"
+                onClick={() => setActiveContent("explore")}
+              >
+                <div className="flex items-center gap-3 mb-4">
+                  <div className="w-10 h-10 rounded-2xl bg-gray-50 dark:bg-gray-700/50 flex items-center justify-center text-gray-400 group-hover:text-indigo-500 transition-colors">
+                    <Sparkles size={20} />
+                  </div>
+                  <div>
+                    <h4 className="font-bold text-sm text-gray-900 dark:text-white line-clamp-1">{course.title}</h4>
+                    <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">{course.level || "Modern"}</p>
+                  </div>
+                </div>
+                <p className="text-gray-500 dark:text-gray-400 text-xs line-clamp-2 mb-4 h-8">{course.description}</p>
+                <div className="flex items-center justify-between border-t border-gray-50 dark:border-gray-700 pt-3">
+                  <span className="text-[10px] font-black text-indigo-600 uppercase tracking-widest">Discovery</span>
+                  <ChevronRight size={14} className="text-gray-300 group-hover:text-indigo-500 group-hover:translate-x-1 transition-all" />
+                </div>
+              </motion.div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Your Collection */}
+      <div className="space-y-6">
+        <div className="flex items-center justify-between px-1">
+          <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-500">Your Collection</h3>
+          <div className="flex bg-gray-100 dark:bg-gray-800 rounded-xl p-1">
+            <button onClick={() => setViewMode("grid")} className={`p-1.5 rounded-lg transition-all ${viewMode === "grid" ? "bg-white dark:bg-gray-700 shadow-sm" : "text-gray-400"}`}><Grid size={14} /></button>
+            <button onClick={() => setViewMode("list")} className={`p-1.5 rounded-lg transition-all ${viewMode === "list" ? "bg-white dark:bg-gray-700 shadow-sm" : "text-gray-400"}`}><List size={14} /></button>
+          </div>
+        </div>
+
+        {loading ? (
+          <div className="grid grid-cols-2 md:grid-cols-3 gap-6">
+            {[...Array(6)].map((_, i) => (
+              <div key={i} className="bg-white dark:bg-gray-800 border rounded-3xl p-6 animate-pulse h-40"></div>
+            ))}
+          </div>
+        ) : courses.length === 0 ? (
+          <motion.div
+            className="text-center py-20 bg-gray-50 dark:bg-gray-800/20 rounded-3xl border border-dashed border-gray-200 dark:border-gray-700"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+          >
+            <BookOpen className="w-12 h-12 text-gray-300 mx-auto mb-4" />
+            <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-2">
+              {searchQuery ? "No matches found" : "Your space is empty"}
+            </h3>
+            <p className="text-sm text-gray-500 mb-6">
+              {searchQuery
+                ? `Couldn't find anything for "${searchQuery}"`
+                : "Start your journey by exploring new topics!"}
+            </p>
+            <button
+              onClick={() => setActiveContent("explore")}
+              className="px-6 py-3 bg-indigo-600 text-white rounded-2xl font-bold text-sm shadow-lg shadow-indigo-500/20 active:scale-95 transition-all"
+            >
+              Explore Discovery
+            </button>
+          </motion.div>
+        ) : (
+          <AnimatePresence mode="wait">
+            <motion.div
+              key={viewMode + filterBy}
+              initial="hidden"
+              animate="visible"
+              variants={{
+                hidden: { opacity: 0 },
+                visible: { opacity: 1, transition: { staggerChildren: 0.1 } },
+              }}
+              className={
+                viewMode === "grid"
+                  ? "grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 sm:gap-6"
+                  : "space-y-4"
+              }
+            >
+              {[...courses].sort((a, b) => (pinnedCourses.has(b.id) ? 1 : 0) - (pinnedCourses.has(a.id) ? 1 : 0)).map((course, idx) => {
+                const colors = [
+                  "from-blue-500 to-indigo-600",
+                  "from-purple-500 to-fuchsia-600",
+                  "from-emerald-500 to-teal-600",
+                  "from-orange-500 to-amber-600",
+                  "from-rose-500 to-pink-600",
+                  "from-sky-500 to-blue-600"
+                ];
+                const cardColor = colors[idx % colors.length];
+
+                return (
+                  <motion.div
+                    key={course.id}
+                    variants={{
+                      hidden: { opacity: 0, y: 20 },
+                      visible: { opacity: 1, y: 0 },
+                    }}
+                    whileHover={{ y: -4 }}
+                    className="group relative cursor-pointer"
+                  >
+                    <div className="bg-white dark:bg-gray-800 rounded-3xl p-5 border border-gray-100 dark:border-gray-700/50 shadow-sm active:scale-[0.98] transition-all relative overflow-hidden h-full flex flex-col">
+                      <div className="flex items-start justify-between mb-4">
+                        <div className={`w-10 h-10 rounded-2xl bg-gradient-to-br ${cardColor} flex items-center justify-center text-white shadow-lg`}>
+                          <BookOpen size={20} />
+                        </div>
+                        <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                          <button onClick={(e) => { e.stopPropagation(); handlePin(course.id); }} className="p-2 hover:bg-gray-50 dark:hover:bg-gray-700 rounded-xl transition-colors">
+                            <Pin size={14} className={course.isPinned ? "fill-yellow-500 text-yellow-500" : "text-gray-400"} />
+                          </button>
+                          <button onClick={(e) => { e.stopPropagation(); handleDelete(course.id); }} className="p-2 hover:bg-red-50 dark:hover:bg-red-900/20 text-red-500 rounded-xl transition-colors">
+                            <Trash2 size={14} />
+                          </button>
+                        </div>
+                      </div>
+
+                      <div className="flex-grow space-y-2 mb-4">
+                        <h4 className="font-black text-sm text-gray-900 dark:text-white line-clamp-2 leading-tight">{course.title}</h4>
+                        <div className="flex items-center gap-2">
+                          <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest">{course.difficulty || "Adaptive"}</span>
+                          <span className="w-1 h-1 bg-gray-300 rounded-full" />
+                          <span className="text-[10px] font-bold text-gray-400">{course.estimatedTime}</span>
+                        </div>
+                      </div>
+
+                      <div className="space-y-3">
+                        <div className="flex items-center justify-between text-[11px] font-bold text-gray-500">
+                          <span>{course.progress}% Learn</span>
+                        </div>
+
+                        <div className="h-1.5 w-full bg-gray-100 dark:bg-gray-700/50 rounded-full overflow-hidden">
+                          <motion.div
+                            initial={{ width: 0 }}
+                            animate={{ width: `${course.progress}%` }}
+                            className={`h-full bg-gradient-to-r ${cardColor} rounded-full`}
+                          />
+                        </div>
+
+                        <Link
+                          href={
+                            course.isGenerated
+                              ? `/learn/${encodeURIComponent(course.topic)}?format=${course.format}&difficulty=${course.difficulty}`
+                              : `/learn/${course.id}`
+                          }
+                          onClick={(e) => e.stopPropagation()}
+                          className="w-full py-3 bg-gray-50 dark:bg-gray-700/50 text-gray-900 dark:text-white rounded-2xl font-black text-[10px] uppercase tracking-[0.2em] flex items-center justify-center gap-2 hover:bg-indigo-600 hover:text-white transition-all group/btn"
+                        >
+                          <Play size={12} className="fill-current" />
+                          <span>{course.progress === 100 ? "Review" : "Continue"}</span>
+                        </Link>
+                      </div>
+                    </div>
+                  </motion.div>
+                );
+              })}
+            </motion.div>
+          </AnimatePresence>
+        )}
+
+        {pagination.totalPages > 1 && (
+          <div className="flex justify-center gap-2 mt-10">
+            <button
+              onClick={() => handlePageChange(currentPage - 1)}
+              disabled={currentPage === 1}
+              className="p-2 border border-gray-200 dark:border-gray-700 rounded-xl disabled:opacity-30 transition-opacity"
+            >
+              <ChevronLeft className="w-5 h-5" />
+            </button>
+            {[...Array(pagination.totalPages)].map((_, i) => (
+              <button
+                key={i + 1}
+                onClick={() => handlePageChange(i + 1)}
+                className={`w-9 h-9 rounded-xl font-bold text-sm transition-all ${currentPage === i + 1 ? "bg-indigo-600 text-white shadow-lg shadow-indigo-500/20" : "border border-gray-200 dark:border-gray-700 text-gray-500"}`}
+              >
+                {i + 1}
+              </button>
+            ))}
+            <button
+              onClick={() => handlePageChange(currentPage + 1)}
+              disabled={currentPage === pagination.totalPages}
+              className="p-2 border border-gray-200 dark:border-gray-700 rounded-xl disabled:opacity-30 transition-opacity"
+            >
+              <ChevronRight className="w-5 h-5" />
+            </button>
+          </div>
+        )}
+      </div>
+
       <ConfirmModal
         isOpen={deleteModalOpen}
         onClose={() => {
@@ -676,10 +902,10 @@ export default function Library({ setActiveContent }) {
           setCourseToDelete(null);
         }}
         onConfirm={confirmDelete}
-        title="Delete Course"
-        message={`Are you sure you want to delete "${courseToDelete?.title}"? This cannot be undone.`}
-        confirmText="Delete"
-        cancelText="Cancel"
+        title="Remove Course"
+        message={`Are you sure you want to remove "${courseToDelete?.title}"? This will permanently delete your progress.`}
+        confirmText="Remove"
+        cancelText="Keep"
         confirmColor="red"
       />
     </div>

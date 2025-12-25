@@ -130,7 +130,7 @@
 }
 
 @layer utilities {
-  .hide-scrollbar {
+  .hide-scrollbar, .scrollbar-hide, .no-scrollbar {
     scrollbar-width: none;
     &::-webkit-scrollbar {
       display: none;

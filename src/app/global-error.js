@@ -16,7 +16,7 @@ export default function GlobalError({ error, reset }) {
                 }}>
                     <h2 style={{ fontSize: '1.5rem', fontWeight: 'bold', marginBottom: '1rem' }}>Something went wrong!</h2>
                     <button
-                        onClick={() => reset()}
+                        onClick={() => typeof reset === 'function' ? reset() : window.location.reload()}
                         style={{
                             borderRadius: '0.375rem',
                             backgroundColor: '#2563eb',
