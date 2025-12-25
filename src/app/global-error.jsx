@@ -3,26 +3,12 @@
 import React from "react";
 
 export default function GlobalError({ error, reset }) {
-    // Use a local effect for side effects like logging
-    React.useEffect(() => {
-        if (error) {
-            console.error("Global Error Caught:", error);
-        }
-    }, [error]);
-
-    const handleReset = () => {
-        if (typeof window !== "undefined") {
-            if (typeof reset === "function") {
-                reset();
-            } else {
-                window.location.reload();
-            }
-        }
-    };
-
     return (
-        <html lang="en" suppressHydrationWarning>
-            <body suppressHydrationWarning>
+        <html lang="en">
+            <head>
+                <title>Application Error</title>
+            </head>
+            <body>
                 <div style={{
                     display: 'flex',
                     minHeight: '100vh',
@@ -42,7 +28,11 @@ export default function GlobalError({ error, reset }) {
                         A fatal error occurred in the application. Please try refreshing the page.
                     </p>
                     <button
-                        onClick={handleReset}
+                        onClick={() => {
+                            if (typeof window !== "undefined") {
+                                window.location.reload();
+                            }
+                        }}
                         style={{
                             padding: '12px 24px',
                             backgroundColor: '#2563eb',
@@ -51,8 +41,7 @@ export default function GlobalError({ error, reset }) {
                             borderRadius: '8px',
                             cursor: 'pointer',
                             fontSize: '1rem',
-                            fontWeight: '600',
-                            transition: 'background-color 0.2s'
+                            fontWeight: '600'
                         }}
                     >
                         Try Again
