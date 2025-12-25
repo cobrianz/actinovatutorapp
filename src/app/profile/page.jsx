@@ -1,11 +1,10 @@
-"use client";
 export const dynamic = "force-dynamic";
 
-import nextDynamic from "next/dynamic";
+import dynamic from "next/dynamic";
 import NavbarOnlyLayout from "../components/NavbarOnlyLayout";
 import { Suspense } from "react";
 
-const ProfileContent = nextDynamic(() => import("../components/ProfileContent"), {
+const ProfileContent = dynamic(() => import("../components/ProfileContent"), {
   ssr: false,
 });
 

@@ -1,5 +1,4 @@
 "use client";
-export const dynamic = "force-dynamic";
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
@@ -129,8 +128,8 @@ export default function ForgotPasswordPage() {
         <div key={stepNum} className="flex items-center">
           <div
             className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium ${step >= stepNum
-                ? "bg-blue-600 text-white"
-                : "bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-400"
+              ? "bg-blue-600 text-white"
+              : "bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-400"
               }`}
           >
             {stepNum}

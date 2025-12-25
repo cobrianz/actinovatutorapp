@@ -5,7 +5,7 @@ import { useSearchParams } from "next/navigation";
 import { Search, BookOpen, FileText, Clock, Users } from "lucide-react";
 import Link from "next/link";
 
-export default function SearchPage() {
+function SearchContent() {
   const searchParams = useSearchParams();
   const [query, setQuery] = useState(searchParams.get("q") || "");
   const [results, setResults] = useState([]);
@@ -134,13 +134,12 @@ export default function SearchPage() {
                         {result.title}
                       </h3>
                       <span
-                        className={`px-2 py-1 text-xs rounded-full ${
-                          result.difficulty === "beginner"
+                        className={`px-2 py-1 text-xs rounded-full ${result.difficulty === "beginner"
                             ? "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200"
                             : result.difficulty === "intermediate"
                               ? "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200"
                               : "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200"
-                        }`}
+                          }`}
                       >
                         {result.difficulty}
                       </span>
@@ -175,5 +174,18 @@ export default function SearchPage() {
         </div>
       )}
     </div>
+  );
+}
+
+export default function SearchPage() {
+  return (
+    <Suspense fallback={
+      <div className="text-center py-12">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500 mx-auto"></div>
+        <p className="text-gray-600 dark:text-gray-400 mt-4">Loading Search...</p>
+      </div>
+    }>
+      <SearchContent />
+    </Suspense>
   );
 }
