@@ -4,7 +4,7 @@ import { NextResponse } from "next/server";
 import { connectToDatabase } from "@/lib/mongodb";
 import { hashPassword } from "@/lib/auth";
 import { ObjectId } from "mongodb";
-import { withCORS } from "@/app/lib/middleware";
+import { withCORS } from "@/lib/middleware";
 import crypto from 'crypto';
 
 const RATE_LIMIT = { max: 5, windowMs: 15 * 60 * 1000 };

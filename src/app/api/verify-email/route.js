@@ -5,7 +5,7 @@ import { cookies } from "next/headers";
 import { connectToDatabase } from "@/lib/mongodb";
 import { generateTokenPair } from "@/lib/auth";
 import { generateCsrfToken, setCsrfCookie } from "@/lib/csrf";
-import { withCORS } from "@/app/lib/middleware";
+import { withCORS } from "@/lib/middleware";
 
 const RATE_LIMIT = { max: 10, windowMs: 15 * 60 * 1000 };
 const attempts = new Map();

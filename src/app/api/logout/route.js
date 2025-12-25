@@ -4,7 +4,7 @@ import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { connectToDatabase } from "@/lib/mongodb";
 import { ObjectId } from "mongodb";
-import { withCORS } from "@/app/lib/middleware";
+import { withCORS } from "@/lib/middleware";
 
 async function logoutHandler() {
   const cookieStore = await cookies();

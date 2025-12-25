@@ -4,7 +4,7 @@ import { NextResponse } from "next/server";
 import { connectToDatabase } from "@/lib/mongodb";
 import { hashPassword, verifyPassword } from "@/lib/auth";
 import { verifyResetCode } from "@/lib/db";
-import { withCORS } from "@/app/lib/middleware";
+import { withCORS } from "@/lib/middleware";
 
 const RATE_LIMIT = { max: 5, windowMs: 15 * 60 * 1000 };
 const attempts = new Map(); // Replace with Upstash Redis in prod

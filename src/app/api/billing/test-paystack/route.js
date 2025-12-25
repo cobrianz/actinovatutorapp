@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 
-export const dynamic = "force-dynamic";
+
 
 // Helper: Safely get base URL
 const getBaseUrl = () => {

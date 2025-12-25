@@ -5,7 +5,7 @@ import { cookies } from "next/headers";
 import { connectToDatabase } from "@/lib/mongodb";
 import { ObjectId } from "mongodb";
 import { generateCsrfToken, setCsrfCookie } from "@/lib/csrf";
-import { withCORS } from "@/app/lib/middleware";
+import { withCORS } from "@/lib/middleware";
 
 async function refreshHandler() {
   const cookieStore = await cookies();

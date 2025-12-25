@@ -5,7 +5,7 @@ import { cookies } from "next/headers";
 import { connectToDatabase } from "@/lib/mongodb";
 import { verifyPassword, generateTokenPair, sanitizeUser } from "@/lib/auth";
 import { generateCsrfToken, setCsrfCookie } from "@/lib/csrf";
-import { withCORS } from "@/app/lib/middleware";
+import { withCORS } from "@/lib/middleware";
 
 const RATE_LIMIT = { max: 8, windowMs: 15 * 60 * 1000 }; // 8 attempts per 15 min
 const loginAttempts = new Map(); // In-memory rate limiting (or use Redis in prod)

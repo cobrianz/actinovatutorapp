@@ -188,4 +188,4 @@ async function deleteHandler(request) {
 export const GET = withAuth(withErrorHandling(getHandler));
 export const POST = withAuth(withErrorHandling(postHandler));
 export const DELETE = withAuth(withErrorHandling(deleteHandler));
-export const dynamic = "force-dynamic"; // if needed
+

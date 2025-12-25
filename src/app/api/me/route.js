@@ -5,7 +5,7 @@ import { cookies, headers } from "next/headers";
 import { connectToDatabase } from "@/lib/mongodb";
 import { verifyToken } from "@/lib/auth";
 import { ObjectId } from "mongodb";
-import { withCORS } from "@/app/lib/middleware";
+import { withCORS } from "@/lib/middleware";
 
 async function meHandler() {
   let token = null;
