@@ -9,7 +9,7 @@ const IS_BROWSER = typeof window !== 'undefined';
 const IS_CAPACITOR = IS_BROWSER && window.origin.startsWith('capacitor://');
 
 // Replace with your actual production backend URL if NEXT_PUBLIC_API_URL is not set
-const DEFAULT_API_URL = 'https://actinova-backend.vercel.app';
+const DEFAULT_API_URL = 'https://actinovatutorapp.vercel.app';
 
 export const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || DEFAULT_API_URL;
 console.log('[Actinova] API_BASE_URL configured as:', API_BASE_URL);
