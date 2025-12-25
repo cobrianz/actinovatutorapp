@@ -1195,9 +1195,18 @@ export default function LearnContent() {
         }
 
         const data = await response.json();
-        console.log("Actinova Generate Response:", { format, success: data.success, hasContent: !!data.content, hasRootModules: !!data.modules });
 
-        const courseDataToSet = data.content || data;
+        // Extract course data - API can return in different formats
+        let courseDataToSet;
+        if (data.content) {
+          courseDataToSet = data.content;
+        } else if (data.modules) {
+          // Data is at root level
+          courseDataToSet = data;
+        } else {
+          // Fallback - use the whole data object
+          courseDataToSet = data;
+        }
 
         // Only validate modules for course format, not quiz
         if (format === "course") {
@@ -1206,7 +1215,8 @@ export default function LearnContent() {
             (Array.isArray(courseDataToSet.topics) && courseDataToSet.topics.length > 0);
 
           if (!hasModules) {
-            console.error("Course Data missing modules:", courseDataToSet);
+            // Log for debugging but don't expose full data
+            console.error("Course generation failed: Invalid structure");
             throw new Error(
               "Generated course structure is invalid. Please try again."
             );

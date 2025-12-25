@@ -110,56 +110,24 @@ export const downloadCourseAsPDF = async (data, mode = "course") => {
     pdf.setFont("helvetica", "normal");
     pdf.setTextColor(...COLORS.text);
 
-    const lines = pdf.splitTextToSize(text, contentWidth - (xPos - margin));
+    // Strip ALL markdown before processing
+    let cleanedText = text
+      .replace(/\*\*\*([^*]+)\*\*\*/g, '$1')  // Bold+Italic
+      .replace(/\*\*([^*]+)\*\*/g, '$1')      // Bold
+      .replace(/\*([^*]+)\*/g, '$1')          // Italic
+      .replace(/__([^_]+)__/g, '$1')          // Bold underscore
+      .replace(/_([^_]+)_/g, '$1')            // Italic underscore
+      .replace(/~~([^~]+)~~/g, '$1')          // Strikethrough
+      .replace(/`([^`]+)`/g, '$1')            // Inline code
+      .trim();
+
+    const maxWidth = contentWidth - (xPos - margin);
+    const lines = pdf.splitTextToSize(cleanedText, maxWidth);
+
     lines.forEach((line) => {
       checkNewPage(8);
-      let currentX = xPos;
-
-      const segments = line.split(/(\*\*[^*]+\*\*|\*[^*]+\*|_[^_]+_)/g);
-
-      // Detect full line **TITLE**
-      let isFullBoldSection = false;
-      if (segments.length === 3 && segments[0] === '' && segments[2] === '' && segments[1].startsWith('**') && segments[1].endsWith('**')) {
-        isFullBoldSection = true;
-      }
-
-      if (isFullBoldSection) {
-        const cleanText = segments[1].substring(2, segments[1].length - 2).trim();
-        pdf.setFont("helvetica", "bold");
-        pdf.setFontSize(18);
-        pdf.setTextColor(...COLORS.primary);
-        const sectionLines = pdf.splitTextToSize(cleanText, contentWidth);
-        sectionLines.forEach((sLine, i) => {
-          pdf.text(sLine, margin, y);
-          y += 9;
-          if (i === sectionLines.length - 1) {
-            const w = pdf.getTextWidth(sLine);
-            pdf.setDrawColor(...COLORS.primary);
-            pdf.setLineWidth(0.8);
-            pdf.line(margin, y - 2, margin + w, y - 2);
-          }
-        });
-        y += 8;
-      } else {
-        segments.forEach((segment) => {
-          if (!segment) return;
-          let style = "normal";
-          let cleanText = segment;
-
-          if (segment.startsWith("**") && segment.endsWith("**")) {
-            style = "bold";
-            cleanText = segment.substring(2, segment.length - 2);
-          } else if ((segment.startsWith("*") && segment.endsWith("*")) || (segment.startsWith("_") && segment.endsWith("_"))) {
-            style = "italic";
-            cleanText = segment.substring(1, segment.length - 1);
-          }
-
-          pdf.setFont("helvetica", style);
-          pdf.text(cleanText, currentX, y);
-          currentX += pdf.getTextWidth(cleanText);
-        });
-        y += 7;
-      }
+      pdf.text(line, xPos, y);
+      y += 7;
     });
   };
 

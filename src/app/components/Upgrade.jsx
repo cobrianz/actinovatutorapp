@@ -17,6 +17,8 @@ import {
 import { toast } from "sonner";
 import { useAuth } from "./AuthProvider";
 
+import { PLAN_LIMITS } from "@/lib/planLimits";
+
 export default function Upgrade() {
   const { user, loading } = useAuth();
   const [selectedPlan, setSelectedPlan] = useState("premium");
@@ -86,7 +88,7 @@ export default function Upgrade() {
         credentials: "include",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          plan: planName === 'premium' ? 'pro' : planName, // Map premium to pro for legacy compatibility if needed, or update backend to accept 'premium'
+          plan: planName === 'premium' ? 'pro' : planName,
           paymentMethod: paymentMethod,
         }),
       });
@@ -106,7 +108,6 @@ export default function Upgrade() {
       const data = await response.json();
 
       if (data.sessionUrl) {
-        // Redirect to Paystack checkout
         window.location.href = data.sessionUrl;
       } else {
         throw new Error("No payment URL received");
@@ -128,20 +129,21 @@ export default function Upgrade() {
     }
   };
 
+  // Use centralized plan limits
   const comparisonFeatures = [
     {
       category: "Limits",
       features: [
-        { name: "Course Generations", basic: "2/month", premium: "15/month", enterprise: "Unlimited" },
-        { name: "Quiz Generations", basic: "1/month", premium: "20/month", enterprise: "Unlimited" },
-        { name: "Flashcard Sets", basic: "8/month", premium: "40/month", enterprise: "Unlimited" },
+        { name: "Course Generations", basic: `${PLAN_LIMITS.free.courses}/month`, premium: `${PLAN_LIMITS.premium.courses}/month`, enterprise: "Unlimited" },
+        { name: "Quiz Generations", basic: `${PLAN_LIMITS.free.quizzes}/month`, premium: `${PLAN_LIMITS.premium.quizzes}/month`, enterprise: "Unlimited" },
+        { name: "Flashcard Sets", basic: `${PLAN_LIMITS.free.flashcards}/month`, premium: `${PLAN_LIMITS.premium.flashcards}/month`, enterprise: "Unlimited" },
       ]
     },
     {
       category: "Learning Features",
       features: [
-        { name: "Modules per Course", basic: "3", premium: "20", enterprise: "Unlimited" },
-        { name: "Lessons per Module", basic: "3", premium: "5", enterprise: "Unlimited" },
+        { name: "Modules per Course", basic: `${PLAN_LIMITS.free.modules}`, premium: `${PLAN_LIMITS.premium.modules}`, enterprise: `${PLAN_LIMITS.enterprise.modules}` },
+        { name: "Lessons per Module", basic: `${PLAN_LIMITS.free.lessonsPerModule}`, premium: `${PLAN_LIMITS.premium.lessonsPerModule}`, enterprise: `${PLAN_LIMITS.enterprise.lessonsPerModule}` },
         { name: "Difficulty Levels", basic: "Beginner only", premium: "All Levels", enterprise: "All Levels" },
       ],
     },

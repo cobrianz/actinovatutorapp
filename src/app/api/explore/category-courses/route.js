@@ -52,13 +52,14 @@ export async function GET(request) {
     }
   }
 
-  // Premium check
-  const userDoc = await User.findById(userId).lean();
-  const isPremium =
-    userDoc?.subscription?.plan === "pro" &&
-    userDoc?.subscription?.status === "active";
+  // Premium check - use centralized plan limits
+  const { db } = await connectToDatabase();
+  const user = await db.collection("users").findOne({ _id: new ObjectId(userId) });
 
-  if (!isPremium) {
+  const { getUserPlanName } = await import("@/lib/planLimits");
+  const planName = getUserPlanName(user);
+
+  if (planName === 'free') {
     return NextResponse.json(
       {
         error: "Premium required",
@@ -80,7 +81,6 @@ export async function GET(request) {
   }
 
   try {
-    const { db } = await connectToDatabase();
     const col = db.collection("explore_category_courses");
 
     // 1. Try cache first (24 hours)

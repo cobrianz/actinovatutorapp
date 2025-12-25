@@ -182,8 +182,6 @@ async function createCheckoutSessionHandler(request) {
     const origin = `${protocol}://${host}`;
     const callbackUrl = `${origin}/api/billing/verify-payment`;
 
-    console.warn(`[Checkout] ${user.email} → ${currency} ${planConfig.amount / 100} ${cycle}`);
-
     const response = await fetch(
       "https://api.paystack.co/transaction/initialize",
       {

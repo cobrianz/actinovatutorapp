@@ -204,7 +204,6 @@ async function postHandler(request) {
       console.log("[POST /profile/update] Unauthorized - no valid user ID");
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
-    console.log("[POST /profile/update] User ID:", userId.toString());
 
     let updates;
     try {

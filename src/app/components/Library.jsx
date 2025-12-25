@@ -463,6 +463,11 @@ export default function Library({ setActiveContent, setHideNavs }) {
   };
 
   const handleDelete = (courseId) => {
+    if (!isPremium) {
+      toast.error("Deleting courses is a Pro feature. Please upgrade to manage your library.");
+      return;
+    }
+
     const course = courses.find((c) => c.id === courseId);
     if (!course) return;
 

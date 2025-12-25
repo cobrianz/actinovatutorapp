@@ -136,25 +136,13 @@ export async function POST(request) {
 
     const normalizedTopic = topic.trim().toLowerCase();
 
-    // ─── CHECK FOR EXISTING COURSE ───
-    console.log(
-      `Checking for existing course: userId=${userId}, topic=${normalizedTopic}, difficulty=${difficulty}`
-    );
+    // Check for existing course
     const existingCourse = await db.collection("library").findOne({
       userId: userId ? new ObjectId(userId) : null,
       topic: normalizedTopic,
       format: "course",
       difficulty,
     });
-    console.log(
-      `Existing course found: ${!!existingCourse}`,
-      existingCourse ? existingCourse._id : "none"
-    );
-    if (existingCourse) {
-      console.log(
-        `Existing course details: title=${existingCourse.title}, topic=${existingCourse.topic}, difficulty=${existingCourse.difficulty}, format=${existingCourse.format}, userId=${existingCourse.userId}`
-      );
-    }
 
     if (existingCourse) {
       // Scenario 1: Course exists, user is premium, but course is NOT premium. Upgrade it.
@@ -351,7 +339,6 @@ Exactly ${modules} modules, exactly ${lessonsPerModule} lessons each. No content
     let course;
     try {
       const aiContent = completion.choices[0].message.content.trim();
-      console.log("AI Generation Response Length:", aiContent.length);
       course = JSON.parse(aiContent);
     } catch (e) {
       console.warn("AI JSON failed, using fallback:", e.message);
@@ -409,7 +396,6 @@ Exactly ${modules} modules, exactly ${lessonsPerModule} lessons each. No content
 
     try {
       await db.collection("library").insertOne(courseDoc);
-      console.log(`Course saved: ${courseId}`);
       if (userId) {
         try {
           await db

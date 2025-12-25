@@ -161,7 +161,7 @@ export async function POST(request) {
         const isNew = await addBillingEntry(userId, data, "webhook");
         if (isNew) {
           await updateSubscriptionPeriod(user, data);
-          console.log(`User ${user.email} upgraded via webhook`);
+          // User upgraded successfully
         }
         break;
       }
