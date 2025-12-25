@@ -9,7 +9,7 @@ const getBaseUrl = () => {
     : "http://localhost:3000";
 };
 
-export async function GET() {
+export async function POST() {
   const baseUrl = getBaseUrl();
   const hasSecretKey = !!process.env.PAYSTACK_SECRET_KEY;
 
