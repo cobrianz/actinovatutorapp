@@ -824,9 +824,18 @@ const staticCategories = [
   },
 ];
 
-export default function Explore() {
+export default function Explore({ setHideNavs }) {
   const router = useRouter();
   const { user, refreshToken } = useAuth();
+
+  // Hide Navbar/Bottombar on mount
+  useEffect(() => {
+    if (setHideNavs) {
+      setHideNavs(true);
+      return () => setHideNavs(false);
+    }
+  }, [setHideNavs]);
+
   const [trendingTopics, setTrendingTopics] = useState([]);
   const [loading, setLoading] = useState(false);
   const [generatingCourse, setGeneratingCourse] = useState(null);
@@ -1268,40 +1277,116 @@ export default function Explore() {
               className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
           </div>
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
-            <select
-              value={selectedCategory}
-              onChange={(e) => setSelectedCategory(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
-            >
-              <option value="">All Categories</option>
-              {staticCategories.map((category) => (
-                <option key={category.name} value={category.name}>
-                  {category.name}
-                </option>
-              ))}
-            </select>
-            <select
-              value={selectedDifficulty}
-              onChange={(e) => setSelectedDifficulty(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
-            >
-              <option value="">All Levels</option>
-              <option value="beginner">Beginner</option>
-              <option value="intermediate">Intermediate</option>
-              <option value="advanced">Advanced</option>
-            </select>
-            <select
-              value={isPremium}
-              onChange={(e) => setIsPremium(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
-            >
-              <option value="">All Courses</option>
-              <option value="true">Premium Only</option>
-              <option value="false">Free Only</option>
-            </select>
-          </div>
         </div>
+      </div>
+
+      {/* Categories */}
+      <div className="mb-16">
+        <div className="flex items-center justify-between mb-6">
+          <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100">
+            Browse by Category
+          </h2>
+          <button
+            onClick={() => toggleSectionMinimized("categories")}
+            className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-700"
+            title={
+              minimizedSections.has("categories")
+                ? "Expand section"
+                : "Minimize section"
+            }
+          >
+            {minimizedSections.has("categories") ? (
+              <ChevronDown className="w-5 h-5" />
+            ) : (
+              <ChevronUp className="w-5 h-5" />
+            )}
+          </button>
+        </div>
+
+        {!minimizedSections.has("categories") && (
+          <>
+            {loading ? (
+              <div className="flex gap-4 overflow-x-auto pb-4 -mx-4 px-4 scrollbar-hide no-scrollbar">
+                {[...Array(6)].map((_, index) => (
+                  <div
+                    key={index}
+                    className="flex-shrink-0 w-[240px] bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-3xl p-6 animate-pulse"
+                  >
+                    <div className="h-4 bg-gray-300 dark:bg-gray-600 rounded mb-4"></div>
+                    <div className="h-3 bg-gray-300 dark:bg-gray-600 rounded mb-2"></div>
+                    <div className="flex gap-2">
+                      <div className="h-6 w-16 bg-gray-300 dark:bg-gray-600 rounded-full"></div>
+                      <div className="h-6 w-20 bg-gray-300 dark:bg-gray-600 rounded-full"></div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : filteredCategories.length === 0 && searchQuery ? (
+              <div className="text-center py-12">
+                <Search className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-2">
+                  No categories found
+                </h3>
+                <p className="text-gray-600 dark:text-gray-400">
+                  Try adjusting your search terms or browse all categories.
+                </p>
+              </div>
+            ) : (
+              <div className="flex gap-3 overflow-x-auto pb-4 -mx-4 px-4 scrollbar-hide no-scrollbar scroll-smooth">
+                {filteredCategories.map((category, index) => {
+                  const colors = [
+                    "from-blue-500 to-indigo-600",
+                    "from-purple-500 to-fuchsia-600",
+                    "from-indigo-500 to-violet-600",
+                    "from-blue-600 to-indigo-700",
+                  ];
+                  const cardColor = colors[index % colors.length];
+
+                  return (
+                    <div
+                      key={index}
+                      onClick={() => handleExploreCategory(category)}
+                      className={`flex-shrink-0 w-[240px] bg-gradient-to-br ${cardColor} rounded-3xl p-6 shadow-lg shadow-indigo-500/20 relative cursor-pointer group overflow-hidden`}
+                    >
+                      <div className="absolute top-0 right-0 w-24 h-24 bg-white/10 rounded-full -translate-y-10 translate-x-10 blur-xl group-hover:scale-110 transition-transform" />
+
+                      <div className="relative z-10">
+                        <h3 className="text-lg font-bold text-white mb-2">
+                          {category.name}
+                        </h3>
+                        <p className="text-white/80 text-sm line-clamp-2 mb-4">
+                          {category.description}
+                        </p>
+
+                        <div className="flex flex-wrap gap-1 mb-4">
+                          {category.topics.slice(0, 3).map((topic, i) => (
+                            <span
+                              key={i}
+                              className="px-2 py-0.5 bg-white/20 text-white text-[10px] rounded-full"
+                            >
+                              {topic}
+                            </span>
+                          ))}
+                        </div>
+
+                        <button className="w-full bg-white/20 hover:bg-white/30 text-white py-2 px-4 rounded-xl transition-colors text-xs font-bold uppercase tracking-widest flex items-center justify-center space-x-2">
+                          {exploringCategory === category.name ? (
+                            <>
+                              <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-white"></div>
+                              <span>Building...</span>
+                            </>
+                          ) : (
+                            <span>Explore</span>
+                          )}
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </>
+        )}
       </div>
 
       {/* Trending Topics */}
@@ -1333,7 +1418,7 @@ export default function Explore() {
         {!minimizedSections.has("trending-topics") && (
           <>
             {loading ? (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              <div className="flex flex-col gap-4">
                 {[...Array(6)].map((_, index) => (
                   <div
                     key={index}
@@ -1361,7 +1446,7 @@ export default function Explore() {
                 </p>
               </div>
             ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              <div className="flex flex-col gap-4">
                 {filteredTrendingTopics.map((topic, index) => (
                   <div
                     key={index}
@@ -1448,161 +1533,6 @@ export default function Explore() {
                   </div>
                 ))}
               </div>
-            )}
-          </>
-        )}
-      </div>
-
-      {/* Categories */}
-      <div className="mb-16">
-        <div className="flex items-center justify-between mb-6">
-          <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100">
-            Browse by Category
-          </h2>
-          <button
-            onClick={() => toggleSectionMinimized("categories")}
-            className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-700"
-            title={
-              minimizedSections.has("categories")
-                ? "Expand section"
-                : "Minimize section"
-            }
-          >
-            {minimizedSections.has("categories") ? (
-              <ChevronDown className="w-5 h-5" />
-            ) : (
-              <ChevronUp className="w-5 h-5" />
-            )}
-          </button>
-        </div>
-
-        {!minimizedSections.has("categories") && (
-          <>
-            {loading ? (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {[...Array(6)].map((_, index) => (
-                  <div
-                    key={index}
-                    className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-6 animate-pulse"
-                  >
-                    <div className="h-4 bg-gray-300 dark:bg-gray-600 rounded mb-4"></div>
-                    <div className="h-3 bg-gray-300 dark:bg-gray-600 rounded mb-2"></div>
-                    <div className="flex gap-2">
-                      <div className="h-6 w-16 bg-gray-300 dark:bg-gray-600 rounded-full"></div>
-                      <div className="h-6 w-20 bg-gray-300 dark:bg-gray-600 rounded-full"></div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            ) : filteredCategories.length === 0 && searchQuery ? (
-              <div className="text-center py-12">
-                <Search className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-                <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-2">
-                  No categories found
-                </h3>
-                <p className="text-gray-600 dark:text-gray-400">
-                  Try adjusting your search terms or browse all categories.
-                </p>
-              </div>
-            ) : (
-              <>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                  {filteredCategories
-                    .slice(0, visibleCategoriesCount)
-                    .map((category, index) => (
-                      <div
-                        key={index}
-                        className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-6 hover:shadow-lg transition-shadow relative"
-                      >
-                        {!userIsPremium && (
-                          <div className="absolute top-3 right-3">
-                            <div className="bg-gradient-to-r from-blue-100 to-purple-100 dark:from-blue-900 dark:to-purple-900 text-blue-800 dark:text-blue-200 text-xs px-2 py-1 rounded-full flex items-center space-x-1">
-                              <span>⭐</span>
-                              <span>Premium</span>
-                            </div>
-                          </div>
-                        )}
-                        <div className="flex items-center justify-between mb-4">
-                          <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
-                            {category.name}
-                          </h3>
-                        </div>
-                        <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
-                          {category.description}
-                        </p>
-                        <div className="flex flex-wrap gap-2 mb-4">
-                          {category.topics
-                            .slice(0, 4)
-                            .map((topic, topicIndex) => (
-                              <span
-                                key={topicIndex}
-                                className="px-2 py-1 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 text-xs rounded-full"
-                              >
-                                {topic}
-                              </span>
-                            ))}
-                          {category.topics.length > 4 && (
-                            <span className="px-2 py-1 bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300 text-xs rounded-full">
-                              +{category.topics.length - 4} more
-                            </span>
-                          )}
-                        </div>
-                        <button
-                          onClick={() => handleExploreCategory(category)}
-                          disabled={exploringCategory === category.name}
-                          className="w-full bg-gradient-to-r from-blue-600 to-purple-600 text-white py-2 px-4 rounded-lg hover:from-blue-700 hover:to-purple-700 transition-colors text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center space-x-2"
-                        >
-                          {exploringCategory === category.name ? (
-                            <>
-                              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-                              <span>Exploring...</span>
-                            </>
-                          ) : (
-                            <>
-                              <Sparkles className="w-4 h-4" />
-                              <span>Explore Courses</span>
-                            </>
-                          )}
-                        </button>
-                      </div>
-                    ))}
-                </div>
-
-                {visibleCategoriesCount < filteredCategories.length && (
-                  <div className="text-center mt-8">
-                    <button
-                      onClick={handleSeeMoreCategories}
-                      className="bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 px-6 py-3 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors font-medium"
-                    >
-                      See More Categories (
-                      {filteredCategories.length - visibleCategoriesCount}{" "}
-                      remaining)
-                    </button>
-                  </div>
-                )}
-
-                {visibleCategoriesCount >= filteredCategories.length &&
-                  filteredCategories.length > 9 && (
-                    <div className="text-center mt-8">
-                      <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
-                        <Sparkles className="w-8 h-8 text-blue-500 mx-auto mb-2" />
-                        <p className="text-blue-700 dark:text-blue-300 font-medium">
-                          Didn't find what you're looking for?
-                        </p>
-                        <p className="text-blue-600 dark:text-blue-400 text-sm mt-1 mb-4">
-                          Try generating a custom course with our AI!
-                        </p>
-                        <button
-                          onClick={() => router.push("/dashboard?tab=generate")}
-                          className="bg-gradient-to-r from-blue-600 to-purple-600 text-white px-6 py-2 rounded-lg hover:from-blue-700 hover:to-purple-700 transition-colors font-medium flex items-center space-x-2 mx-auto"
-                        >
-                          <Sparkles className="w-4 h-4" />
-                          <span>Generate Custom Course</span>
-                        </button>
-                      </div>
-                    </div>
-                  )}
-              </>
             )}
           </>
         )}
@@ -1912,6 +1842,13 @@ export default function Explore() {
           </div>
         </div>
       )}
+      {/* Floating Generate Button */}
+      <button
+        onClick={() => router.push("/dashboard?tab=generate")}
+        className="fixed bottom-6 right-6 w-14 h-14 bg-gradient-to-r from-blue-600 to-purple-600 rounded-full flex items-center justify-center text-white shadow-xl shadow-blue-500/30 hover:scale-110 transition-transform z-50"
+      >
+        <Sparkles size={24} />
+      </button>
     </div>
   );
 }

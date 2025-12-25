@@ -213,8 +213,17 @@ const staticCategories = [
   }
 ];
 
-export default function Library({ setActiveContent }) {
+export default function Library({ setActiveContent, setHideNavs }) {
   const router = useRouter();
+
+  // Hide Navbar/Bottombar on mount
+  useEffect(() => {
+    if (setHideNavs) {
+      setHideNavs(true);
+      return () => setHideNavs(false);
+    }
+  }, [setHideNavs]);
+
   const [viewMode, setViewMode] = useState("grid");
   const [filterBy, setFilterBy] = useState("all");
   const [selectedCategory, setSelectedCategory] = useState("All");
@@ -231,6 +240,7 @@ export default function Library({ setActiveContent }) {
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const [courseToDelete, setCourseToDelete] = useState(null);
   const [pinnedCourses, setPinnedCourses] = useState(new Set());
+  const [generatingCourse, setGeneratingCourse] = useState(null);
 
   const { user, loading: authLoading, refreshToken } = useAuth();
 
@@ -502,6 +512,70 @@ export default function Library({ setActiveContent }) {
     }
   };
 
+  const handleGenerateCourse = async (course) => {
+    if (generatingCourse) return;
+
+    setGeneratingCourse(course.title);
+    toast.loading(`Generating course: ${course.title}...`, { id: "generating" });
+
+    try {
+      // 1. Determine difficulty based on user status and topic difficulty
+      let difficulty = (course.difficulty || "beginner").toLowerCase();
+
+      // 2. Validate difficulty matches API whitelist
+      if (!["beginner", "intermediate", "advanced"].includes(difficulty)) {
+        difficulty = "beginner";
+      }
+
+      // 3. Force beginner for free users (Premium is required for Intermediate/Advanced)
+      const isPro = !!(user?.subscription?.plan === "pro" || user?.isPremium);
+      if (!isPro) {
+        difficulty = "beginner";
+      }
+
+      // Generate the course (server reads cookie for auth)
+      const response = await fetch("/api/generate-course", {
+        method: "POST",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          topic: course.title,
+          format: "course",
+          difficulty,
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || "Failed to generate course");
+      }
+
+      const responseData = await response.json();
+
+      toast.success(`Course "${course.title}" generated successfully!`, {
+        id: "generating",
+      });
+
+      // Navigate to the learning page with safer URL encoding
+      if (responseData.courseId || responseData.success) {
+        const safeTopic = course.title
+          .replace(/[^a-zA-Z0-9\s-]/g, "")
+          .trim()
+          .replace(/\s+/g, "-");
+        router.push(
+          `/learn/${encodeURIComponent(safeTopic)}?format=course&difficulty=${difficulty}&originalTopic=${encodeURIComponent(course.title)}`
+        );
+      }
+    } catch (error) {
+      console.error("Error generating course:", error);
+      toast.error(error.message || "Failed to generate course", {
+        id: "generating",
+      });
+    } finally {
+      setGeneratingCourse(null);
+    }
+  };
+
   const isPremium =
     !!(
       user?.subscription &&
@@ -594,25 +668,30 @@ export default function Library({ setActiveContent }) {
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6 sm:py-8 space-y-12 no-scrollbar">
       {/* Metrics Section */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 pb-4">
+      <div className="grid grid-cols-2 gap-4 pb-4">
         {[
-          { label: "Total Courses", value: stats.courses || 0, icon: BookOpen, color: "blue", bg: "bg-blue-50 dark:bg-blue-900/20", text: "text-blue-500" },
-          { label: "Completed", value: stats.completedCourses || 0, icon: Trophy, color: "green", bg: "bg-green-50 dark:bg-green-900/20", text: "text-green-500" },
-          { label: "Pinned", value: stats.pinnedCourses || 0, icon: Pin, color: "yellow", bg: "bg-yellow-50 dark:bg-yellow-900/20", text: "text-yellow-500" },
-          { label: "Avg Progress", value: `${courses.length > 0 ? Math.round(courses.reduce((sum, c) => sum + (c.progress || 0), 0) / courses.length) : 0}%`, icon: TrendingUp, color: "purple", bg: "bg-purple-50 dark:bg-purple-900/20", text: "text-purple-500" }
+          { label: "Courses", value: stats.courses || 0, icon: BookOpen, color: "blue", gradient: "from-blue-500/30 to-indigo-500/30", text: "text-blue-600 dark:text-blue-400" },
+          { label: "Done", value: stats.completedCourses || 0, icon: Trophy, color: "green", gradient: "from-emerald-500/30 to-teal-500/30", text: "text-emerald-600 dark:text-emerald-400" },
+          { label: "Pinned", value: stats.pinnedCourses || 0, icon: Pin, color: "yellow", gradient: "from-orange-500/30 to-amber-500/30", text: "text-orange-600 dark:text-orange-400" },
+          { label: "Progress", value: `${courses.length > 0 ? Math.round(courses.reduce((sum, c) => sum + (c.progress || 0), 0) / courses.length) : 0}%`, icon: TrendingUp, color: "purple", gradient: "from-purple-500/30 to-fuchsia-500/30", text: "text-purple-600 dark:text-purple-400" }
         ].map((stat, i) => (
           <motion.div
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: i * 0.1 }}
             key={i}
-            className="bg-white dark:bg-gray-800 p-4 rounded-3xl shadow-sm border border-gray-100 dark:border-gray-700/50 flex flex-col items-center text-center"
+            className="relative bg-white/60 dark:bg-gray-800/60 backdrop-blur-xl p-2.5 rounded-sm border border-gray-100 dark:border-gray-700/50 overflow-hidden"
           >
-            <div className={`p-2 ${stat.bg} rounded-xl mb-2 ${stat.text}`}>
-              <stat.icon size={18} />
+            <div className={`absolute inset-0 bg-gradient-to-br ${stat.gradient} opacity-80`} />
+            <div className="relative z-10 flex items-center gap-2">
+              <div className={`p-1 ${stat.text}`}>
+                <stat.icon size={12} className="stroke-[2.5]" />
+              </div>
+              <div className="flex flex-row items-center gap-1.5 min-w-0">
+                <div className="text-xs font-black text-gray-900 dark:text-white leading-none truncate">{stat.value}</div>
+                <div className="text-[10px] font-bold text-gray-600 dark:text-gray-300 truncate">{stat.label}</div>
+              </div>
             </div>
-            <div className="text-xl font-black text-gray-900 dark:text-white leading-none mb-1">{stat.value}</div>
-            <div className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">{stat.label}</div>
           </motion.div>
         ))}
       </div>
@@ -631,113 +710,131 @@ export default function Library({ setActiveContent }) {
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="Search disciplines..."
-              className="w-full pl-12 pr-4 py-3 bg-white dark:bg-gray-800 border-none rounded-2xl shadow-sm focus:ring-2 focus:ring-indigo-500/20 outline-none transition-all placeholder:text-gray-400 placeholder:font-medium font-medium text-sm"
+              className="w-full pl-12 pr-4 py-3 bg-white dark:bg-gray-800 border-2 border-purple-100 dark:border-purple-900/30 rounded-2xl focus:ring-2 focus:ring-purple-500/20 outline-none transition-all placeholder:text-gray-400 placeholder:font-medium font-medium text-sm"
             />
           </div>
         </div>
 
-        <div className="space-y-4">
-          <div className="flex items-center justify-between px-1">
-            <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-500">Categories</h3>
-          </div>
-          <div className="flex gap-3 overflow-x-auto pb-4 -mx-4 px-4 scrollbar-hide no-scrollbar scroll-smooth">
-            {staticCategories.map((cat) => (
-              <button
-                key={cat.name}
-                onClick={() => handleCategoryClick(cat.name)}
-                className={`flex-shrink-0 flex items-center gap-2 px-5 py-3 rounded-2xl font-bold text-sm transition-all active:scale-95 ${selectedCategory === cat.name
-                  ? "bg-indigo-600 text-white shadow-lg shadow-indigo-500/20"
-                  : "bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700/50"
-                  }`}
-              >
-                <IconComponent name={cat.icon} size={16} />
-                <span>{cat.name}</span>
-              </button>
-            ))}
-          </div>
+        <div className="flex items-center justify-between">
+          <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-500">
+            Categories
+          </h3>
+          <Link
+            href="/explore"
+            className="text-[10px] font-bold text-indigo-600 uppercase tracking-widest hover:underline flex items-center gap-1"
+          >
+            Explore <ChevronRight size={12} />
+          </Link>
+        </div>
+        <div className="flex gap-3 overflow-x-auto pb-4 -mx-4 px-4 scrollbar-hide no-scrollbar scroll-smooth">
+          {staticCategories.map((cat) => (
+            <button
+              key={cat.name}
+              onClick={() => handleCategoryClick(cat.name)}
+              className={`flex-shrink-0 flex items-center gap-2 px-5 py-3 rounded-2xl font-bold text-sm transition-all active:scale-95 ${selectedCategory === cat.name
+                ? "bg-indigo-600 text-white shadow-lg shadow-indigo-500/20"
+                : "bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700/50"
+                }`}
+            >
+              <IconComponent name={cat.icon} size={16} />
+              <span>{cat.name}</span>
+            </button>
+          ))}
+          <Link
+            href="/explore"
+            className="flex-shrink-0 flex items-center gap-2 px-5 py-3 rounded-2xl font-bold text-sm transition-all active:scale-95 bg-white dark:bg-gray-800 text-indigo-600 hover:bg-gray-50 dark:hover:bg-gray-700/50"
+          >
+            <Grid size={16} />
+            <span>View More</span>
+          </Link>
+
         </div>
       </div>
 
       {/* Premium Spotlight */}
-      {premiumCourses.length > 0 && (
-        <div className="space-y-4">
-          <div className="flex items-center justify-between px-1">
-            <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-500">Premium Spotlight</h3>
-            <button onClick={() => setActiveContent("staff-picks")} className="text-[10px] font-bold text-indigo-600 uppercase tracking-widest hover:underline">View All</button>
-          </div>
-          <div className="flex gap-4 overflow-x-auto pb-4 -mx-4 px-4 scrollbar-hide no-scrollbar scroll-smooth">
-            {premiumCourses.map((course, idx) => (
-              <motion.div
-                key={course.id || idx}
-                whileHover={{ y: -4 }}
-                className="flex-shrink-0 w-[280px] bg-gradient-to-br from-indigo-600 to-purple-700 rounded-3xl p-5 text-white shadow-xl shadow-indigo-500/10 relative overflow-hidden group cursor-pointer"
-                onClick={() => router.push(`/dashboard?tab=staff-picks`)}
-              >
-                <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -translate-y-16 translate-x-16 blur-2xl group-hover:scale-110 transition-transform" />
-                <div className="relative z-10 flex flex-col h-full">
-                  <div className="flex justify-between items-start mb-4">
-                    <div className="p-2 bg-white/20 rounded-xl">
-                      <Crown size={18} className="text-yellow-300" />
+      {
+        premiumCourses.length > 0 && (
+          <div className="space-y-4">
+            <div className="flex items-center justify-between px-1">
+              <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-500">Premium Spotlight</h3>
+              <button onClick={() => setActiveContent("staff-picks")} className="text-[10px] font-bold text-indigo-600 uppercase tracking-widest hover:underline">View All</button>
+            </div>
+            <div className="flex gap-4 overflow-x-auto pb-4 -mx-4 px-4 scrollbar-hide no-scrollbar scroll-smooth">
+              {premiumCourses.map((course, idx) => (
+                <motion.div
+                  key={course.id || idx}
+                  whileHover={{ y: -4 }}
+                  className="flex-shrink-0 w-[280px] bg-gradient-to-br from-indigo-600 to-purple-700 rounded-3xl p-5 text-white shadow-xl shadow-indigo-500/10 relative overflow-hidden group cursor-pointer"
+                  onClick={() => handleGenerateCourse(course)}
+                >
+                  <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -translate-y-16 translate-x-16 blur-2xl group-hover:scale-110 transition-transform" />
+                  <div className="relative z-10 flex flex-col h-full">
+                    <div className="flex justify-between items-start mb-4">
+                      <div className="p-2 bg-white/20 rounded-xl">
+                        <Crown size={18} className="text-yellow-300" />
+                      </div>
+                      {course.badge && (
+                        <span className="px-2 py-1 bg-white/20 rounded-full text-[9px] font-black uppercase tracking-widest">{course.badge}</span>
+                      )}
                     </div>
-                    {course.badge && (
-                      <span className="px-2 py-1 bg-white/20 rounded-full text-[9px] font-black uppercase tracking-widest">{course.badge}</span>
-                    )}
-                  </div>
-                  <h4 className="font-black text-lg leading-tight mb-2 line-clamp-2">{course.title}</h4>
-                  <p className="text-white/70 text-xs font-medium line-clamp-2 mb-4">{course.description}</p>
-                  <div className="mt-auto flex items-center gap-3">
-                    <div className="flex -space-x-2">
-                      {[1, 2, 3].map(i => <div key={i} className="w-6 h-6 rounded-full bg-white/20 border-2 border-indigo-600 flex items-center justify-center text-[8px] font-bold">{i}</div>)}
+                    <h4 className="font-black text-lg leading-tight mb-2 line-clamp-2">{course.title}</h4>
+                    <p className="text-white/70 text-xs font-medium line-clamp-2 mb-4">{course.description}</p>
+                    <div className="mt-auto flex items-center gap-3">
+                      <div className="flex -space-x-2">
+                        {[1, 2, 3].map(i => <div key={i} className="w-6 h-6 rounded-full bg-white/20 border-2 border-indigo-600 flex items-center justify-center text-[8px] font-bold">{i}</div>)}
+                      </div>
+                      <span className="text-[10px] font-black uppercase tracking-widest opacity-80">Join 1k+ students</span>
                     </div>
-                    <span className="text-[10px] font-black uppercase tracking-widest opacity-80">Join 1k+ students</span>
                   </div>
-                </div>
-              </motion.div>
-            ))}
+                </motion.div>
+              ))}
+            </div>
           </div>
-        </div>
-      )}
+        )
+      }
 
       {/* Featured Discovery (Explore Courses) */}
-      {exploreCourses.length > 0 && (
-        <div className="space-y-4">
-          <div className="flex items-center justify-between px-1">
-            <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-500">Featured Discovery</h3>
-            <button onClick={() => setActiveContent("explore")} className="text-[10px] font-bold text-indigo-600 uppercase tracking-widest hover:underline">View All</button>
-          </div>
-          <div className="flex gap-4 overflow-x-auto pb-4 -mx-4 px-4 scrollbar-hide no-scrollbar scroll-smooth">
-            {exploreCourses.map((course, idx) => (
-              <motion.div
-                key={idx}
-                whileHover={{ y: -4 }}
-                className="flex-shrink-0 w-[260px] bg-white dark:bg-gray-800 rounded-3xl p-5 border border-gray-100 dark:border-gray-700/50 shadow-sm relative overflow-hidden group cursor-pointer"
-                onClick={() => setActiveContent("explore")}
-              >
-                <div className="flex items-center gap-3 mb-4">
-                  <div className="w-10 h-10 rounded-2xl bg-gray-50 dark:bg-gray-700/50 flex items-center justify-center text-gray-400 group-hover:text-indigo-500 transition-colors">
-                    <Sparkles size={20} />
+      {
+        exploreCourses.length > 0 && (
+          <div className="space-y-4">
+            <div className="flex items-center justify-between px-1">
+              <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-500">Featured Discovery</h3>
+              <button onClick={() => setActiveContent("explore")} className="text-[10px] font-bold text-indigo-600 uppercase tracking-widest hover:underline">View All</button>
+            </div>
+            <div className="flex gap-4 overflow-x-auto pb-4 -mx-4 px-4 scrollbar-hide no-scrollbar scroll-smooth">
+              {exploreCourses.map((course, idx) => (
+                <motion.div
+                  key={idx}
+                  whileHover={{ y: -4 }}
+                  className="flex-shrink-0 w-[260px] bg-white dark:bg-gray-800 rounded-3xl p-5 border border-gray-100 dark:border-gray-700/50 shadow-sm relative overflow-hidden group cursor-pointer"
+                  onClick={() => setActiveContent("explore")}
+                >
+                  <div className="flex items-center gap-3 mb-4">
+                    <div className="w-10 h-10 rounded-2xl bg-gray-50 dark:bg-gray-700/50 flex items-center justify-center text-gray-400 group-hover:text-indigo-500 transition-colors">
+                      <Sparkles size={20} />
+                    </div>
+                    <div>
+                      <h4 className="font-bold text-sm text-gray-900 dark:text-white line-clamp-1">{course.title}</h4>
+                      <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">{course.level || "Modern"}</p>
+                    </div>
                   </div>
-                  <div>
-                    <h4 className="font-bold text-sm text-gray-900 dark:text-white line-clamp-1">{course.title}</h4>
-                    <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">{course.level || "Modern"}</p>
+                  <p className="text-gray-500 dark:text-gray-400 text-xs line-clamp-2 mb-4 h-8">{course.description}</p>
+                  <div className="flex items-center justify-between border-t border-gray-50 dark:border-gray-700 pt-3">
+                    <span className="text-[10px] font-black text-indigo-600 uppercase tracking-widest">Discovery</span>
+                    <ChevronRight size={14} className="text-gray-300 group-hover:text-indigo-500 group-hover:translate-x-1 transition-all" />
                   </div>
-                </div>
-                <p className="text-gray-500 dark:text-gray-400 text-xs line-clamp-2 mb-4 h-8">{course.description}</p>
-                <div className="flex items-center justify-between border-t border-gray-50 dark:border-gray-700 pt-3">
-                  <span className="text-[10px] font-black text-indigo-600 uppercase tracking-widest">Discovery</span>
-                  <ChevronRight size={14} className="text-gray-300 group-hover:text-indigo-500 group-hover:translate-x-1 transition-all" />
-                </div>
-              </motion.div>
-            ))}
+                </motion.div>
+              ))}
+            </div>
           </div>
-        </div>
-      )}
+        )
+      }
 
       {/* Your Collection */}
       <div className="space-y-6">
         <div className="flex items-center justify-between px-1">
           <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-500">Your Collection</h3>
-          <div className="flex bg-gray-100 dark:bg-gray-800 rounded-xl p-1">
+          <div className="flex bg-gray-100 dark:bg-gray-800 rounded-xl p-1 opacity-0 pointer-events-none hidden">
             <button onClick={() => setViewMode("grid")} className={`p-1.5 rounded-lg transition-all ${viewMode === "grid" ? "bg-white dark:bg-gray-700 shadow-sm" : "text-gray-400"}`}><Grid size={14} /></button>
             <button onClick={() => setViewMode("list")} className={`p-1.5 rounded-lg transition-all ${viewMode === "list" ? "bg-white dark:bg-gray-700 shadow-sm" : "text-gray-400"}`}><List size={14} /></button>
           </div>
@@ -772,128 +869,154 @@ export default function Library({ setActiveContent }) {
             </button>
           </motion.div>
         ) : (
-          <AnimatePresence mode="wait">
-            <motion.div
-              key={viewMode + filterBy}
-              initial="hidden"
-              animate="visible"
-              variants={{
-                hidden: { opacity: 0 },
-                visible: { opacity: 1, transition: { staggerChildren: 0.1 } },
-              }}
-              className={
-                viewMode === "grid"
-                  ? "grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 sm:gap-6"
-                  : "space-y-4"
-              }
-            >
-              {[...courses].sort((a, b) => (pinnedCourses.has(b.id) ? 1 : 0) - (pinnedCourses.has(a.id) ? 1 : 0)).map((course, idx) => {
-                const colors = [
-                  "from-blue-500 to-indigo-600",
-                  "from-purple-500 to-fuchsia-600",
-                  "from-emerald-500 to-teal-600",
-                  "from-orange-500 to-amber-600",
-                  "from-rose-500 to-pink-600",
-                  "from-sky-500 to-blue-600"
-                ];
-                const cardColor = colors[idx % colors.length];
+          <motion.div
+            key={filterBy}
+            initial="hidden"
+            animate="visible"
+            variants={{
+              hidden: { opacity: 0 },
+              visible: { opacity: 1, transition: { staggerChildren: 0.1 } },
+            }}
+            className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-4 sm:gap-6 pb-20"
+          >
+            {[...courses].sort((a, b) => (pinnedCourses.has(b.id) ? 1 : 0) - (pinnedCourses.has(a.id) ? 1 : 0)).map((course, idx) => {
+              const colors = [
+                "from-blue-500 to-indigo-600",
+                "from-purple-500 to-fuchsia-600",
+                "from-emerald-500 to-teal-600",
+                "from-orange-500 to-amber-600",
+                "from-rose-500 to-pink-600",
+                "from-sky-500 to-blue-600"
+              ];
+              const cardColor = colors[idx % colors.length];
 
-                return (
-                  <motion.div
-                    key={course.id}
-                    variants={{
-                      hidden: { opacity: 0, y: 20 },
-                      visible: { opacity: 1, y: 0 },
-                    }}
-                    whileHover={{ y: -4 }}
-                    className="group relative cursor-pointer"
-                  >
-                    <div className="bg-white dark:bg-gray-800 rounded-3xl p-5 border border-gray-100 dark:border-gray-700/50 shadow-sm active:scale-[0.98] transition-all relative overflow-hidden h-full flex flex-col">
-                      <div className="flex items-start justify-between mb-4">
-                        <div className={`w-10 h-10 rounded-2xl bg-gradient-to-br ${cardColor} flex items-center justify-center text-white shadow-lg`}>
-                          <BookOpen size={20} />
-                        </div>
-                        <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                          <button onClick={(e) => { e.stopPropagation(); handlePin(course.id); }} className="p-2 hover:bg-gray-50 dark:hover:bg-gray-700 rounded-xl transition-colors">
-                            <Pin size={14} className={course.isPinned ? "fill-yellow-500 text-yellow-500" : "text-gray-400"} />
-                          </button>
-                          <button onClick={(e) => { e.stopPropagation(); handleDelete(course.id); }} className="p-2 hover:bg-red-50 dark:hover:bg-red-900/20 text-red-500 rounded-xl transition-colors">
-                            <Trash2 size={14} />
-                          </button>
-                        </div>
+              return (
+                <motion.div
+                  key={course.id}
+                  layoutId={course.id}
+                  onClick={() => {
+                    const safeTopic = course.topic
+                      .replace(/[^a-zA-Z0-9\s-]/g, "")
+                      .trim()
+                      .replace(/\s+/g, "-");
+                    router.push(
+                      `/learn/${encodeURIComponent(safeTopic)}?format=${course.format}&difficulty=${course.difficulty || "beginner"}&originalTopic=${encodeURIComponent(course.topic)}`
+                    );
+                  }}
+                  className={`w-full bg-gradient-to-br ${cardColor} rounded-2xl p-6 relative overflow-hidden group cursor-pointer transition-all hover:scale-[1.01] shadow-xl shadow-gray-200/20 dark:shadow-none`}
+                >
+                  <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -translate-y-16 translate-x-16 blur-2xl" />
+
+                  <div className="relative z-10 flex flex-col h-full">
+                    <div className="flex justify-between items-start mb-6">
+                      <div className="p-3 bg-white/20 backdrop-blur-md rounded-2xl border border-white/20">
+                        {course.format === "questions" ? <Grid size={20} className="text-white" /> :
+                          course.format === "flashcards" ? <Zap size={20} className="text-white" /> :
+                            <BookOpen size={20} className="text-white" />}
                       </div>
-
-                      <div className="flex-grow space-y-2 mb-4">
-                        <h4 className="font-black text-sm text-gray-900 dark:text-white line-clamp-2 leading-tight">{course.title}</h4>
-                        <div className="flex items-center gap-2">
-                          <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest">{course.difficulty || "Adaptive"}</span>
-                          <span className="w-1 h-1 bg-gray-300 rounded-full" />
-                          <span className="text-[10px] font-bold text-gray-400">{course.estimatedTime}</span>
-                        </div>
-                      </div>
-
-                      <div className="space-y-3">
-                        <div className="flex items-center justify-between text-[11px] font-bold text-gray-500">
-                          <span>{course.progress}% Learn</span>
-                        </div>
-
-                        <div className="h-1.5 w-full bg-gray-100 dark:bg-gray-700/50 rounded-full overflow-hidden">
-                          <motion.div
-                            initial={{ width: 0 }}
-                            animate={{ width: `${course.progress}%` }}
-                            className={`h-full bg-gradient-to-r ${cardColor} rounded-full`}
-                          />
-                        </div>
-
-                        <Link
-                          href={
-                            course.isGenerated
-                              ? `/learn/${encodeURIComponent(course.topic)}?format=${course.format}&difficulty=${course.difficulty}`
-                              : `/learn/${course.id}`
-                          }
-                          onClick={(e) => e.stopPropagation()}
-                          className="w-full py-3 bg-gray-50 dark:bg-gray-700/50 text-gray-900 dark:text-white rounded-2xl font-black text-[10px] uppercase tracking-[0.2em] flex items-center justify-center gap-2 hover:bg-indigo-600 hover:text-white transition-all group/btn"
+                      <div className="flex items-center gap-2">
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleDownload(course);
+                          }}
+                          className="p-2.5 rounded-full bg-white/10 text-white hover:bg-white/20 transition-all"
+                          title="Download PDF"
                         >
-                          <Play size={12} className="fill-current" />
-                          <span>{course.progress === 100 ? "Review" : "Continue"}</span>
-                        </Link>
+                          <Download size={14} />
+                        </button>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setCourseToDelete(course);
+                            setDeleteModalOpen(true);
+                          }}
+                          className="p-2.5 rounded-full bg-white/10 text-white hover:bg-red-500 transition-all"
+                          title="Delete Course"
+                        >
+                          <Trash2 size={14} />
+                        </button>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handlePin(course.id);
+                          }}
+                          className={`p-2.5 rounded-full transition-all ${course.isPinned ? "bg-white text-indigo-600" : "bg-white/10 text-white hover:bg-white/20"
+                            }`}
+                          title={course.isPinned ? "Unpin" : "Pin"}
+                        >
+                          <Pin size={14} className={course.isPinned ? "fill-current" : ""} />
+                        </button>
                       </div>
                     </div>
-                  </motion.div>
-                );
-              })}
-            </motion.div>
-          </AnimatePresence>
-        )}
 
-        {pagination.totalPages > 1 && (
-          <div className="flex justify-center gap-2 mt-10">
-            <button
-              onClick={() => handlePageChange(currentPage - 1)}
-              disabled={currentPage === 1}
-              className="p-2 border border-gray-200 dark:border-gray-700 rounded-xl disabled:opacity-30 transition-opacity"
-            >
-              <ChevronLeft className="w-5 h-5" />
-            </button>
-            {[...Array(pagination.totalPages)].map((_, i) => (
+                    <h4 className="font-black text-xl leading-snug mb-4 line-clamp-2 text-white">
+                      {course.title}
+                    </h4>
+
+                    <div className="space-y-5">
+                      <div className="flex items-center justify-between text-xs font-bold text-white/90">
+                        <span>{course.progress}% Completed</span>
+                        <span>{course.difficulty}</span>
+                      </div>
+
+                      <div className="h-2 w-full bg-white/20 rounded-full overflow-hidden">
+                        <div
+                          className="h-full bg-white rounded-full transition-all duration-700"
+                          style={{ width: `${course.progress}%` }}
+                        />
+                      </div>
+
+                      <button className="w-full mt-2 py-4 bg-white text-gray-900 rounded-2xl font-black text-[10px] uppercase tracking-[0.2em] hover:translate-y-[-2px] transition-all active:scale-95 shadow-none">
+                        Continue Learning
+                      </button>
+                    </div>
+                  </div>
+                </motion.div>
+              );
+            })}
+          </motion.div>
+        )
+        }
+
+        {
+          pagination.totalPages > 1 && (
+            <div className="flex justify-center gap-2 mt-10">
               <button
-                key={i + 1}
-                onClick={() => handlePageChange(i + 1)}
-                className={`w-9 h-9 rounded-xl font-bold text-sm transition-all ${currentPage === i + 1 ? "bg-indigo-600 text-white shadow-lg shadow-indigo-500/20" : "border border-gray-200 dark:border-gray-700 text-gray-500"}`}
+                onClick={() => handlePageChange(currentPage - 1)}
+                disabled={currentPage === 1}
+                className="p-2 border border-gray-200 dark:border-gray-700 rounded-xl disabled:opacity-30 transition-opacity"
               >
-                {i + 1}
+                <ChevronLeft className="w-5 h-5" />
               </button>
-            ))}
-            <button
-              onClick={() => handlePageChange(currentPage + 1)}
-              disabled={currentPage === pagination.totalPages}
-              className="p-2 border border-gray-200 dark:border-gray-700 rounded-xl disabled:opacity-30 transition-opacity"
-            >
-              <ChevronRight className="w-5 h-5" />
-            </button>
-          </div>
-        )}
-      </div>
+              {[...Array(pagination.totalPages)].map((_, i) => (
+                <button
+                  key={i + 1}
+                  onClick={() => handlePageChange(i + 1)}
+                  className={`w-9 h-9 rounded-xl font-bold text-sm transition-all ${currentPage === i + 1 ? "bg-indigo-600 text-white shadow-lg shadow-indigo-500/20" : "border border-gray-200 dark:border-gray-700 text-gray-500"}`}
+                >
+                  {i + 1}
+                </button>
+              ))}
+              <button
+                onClick={() => handlePageChange(currentPage + 1)}
+                disabled={currentPage === pagination.totalPages}
+                className="p-2 border border-gray-200 dark:border-gray-700 rounded-xl disabled:opacity-30 transition-opacity"
+              >
+                <ChevronRight className="w-5 h-5" />
+              </button>
+            </div>
+          )
+        }
+      </div >
+
+      {/* Floating Generate New Button */}
+      <button
+        onClick={() => router.push("/dashboard?tab=generate")}
+        className="fixed bottom-6 right-6 w-14 h-14 bg-gradient-to-r from-blue-600 to-purple-600 rounded-full flex items-center justify-center text-white shadow-xl shadow-blue-500/30 hover:scale-110 transition-transform z-50 md:hidden"
+      >
+        <Sparkles size={24} />
+      </button>
 
       <ConfirmModal
         isOpen={deleteModalOpen}
@@ -908,6 +1031,6 @@ export default function Library({ setActiveContent }) {
         cancelText="Keep"
         confirmColor="red"
       />
-    </div>
+    </div >
   );
 }
