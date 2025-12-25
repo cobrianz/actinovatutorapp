@@ -273,6 +273,7 @@ export function withCORS(options = {}) {
             "Access-Control-Allow-Headers": allowedHeaders.join(", "),
             "Access-Control-Allow-Credentials": "true",
             "Access-Control-Max-Age": "86400",
+            "X-Actinova-CORS": "active"
           },
         });
       }
