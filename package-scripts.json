@@ -1,5 +1,0 @@
-{
-    "scripts": {
-        "seed:plans": "node scripts/seed-plans.js"
-    }
-}
