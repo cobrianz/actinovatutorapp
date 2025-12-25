@@ -521,9 +521,11 @@ export function AuthProvider({ children }) {
         handleInactivityLogout,
       }}
     >
-      {children}
-      <ToasterClient />
-      <InactivityModal />
+      <>
+        {children}
+        <ToasterClient />
+        <InactivityModal />
+      </>
     </AuthContext.Provider>
   );
 }
