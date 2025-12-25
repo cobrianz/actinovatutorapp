@@ -5,6 +5,7 @@
   "scripts": {
     "dev": "next dev --webpack",
     "build": "next build --webpack",
+    "build:cap": "node scripts/build-capacitor.js",
     "start": "next start",
     "lint": "next lint",
     "prepare": "husky install",

@@ -13,6 +13,7 @@ let cacheTime = null;
 const CACHE_TTL = 24 * 60 * 60 * 1000; // 24 hours
 
 // Daily cleanup at 3 AM UTC
+export const dynamic = "force-dynamic";
 
 
 async function generateTrendingCourses(user = null) {
