@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import Test from "../../../../models/Quiz";
+import Test from "@/models/Quiz";
 import { connectToDatabase } from "@/lib/mongodb";
 import { ObjectId } from "mongodb";
 import { verifyToken } from "@/lib/auth";
