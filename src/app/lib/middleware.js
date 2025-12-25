@@ -244,6 +244,7 @@ export function withCORS(options = {}) {
   const allowedOrigins = options.origins || [
     process.env.CORS_ORIGIN || "http://localhost:3000",
     "https://actinovatutorapp.vercel.app",
+    "http://localhost",
     "https://localhost",
     "capacitor://localhost"
   ];
@@ -259,7 +260,18 @@ export function withCORS(options = {}) {
   return (handler) => {
     return async (req, context) => {
       const origin = req.headers?.get("origin");
-      const isAllowedOrigin = allowedOrigins.includes(origin);
+
+      // Flexible origin matching
+      let isAllowedOrigin = false;
+      if (origin) {
+        if (allowedOrigins.includes(origin)) {
+          isAllowedOrigin = true;
+        } else if (origin.startsWith('https://actinova') && origin.endsWith('.vercel.app')) {
+          isAllowedOrigin = true;
+        } else if (origin === 'http://localhost' || origin === 'https://localhost') {
+          isAllowedOrigin = true;
+        }
+      }
 
       // Handle preflight requests
       if (req.method === "OPTIONS") {

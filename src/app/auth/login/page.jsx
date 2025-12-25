@@ -29,6 +29,12 @@ export default function LoginPage() {
         // Check user status and redirect accordingly
         const user = result.user;
 
+        if (!user) {
+          console.error('[Actinova] Login success but user profile fetch returned null');
+          router.push("/dashboard"); // Fallback to dashboard
+          return;
+        }
+
         // If email not verified, redirect to verification
         if (!user.emailVerified && user.status === "pending") {
           localStorage.setItem("pendingVerificationEmail", email);
