@@ -243,6 +243,7 @@ export function withRateLimit(options = {}) {
 export function withCORS(options = {}) {
   const allowedOrigins = options.origins || [
     process.env.CORS_ORIGIN || "http://localhost:3000",
+    "https://actinovatutorapp.vercel.app",
     "https://localhost",
     "capacitor://localhost"
   ];
