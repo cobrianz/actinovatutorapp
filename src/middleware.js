@@ -18,7 +18,7 @@ export function middleware(request) {
   const isAuthPage = url.pathname.startsWith("/auth") || url.pathname === "/login" || url.pathname === "/signup";
 
   if (isProtected && !token) {
-    url.pathname = "/login";
+    url.pathname = "/auth/login";
     return NextResponse.redirect(url);
   }
 
