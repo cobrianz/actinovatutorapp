@@ -1274,7 +1274,7 @@ export default function Explore({ setHideNavs }) {
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="Search courses, topics, or instructors..."
-              className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full pl-10 pr-4 py-3 border-2 border-blue-100 dark:border-blue-900/30 rounded-2xl bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500/20 transition-all font-medium text-sm"
             />
           </div>
         </div>
@@ -1306,7 +1306,7 @@ export default function Explore({ setHideNavs }) {
         {!minimizedSections.has("categories") && (
           <>
             {loading ? (
-              <div className="flex gap-4 overflow-x-auto pb-4 -mx-4 px-4 scrollbar-hide no-scrollbar">
+              <div className="flex gap-4overflow-x-auto pb-4 -mx-4 my-4 px-4 scrollbar-hide no-scrollbar">
                 {[...Array(6)].map((_, index) => (
                   <div
                     key={index}
@@ -1346,7 +1346,7 @@ export default function Explore({ setHideNavs }) {
                     <div
                       key={index}
                       onClick={() => handleExploreCategory(category)}
-                      className={`flex-shrink-0 w-[240px] bg-gradient-to-br ${cardColor} rounded-3xl p-6 shadow-lg shadow-indigo-500/20 relative cursor-pointer group overflow-hidden`}
+                      className={`flex-shrink-0 w-[300px] bg-gradient-to-br ${cardColor} rounded-2xl p-6 shadow-lg shadow-indigo-500/10 relative cursor-pointer group overflow-hidden transition-all hover:scale-[1.02]`}
                     >
                       <div className="absolute top-0 right-0 w-24 h-24 bg-white/10 rounded-full -translate-y-10 translate-x-10 blur-xl group-hover:scale-110 transition-transform" />
 
@@ -1369,7 +1369,7 @@ export default function Explore({ setHideNavs }) {
                           ))}
                         </div>
 
-                        <button className="w-full bg-white/20 hover:bg-white/30 text-white py-2 px-4 rounded-xl transition-colors text-xs font-bold uppercase tracking-widest flex items-center justify-center space-x-2">
+                        <button className="w-full bg-white/20 hover:bg-white/30 text-white py-2 px-4 rounded-xl transition-colors text-xs font-bold  tracking-widest flex items-center justify-center space-x-2">
                           {exploringCategory === category.name ? (
                             <>
                               <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-white"></div>
@@ -1447,75 +1447,77 @@ export default function Explore({ setHideNavs }) {
               </div>
             ) : (
               <div className="flex flex-col gap-4">
-                {filteredTrendingTopics.map((topic, index) => (
-                  <div
-                    key={index}
-                    className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-6 hover:shadow-lg transition-shadow relative group cursor-pointer"
-                    onClick={() => handleGenerateCourse(topic)}
-                  >
-                    <div className="flex items-start justify-between mb-3">
-                      <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 flex-1">
-                        {topic.title}
-                      </h3>
-                      <div className="flex items-center space-x-2">
-                        <span
-                          className={`px-2 py-1 text-xs rounded-full ${topic.difficulty === "beginner"
-                            ? "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200"
-                            : topic.difficulty === "intermediate"
-                              ? "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200"
-                              : "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200"
-                            }`}
-                        >
-                          {topic.difficulty || "Beginner"}
-                        </span>
-                      </div>
-                    </div>
+                {filteredTrendingTopics.map((topic, index) => {
+                  const colors = [
+                    "from-blue-500/5 to-indigo-500/5 dark:from-blue-500/10 dark:to-indigo-500/10",
+                    "from-purple-500/5 to-fuchsia-500/5 dark:from-purple-500/10 dark:to-fuchsia-500/10",
+                    "from-emerald-500/5 to-teal-500/5 dark:from-emerald-500/10 dark:to-teal-500/10",
+                    "from-orange-500/5 to-amber-500/5 dark:from-orange-500/10 dark:to-amber-500/10"
+                  ];
+                  const cardBg = colors[index % colors.length];
+                  const accentGradients = [
+                    "from-blue-600 to-indigo-600",
+                    "from-purple-600 to-fuchsia-600",
+                    "from-emerald-600 to-teal-600",
+                    "from-orange-600 to-amber-600"
+                  ];
+                  const accent = accentGradients[index % accentGradients.length];
 
-                    <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
-                      {topic.description}
-                    </p>
-
-                    {topic.whyTrending && (
-                      <div className="mb-4 p-2 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
-                        <p className="text-xs text-blue-700 dark:text-blue-300">
-                          <span className="font-semibold">🔥 Trending:</span>{" "}
-                          {topic.whyTrending}
-                        </p>
-                      </div>
-                    )}
-
-                    <div className="flex items-center space-x-4 text-sm text-gray-500 dark:text-gray-400 mb-4">
-                      <div className="flex items-center space-x-1">
-                        <Clock className="w-4 h-4" />
-                        <span>{topic.estimatedDuration || "6 weeks"}</span>
-                      </div>
-                      <div className="flex items-center space-x-1">
-                        <BookOpen className="w-4 h-4" />
-                        <span>{topic.category || "General"}</span>
-                      </div>
-                    </div>
-
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center space-x-2 flex-wrap gap-2">
-                        {topic.tags?.slice(0, 3).map((tag, tagIndex) => (
+                  return (
+                    <div
+                      key={index}
+                      className={`bg-gradient-to-br ${cardBg} border border-gray-100 dark:border-gray-700/50 rounded-2xl p-6 hover:shadow-xl hover:shadow-gray-200/20 dark:hover:shadow-none transition-all relative group cursor-pointer border-l-4 ${index % 4 === 0 ? "border-l-blue-500" : index % 4 === 1 ? "border-l-purple-500" : index % 4 === 2 ? "border-l-emerald-500" : "border-l-orange-500"}`}
+                      onClick={() => handleGenerateCourse(topic)}
+                    >
+                      <div className="flex items-start flex-col gap-2 justify-between mb-3">
+                        <h3 className="text-lg font-black text-gray-900 dark:text-white flex-1">
+                          {topic.title}
+                        </h3>
+                        <div className="flex items-center space-x-2">
                           <span
-                            key={tagIndex}
-                            className="px-2 py-1 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 text-xs rounded-full"
+                            className={`px-3 py-1 text-[10px] font-black  tracking-wider ${topic.difficulty === "beginner"
+                              ? "bg-emerald-100 text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-300"
+                              : topic.difficulty === "intermediate"
+                                ? "bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300"
+                                : "bg-rose-100 text-rose-800 dark:bg-rose-900/40 dark:text-rose-300"
+                              }`}
                           >
-                            {tag}
+                            {topic.difficulty || "Beginner"}
                           </span>
-                        ))}
+                        </div>
                       </div>
-                    </div>
 
-                    <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
+                      <p className="text-sm text-gray-600 dark:text-gray-400 mb-4 font-medium leading-relaxed">
+                        {topic.description}
+                      </p>
+
+                      {topic.whyTrending && (
+                        <div className="mb-4 p-3 bg-white/60 dark:bg-gray-800/60 backdrop-blur-sm rounded-xl border border-gray-50 dark:border-gray-700/50">
+                          <p className="text-xs text-blue-700 dark:text-blue-300 font-bold flex flex-col items-start gap-1.5">
+                            <span className="px-4 py-1 bg-blue-100 dark:bg-blue-900/40 rounded-lg">🔥 Why Trending</span>
+                            {topic.whyTrending}
+                          </p>
+                        </div>
+                      )}
+
+                      <div className="flex items-center space-x-6 text-[11px] font-bold text-gray-500 dark:text-gray-400 mb-6">
+                        <div className="flex items-center space-x-1.5">
+                          <Clock className="w-4 h-4 text-gray-400" />
+                          <span>{topic.estimatedDuration || "6 weeks"}</span>
+                        </div>
+                        <div className="flex items-center space-x-1.5">
+                          <BookOpen className="w-4 h-4 text-gray-400" />
+                          <span>{topic.category || "General"}</span>
+                        </div>
+                      </div>
+
                       <button
                         onClick={(e) => {
                           e.stopPropagation();
                           handleGenerateCourse(topic);
                         }}
                         disabled={generatingCourse === topic.title}
-                        className="w-full bg-gradient-to-r from-blue-600 to-purple-600 text-white py-2 px-4 rounded-lg hover:from-blue-700 hover:to-purple-700 transition-colors text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center space-x-2"
+                        className={`w-full bg-gradient-to-r ${accent} text-white py-3 px-4 rounded-xl hover:scale-[1.01] active:scale-95 transition-all text-xs font-black tracking-[0.2em] disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center space-x-2 shadow-lg shadow-gray-200/20`}
                       >
                         {generatingCourse === topic.title ? (
                           <>
@@ -1530,8 +1532,8 @@ export default function Explore({ setHideNavs }) {
                         )}
                       </button>
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             )}
           </>

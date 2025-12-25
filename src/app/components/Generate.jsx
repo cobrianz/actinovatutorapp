@@ -81,7 +81,7 @@ export default function Generate({ setActiveContent }) {
   );
 
   const friendlyName =
-    !loading && user ? user.firstName || user.name || "" : "";
+    !loading && user ? user.firstName || user.name.split(" ")[0] || "" : "";
 
   const handleGenerate = async (retryCount = 0) => {
     if (!topic.trim()) return;
@@ -286,7 +286,7 @@ export default function Generate({ setActiveContent }) {
                   Math.min(e.target.scrollHeight, 200) + "px";
               }}
               placeholder="Describe what you want to learn in detail... (e.g., I want to learn Python programming from scratch, including data structures, web development with Django, and machine learning basics)"
-              className="w-full px-3 sm:px-4 py-3 sm:py-4 text-base sm:text-lg border border-gray-300 dark:border-gray-600 rounded-lg sm:rounded-xl bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-transparent transition-all duration-200 resize-none min-h-[100px] sm:min-h-[120px] max-h-[200px] shadow-sm hover:shadow-md"
+              className="w-full px-3 sm:px-4 py-3 sm:py-4 text-base sm:text-lg border border-blue-300 dark:border-gray-600 rounded-lg sm:rounded-xl bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-transparent transition-all duration-200 resize-none min-h-[100px] sm:min-h-[120px] max-h-[200px]"
               onKeyDown={(e) => {
                 if (e.key === "Enter" && e.ctrlKey) {
                   e.preventDefault();

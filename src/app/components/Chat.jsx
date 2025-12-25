@@ -405,7 +405,6 @@ export default function Chat({ topic: propTopic, setHideNavs }) {
               <Plus size={20} />
             </div>
             <div className="text-left">
-              <span className="block font-black uppercase tracking-widest text-xs opacity-80">Start Fresh</span>
               <span className="text-base font-bold">New Question</span>
             </div>
           </button>
