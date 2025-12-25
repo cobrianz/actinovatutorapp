@@ -30,8 +30,12 @@ export function getApiUrl(path) {
     // Ensure we don't have double slashes
     const cleanPath = path.startsWith('/') ? path : `/${path}`;
 
-    // If we are in development or NOT in Capacitor, we might still want to use relative paths 
-    // unless an absolute URL is explicitly provided.
-    // However, for consistency and to avoid cross-origin issues in Capacitor, we default to absolute.
+    // For local development in the browser, favor relative paths to use the local Next.js API.
+    // This avoids CORS issues and allows testing local API changes directly.
+    if (IS_BROWSER && !IS_CAPACITOR && process.env.NODE_ENV === 'development') {
+        return cleanPath;
+    }
+
+    // Default to absolute URL for Capacitor and Prod
     return `${API_BASE_URL}${cleanPath}`;
 }
