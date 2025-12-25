@@ -9,8 +9,8 @@
     "module": "ESNext",
     "moduleResolution": "Node",
     "resolveJsonModule": true,
-    "allowJs": false,
-    "strict": true,
+    "allowJs": true,
+    "strict": false,
     "noEmit": true,
     "esModuleInterop": true,
     "forceConsistentCasingInFileNames": true,
@@ -21,7 +21,7 @@
     "baseUrl": ".",
     "paths": {
       "@/*": [
-        "src/app/*"
+        "./src/app/*"
       ]
     }
   },
