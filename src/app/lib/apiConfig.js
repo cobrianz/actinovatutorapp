@@ -6,7 +6,19 @@
  */
 
 const IS_BROWSER = typeof window !== 'undefined';
-const IS_CAPACITOR = IS_BROWSER && window.origin.startsWith('capacitor://');
+const IS_CAPACITOR = IS_BROWSER && (
+    window.origin?.startsWith('capacitor://') ||
+    window.origin?.startsWith('http://localhost') ||
+    window.origin?.startsWith('https://localhost') ||
+    window.location.protocol === 'capacitor:' ||
+    !!window.Capacitor
+);
+
+console.log('[Actinova] Environment:', {
+    origin: IS_BROWSER ? window.origin : 'N/A',
+    isCapacitor: IS_CAPACITOR,
+    protocol: IS_BROWSER ? window.location.protocol : 'N/A'
+});
 
 // Replace with your actual production backend URL if NEXT_PUBLIC_API_URL is not set
 const DEFAULT_API_URL = 'https://actinovatutorapp.vercel.app';

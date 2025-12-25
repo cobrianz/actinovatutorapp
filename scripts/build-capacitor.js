@@ -3,14 +3,14 @@ const fs = require('fs');
 const path = require('path');
 
 const apiPath = path.join(__dirname, '../src/app/api');
-const hiddenApiPath = path.join(__dirname, '../src/app/.api-hidden');
+const tempApiPath = path.join(__dirname, '../temp_api_bak');
 
 console.log('🚀 Starting Capacitor-specific build...');
 
-// 1. Hide API folder
+// 1. Move API folder outside of src
 if (fs.existsSync(apiPath)) {
-    console.log('📦 Hiding API routes to allow static export...');
-    fs.renameSync(apiPath, hiddenApiPath);
+    console.log('📦 Moving API routes outside of src/app to allow static export...');
+    fs.renameSync(apiPath, tempApiPath);
 }
 
 try {
@@ -25,8 +25,8 @@ try {
     console.error('❌ Build failed:', error.message);
 } finally {
     // 3. Always restore API folder
-    if (fs.existsSync(hiddenApiPath)) {
+    if (fs.existsSync(tempApiPath)) {
         console.log('📂 Restoring API routes...');
-        fs.renameSync(hiddenApiPath, apiPath);
+        fs.renameSync(tempApiPath, apiPath);
     }
 }

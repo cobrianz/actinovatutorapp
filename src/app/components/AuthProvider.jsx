@@ -99,19 +99,26 @@ export function AuthProvider({ children }) {
     try {
       setError(null);
 
-      // Prefer server-sourced user via `/api/me` which reads secure cookies
+      console.log(`[Actinova] Fetching user from: ${getApiUrl("/api/me")}`);
       let res = await fetch(getApiUrl("/api/me"), {
         credentials: "include",
         headers: { "Content-Type": "application/json" },
       });
 
+      console.log(`[Actinova] /api/me status: ${res.status}`);
       let data = null;
 
       if (res.ok) {
-        data = await res.json();
-        setUser(data.user);
-        setLoading(false);
-        return data.user;
+        const text = await res.text();
+        try {
+          data = JSON.parse(text);
+          setUser(data.user);
+          setLoading(false);
+          return data.user;
+        } catch (e) {
+          console.error(`[Actinova] Failed to parse /api/me JSON. Response text: ${text.substring(0, 100)}...`);
+          throw new Error("Invalid server response format");
+        }
       }
 
       // If server returned 401, attempt token refresh then retry
