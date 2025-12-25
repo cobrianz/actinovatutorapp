@@ -1,8 +1,10 @@
 "use client";
 
 export default function GlobalError({ error, reset }) {
+    console.error("Global Error Caught:", error);
+
     return (
-        <html>
+        <html lang="en">
             <body>
                 <div style={{
                     display: 'flex',
@@ -10,24 +12,29 @@ export default function GlobalError({ error, reset }) {
                     flexDirection: 'column',
                     alignItems: 'center',
                     justifyContent: 'center',
-                    backgroundColor: '#f3f4f6',
-                    color: '#1f2937',
-                    fontFamily: 'system-ui, -apple-system, sans-serif'
+                    backgroundColor: '#f9fafb',
+                    color: '#111827',
+                    padding: '20px',
+                    textAlign: 'center',
+                    fontFamily: 'sans-serif'
                 }}>
-                    <h2 style={{ fontSize: '1.5rem', fontWeight: 'bold', marginBottom: '1rem' }}>Something went wrong!</h2>
+                    <h1 style={{ fontSize: '2rem', marginBottom: '1rem' }}>Application Error</h1>
+                    <p style={{ marginBottom: '2rem', color: '#4b5563' }}>
+                        A fatal error occurred. Please try refreshing the page.
+                    </p>
                     <button
-                        onClick={() => typeof reset === 'function' ? reset() : window.location.reload()}
+                        onClick={() => reset ? reset() : window.location.reload()}
                         style={{
-                            borderRadius: '0.375rem',
+                            padding: '10px 20px',
                             backgroundColor: '#2563eb',
-                            padding: '0.75rem 1.5rem',
                             color: 'white',
                             border: 'none',
-                            fontWeight: '600',
-                            cursor: 'pointer'
+                            borderRadius: '5px',
+                            cursor: 'pointer',
+                            fontSize: '1rem'
                         }}
                     >
-                        Try again
+                        Try Again
                     </button>
                 </div>
             </body>
