@@ -14,10 +14,17 @@ import ProfileContent from "./ProfileContent";
 import { useAuth } from "./AuthProvider";
 import { toast } from "sonner";
 
-export default function DashboardContent() {
+export default function DashboardContent({ setHideNavs }) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { user, loading, fetchUser } = useAuth();
+
+  const activeContent = searchParams.get("tab") || "generate";
+
+  // Reset hideNavs when changing tabs
+  useEffect(() => {
+    if (setHideNavs) setHideNavs(false);
+  }, [activeContent, setHideNavs]);
 
   // Handle payment success/failure messages
   useEffect(() => {
@@ -43,7 +50,6 @@ export default function DashboardContent() {
     }
   }, [searchParams, router, fetchUser]);
 
-  const activeContent = searchParams.get("tab") || "generate";
   const isChat = activeContent === 'chat';
 
   const setActiveContent = (tab) => {
@@ -99,6 +105,7 @@ export default function DashboardContent() {
               <ContentComponent
                 key={activeContent}
                 setActiveContent={setActiveContent}
+                setHideNavs={setHideNavs}
               />
             ) : (
               <div className="text-center text-gray-600 dark:text-gray-400">

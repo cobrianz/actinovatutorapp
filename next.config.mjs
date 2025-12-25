@@ -12,7 +12,8 @@ const nextConfig = {
 
     return config;
   },
-  serverExternalPackages: ['@react-pdf/renderer', 'puppeteer'],
+  serverExternalPackages: ['puppeteer'],
+  transpilePackages: ['@react-pdf/renderer'],
 };
 
 export default nextConfig;

@@ -16,12 +16,18 @@ import {
 import { toast } from "sonner";
 import QuizInterface from "./QuizInterface";
 
-const TestYourself = () => {
+const TestYourself = ({ setHideNavs }) => {
   const [quizzes, setQuizzes] = useState([]);
   const [loading, setLoading] = useState(true);
   const [performanceStats, setPerformanceStats] = useState(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [selectedQuiz, setSelectedQuiz] = useState(null);
+
+  useEffect(() => {
+    if (setHideNavs) {
+      setHideNavs(!!selectedQuiz);
+    }
+  }, [selectedQuiz, setHideNavs]);
   const [loaded, setLoaded] = useState(false);
   const itemsPerPage = 6;
   const [filterDifficulty, setFilterDifficulty] = useState("all");

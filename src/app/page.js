@@ -1,4 +1,5 @@
 "use client";
+export const dynamic = "force-dynamic";
 
 import { useState, useEffect } from "react";
 import SplashScreen from "./components/SplashScreen";
@@ -8,10 +9,14 @@ import { useRouter } from "next/navigation";
 
 export default function Home() {
   const [showSplash, setShowSplash] = useState(true);
+  const [onboardingSeen, setOnboardingSeen] = useState(false);
   const { user, loading } = useAuth();
   const router = useRouter();
 
   useEffect(() => {
+    const seen = localStorage.getItem('onboarding_seen') === 'true';
+    setOnboardingSeen(seen);
+
     // Increment visitor counter on page load
     fetch("/api/visitor-counter").catch(() => {
       // Ignore errors for visitor counter in production
@@ -19,6 +24,8 @@ export default function Home() {
 
     if (!loading && user) {
       router.push("/dashboard");
+    } else if (!loading && !user && seen) {
+      router.push("/auth/signup");
     }
   }, [user, loading, router]);
 
@@ -34,7 +41,8 @@ export default function Home() {
     );
   }
 
-  // If user is logged in, the useEffect will handle redirection.
+  // If user is logged in or has seen onboarding, the useEffect will handle redirection.
   // Otherwise, show onboarding.
+  if (onboardingSeen) return null; // Let useEffect handle redirect
   return <OnboardingSlider />;
 }

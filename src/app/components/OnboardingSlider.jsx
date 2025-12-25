@@ -33,12 +33,9 @@ export default function OnboardingSlider() {
         if (currentScreen < onboardingScreens.length - 1) {
             setCurrentScreen(currentScreen + 1);
         } else {
+            localStorage.setItem('onboarding_seen', 'true');
             router.push("/auth/signup");
         }
-    };
-
-    const handleSkip = () => {
-        router.push("/auth/signup");
     };
 
     return (
@@ -73,21 +70,13 @@ export default function OnboardingSlider() {
             </div>
 
             {/* Bottom Buttons */}
-            <div className="w-full flex flex-col gap-4 mb-8">
+            <div className="w-full flex flex-col gap-4 mb-12">
                 <button
                     onClick={handleNext}
-                    className="w-full py-4 bg-indigo-600 hover:bg-indigo-700 text-white rounded-2xl font-semibold text-lg shadow-lg shadow-indigo-200 dark:shadow-none transition-all active:scale-95"
+                    className="w-full py-4 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white rounded-2xl font-bold text-lg shadow-xl shadow-blue-500/20 dark:shadow-none transition-all active:scale-95"
                 >
                     {currentScreen === onboardingScreens.length - 1 ? "Get Started" : "Next"}
                 </button>
-                {currentScreen < onboardingScreens.length - 1 && (
-                    <button
-                        onClick={handleSkip}
-                        className="w-full py-4 text-gray-500 dark:text-gray-400 font-medium hover:text-gray-700 transition-colors"
-                    >
-                        Skip
-                    </button>
-                )}
             </div>
         </div>
     );

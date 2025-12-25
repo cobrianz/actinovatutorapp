@@ -11,23 +11,25 @@ export default function DashboardLayout({
   activeContent = "generate",
   setActiveContent,
 }) {
+  const [hideNavs, setHideNavs] = useState(false);
+
   return (
     <ProtectedRoute>
       <ThemeProvider>
         <div className="h-screen bg-gray-50 dark:bg-gray-900 flex flex-col">
-          {/* Top Navbar with Explore, Theme, Account */}
-          <Navbar setActiveContent={setActiveContent} />
+          {/* Top Navbar */}
+          {!hideNavs && <Navbar setActiveContent={setActiveContent} />}
 
-          <div className="flex flex-1 overflow-hidden pb-[80px]">
+          <div className={`flex flex-1 overflow-hidden ${!hideNavs ? 'pb-[80px]' : ''}`}>
             <main className="flex-1 overflow-auto">
               {React.Children.map(children, (child) =>
-                React.cloneElement(child, { sidebarOpen: false })
+                React.cloneElement(child, { sidebarOpen: false, setHideNavs })
               )}
             </main>
           </div>
 
-          {/* Bottom Navigation for Mobile App Feel */}
-          <BottomNav activeContent={activeContent} setActiveContent={setActiveContent} />
+          {/* Bottom Navigation */}
+          {!hideNavs && <BottomNav activeContent={activeContent} setActiveContent={setActiveContent} />}
         </div>
       </ThemeProvider>
     </ProtectedRoute>

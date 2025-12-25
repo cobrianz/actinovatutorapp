@@ -14,11 +14,17 @@ import {
   Eye,
 } from "lucide-react";
 
-export default function FlashcardsLibrary({ setActiveContent }) {
+export default function FlashcardsLibrary({ setActiveContent, setHideNavs }) {
   const [flashcards, setFlashcards] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selectedFlashcard, setSelectedFlashcard] = useState(null);
   const [showFlashcards, setShowFlashcards] = useState(false);
+
+  useEffect(() => {
+    if (setHideNavs) {
+      setHideNavs(showFlashcards && !!selectedFlashcard);
+    }
+  }, [showFlashcards, selectedFlashcard, setHideNavs]);
   const [loadingFlashcards, setLoadingFlashcards] = useState(new Set());
   const [transitioning, setTransitioning] = useState(false);
   const [bookmarkedFlashcards, setBookmarkedFlashcards] = useState(new Set());

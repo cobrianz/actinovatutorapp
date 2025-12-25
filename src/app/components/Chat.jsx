@@ -67,21 +67,28 @@ const renderFormattedContent = (content) => {
   return html;
 };
 
-export default function Chat({ topic: propTopic }) {
+export default function Chat({ topic: propTopic, setHideNavs }) {
   const searchParams = useSearchParams();
   const urlTopic = searchParams.get("topic");
   const { theme } = useTheme();
+  const { user, authLoading } = useEnsureSession();
 
   const [topic, setTopic] = useState(() => {
     if (propTopic) return propTopic;
     if (urlTopic) return decodeURIComponent(urlTopic);
     return null;
   });
+
+  const [view, setView] = useState(topic ? "chat" : "history");
+
+  useEffect(() => {
+    if (setHideNavs) {
+      setHideNavs(view === 'chat');
+    }
+  }, [view, setHideNavs]);
   const [topicInput, setTopicInput] = useState("");
   const [showTopicInput, setShowTopicInput] = useState(!propTopic && !urlTopic);
   const messagesEndRef = useRef(null);
-  const { user, authLoading } = useEnsureSession();
-
   if (authLoading) return <ActinovaLoader />;
   if (!user) return null;
 
@@ -379,12 +386,6 @@ export default function Chat({ topic: propTopic }) {
     }
   };
 
-  const [view, setView] = useState(topic ? "chat" : "history");
-
-  useEffect(() => {
-    if (topic) setView("chat");
-    else setView("history");
-  }, [topic]);
 
   return (
     <div className={`flex flex-col w-full h-full overflow-hidden relative ${theme === 'dark' ? 'bg-gray-950 text-white' : 'bg-white text-gray-900'}`}>
@@ -462,8 +463,12 @@ export default function Chat({ topic: propTopic }) {
               <button onClick={() => setView("history")} className="p-2 -ml-2 text-gray-500 hover:text-gray-900 dark:hover:text-white rounded-lg">
                 <ChevronLeft className="w-6 h-6" />
               </button>
-              <div className="w-10 h-10 bg-indigo-100 dark:bg-indigo-900/50 rounded-full flex items-center justify-center mx-3 shadow-inner">
-                <Bot className="w-6 h-6 text-indigo-600 dark:text-indigo-400" />
+              <div className="w-10 h-10 bg-indigo-100 dark:bg-indigo-900/50 rounded-full flex items-center justify-center mx-3 shadow-inner overflow-hidden">
+                {isPro && user?.image ? (
+                  <img src={user.image} alt="Avatar" className="w-full h-full object-cover" />
+                ) : (
+                  <Bot className="w-6 h-6 text-indigo-600 dark:text-indigo-400" />
+                )}
               </div>
               <div>
                 <h3 className="font-bold text-sm text-gray-900 dark:text-gray-100 tracking-tight truncate max-w-[150px]">{topic || "AI Tutor"}</h3>
@@ -544,9 +549,9 @@ export default function Chat({ topic: propTopic }) {
           </div>
 
           {/* Input Area - Beautiful and Focused */}
-          <div className="p-4 bg-transparent z-10 absolute bottom-0 w-full">
-            <div className="max-w-2xl mx-auto flex items-end gap-2 px-2">
-              <div className="flex-1 flex items-end bg-white/95 dark:bg-[#1c2c33]/95 backdrop-blur-md rounded-[2rem] shadow-2xl border border-gray-100 dark:border-gray-800 px-4 py-2">
+          <div className="p-4 bg-white/80 dark:bg-gray-950/80 backdrop-blur-md z-20 fixed bottom-0 w-full left-0 border-t border-gray-100 dark:border-gray-800">
+            <div className="max-w-2xl mx-auto flex items-end gap-2">
+              <div className="flex-1 flex items-end bg-gray-50 dark:bg-[#1c2c33] rounded-[1.5rem] border border-gray-200 dark:border-gray-700 px-4 py-1.5 shadow-inner">
                 <textarea
                   value={input}
                   onChange={(e) => setInput(e.target.value)}
@@ -557,7 +562,7 @@ export default function Chat({ topic: propTopic }) {
                     }
                   }}
                   placeholder="Type a question..."
-                  className="w-full bg-transparent border-none focus:ring-0 resize-none max-h-32 py-2.5 text-sm text-gray-900 dark:text-white font-medium"
+                  className="w-full bg-transparent border-none focus:ring-0 resize-none max-h-32 py-2 text-sm text-gray-900 dark:text-white font-medium"
                   rows={1}
                   onInput={(e) => {
                     e.target.style.height = 'auto';
@@ -568,12 +573,12 @@ export default function Chat({ topic: propTopic }) {
               <button
                 onClick={handleSend}
                 disabled={loading || !input.trim()}
-                className={`w-12 h-12 rounded-full flex items-center justify-center transition-all shadow-lg active:scale-90 ${input.trim()
-                  ? "bg-indigo-600 text-white shadow-indigo-500/30"
-                  : "bg-gray-300 dark:bg-gray-700 text-white opacity-50"
+                className={`w-11 h-11 rounded-full flex items-center justify-center transition-all shadow-md active:scale-90 ${input.trim()
+                  ? "bg-indigo-600 text-white"
+                  : "bg-gray-200 dark:bg-gray-800 text-gray-400"
                   }`}
               >
-                <Send className="w-5 h-5 -mr-0.5 mt-0.5" />
+                <Send className="w-5 h-5" />
               </button>
             </div>
           </div>

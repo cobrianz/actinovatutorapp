@@ -34,10 +34,15 @@ import {
   Zap,
   Receipt,
   LogOut,
+  TrendingUp,
+  Target as TargetIcon
 } from "lucide-react";
 import { useAuth } from "./AuthProvider";
 import { useTheme } from "./ThemeProvider";
 import { toast } from "sonner";
+import dynamic from "next/dynamic";
+
+const BillingHistory = dynamic(() => import("./BillingHistory"), { ssr: false });
 
 const defaultSettings = {
   difficulty: "adaptive",
@@ -319,11 +324,19 @@ export default function ProfileContent() {
     <div className={`min-h-screen pb-24 ${theme === 'dark' ? "bg-gray-950 text-white" : "bg-gray-50 text-gray-900"}`}>
       <main className="max-w-2xl mx-auto px-4 py-8">
 
-        {/* Profile Card */}
-        <div className={`mb-6 p-6 rounded-3xl overflow-hidden relative shadow-sm ${theme === 'dark' ? "bg-gray-900 border border-gray-800" : "bg-white border border-gray-100"}`}>
-          <div className="flex flex-col items-center text-center">
-            <div className={`w-24 h-24 rounded-3xl flex items-center justify-center text-3xl font-bold mb-4 shadow-xl ${theme === 'dark' ? "bg-indigo-600 text-white" : "bg-indigo-100 text-indigo-600"}`}>
-              {profileData?.user?.firstName?.[0] || user?.name?.[0] || "U"}
+        {/* User Stats Card - Mobile First */}
+        <div className={`p-6 rounded-[2.5rem] shadow-2xl relative overflow-hidden transition-all duration-500 hover:shadow-indigo-500/20 ${theme === 'dark' ? "bg-gray-900 border border-gray-800" : "bg-white border border-gray-100"}`}>
+          <div className="flex flex-col items-center text-center space-y-4">
+            <div className={`w-24 h-24 rounded-[2rem] flex items-center justify-center p-1 shadow-xl transform rotate-3 transition-transform hover:rotate-0 ${theme === 'dark' ? "bg-indigo-900/40" : "bg-indigo-50"}`}>
+              <div className={`w-full h-full rounded-[1.8rem] flex items-center justify-center text-white text-3xl font-black bg-gradient-to-br from-indigo-600 to-purple-600 overflow-hidden`}>
+                {profileData?.usage?.isPremium && user?.image ? (
+                  <img src={user.image} alt="Avatar" className="w-full h-full object-cover" />
+                ) : profileData?.usage?.isPremium ? (
+                  <Crown size={36} className="text-white drop-shadow-lg" />
+                ) : (
+                  <User size={36} className="text-white" />
+                )}
+              </div>
             </div>
             <h1 className="text-2xl font-black mb-1">
               {profileData?.user?.firstName ? `${profileData.user.firstName} ${profileData.user.lastName}` : (user?.name || "Actinova User")}
@@ -495,10 +508,10 @@ export default function ProfileContent() {
           )}
 
           {activeTab === "billing" && (
-            <div className="space-y-6 text-center">
-              <h2 className="text-lg font-black uppercase tracking-widest mb-4">Subscription</h2>
-              <div className={`p-8 rounded-3xl relative overflow-hidden bg-indigo-600 text-white shadow-xl`}>
-                <div className="relative z-10">
+            <div className="space-y-6">
+              <h2 className="text-lg font-black uppercase tracking-widest mb-4 text-center">Subscription</h2>
+              <div className={`p-8 rounded-3xl relative overflow-hidden bg-indigo-600 text-white shadow-xl mb-8`}>
+                <div className="relative z-10 text-center">
                   <span className="px-3 py-1 bg-white/20 rounded-full text-[10px] font-bold uppercase tracking-widest">Active Plan</span>
                   <h3 className="text-3xl font-black mt-4 uppercase">
                     {profileData?.usage?.isPremium ? "Pro Elite" : "Free Starter"}
@@ -512,6 +525,14 @@ export default function ProfileContent() {
                     </button>
                   )}
                 </div>
+              </div>
+
+              <div className="space-y-4">
+                <h3 className="text-sm font-black uppercase tracking-widest text-gray-500 ml-1">Billing History</h3>
+                <BillingHistory
+                  billingHistory={profileData?.user?.billingHistory}
+                  theme={theme}
+                />
               </div>
             </div>
           )}
