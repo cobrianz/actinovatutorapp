@@ -13,6 +13,15 @@ import { useRouter, usePathname } from "next/navigation";
 import dynamic from "next/dynamic";
 import { getApiUrl } from "../lib/apiConfig";
 
+// Detect Capacitor environment
+const IS_CAPACITOR = typeof window !== 'undefined' && (
+  window.Capacitor ||
+  window.location.protocol === 'capacitor:' ||
+  window.origin?.startsWith('capacitor://') ||
+  window.origin?.startsWith('http://localhost') ||
+  window.origin?.startsWith('https://localhost')
+);
+
 const InactivityModal = dynamic(() => import("./InactivityModal"), { ssr: false });
 const ToasterClient = dynamic(() => import("./ToasterClient"), { ssr: false });
 
@@ -100,9 +109,19 @@ export function AuthProvider({ children }) {
       setError(null);
 
       console.log(`[Actinova] Fetching user from: ${getApiUrl("/api/me")}`);
+
+      // Build headers with token for Capacitor
+      const headers = { "Content-Type": "application/json" };
+      if (IS_CAPACITOR) {
+        const token = localStorage.getItem('auth_token');
+        if (token) {
+          headers['Authorization'] = `Bearer ${token}`;
+        }
+      }
+
       let res = await fetch(getApiUrl("/api/me"), {
-        credentials: "include",
-        headers: { "Content-Type": "application/json" },
+        credentials: IS_CAPACITOR ? "omit" : "include",
+        headers,
       });
 
       console.log(`[Actinova] /api/me status: ${res.status}`);
@@ -345,7 +364,7 @@ export function AuthProvider({ children }) {
         headers: {
           "Content-Type": "application/json",
         },
-        credentials: "include",
+        credentials: IS_CAPACITOR ? "omit" : "include",
         body: JSON.stringify(credentials),
       });
 
@@ -366,6 +385,13 @@ export function AuthProvider({ children }) {
       }
 
       console.log('[Actinova] Login successful, fetching user profile...');
+
+      // For Capacitor, store the token from response
+      if (IS_CAPACITOR && data.token) {
+        localStorage.setItem('auth_token', data.token);
+        console.log('[Actinova] Token stored in localStorage for Capacitor');
+      }
+
       // Sync client state from server-side secure cookie via `/api/me`
       const freshUser = await fetchUser();
       return { success: true, user: freshUser };

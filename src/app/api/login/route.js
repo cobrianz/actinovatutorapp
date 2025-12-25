@@ -271,6 +271,7 @@ async function loginHandler(request) {
     return NextResponse.json({
       success: true,
       message: "Welcome back!",
+      token: accessToken, // Include token for mobile app
       user: {
         ...safeUser,
         usage: usageData,
