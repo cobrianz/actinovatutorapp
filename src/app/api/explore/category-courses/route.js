@@ -234,13 +234,14 @@ Return ONLY a clean JSON array. No markdown. No explanations. Make them feel rea
       }));
     }
 
-    // 4. Cache for 24 hours
+    // 4. Cache for 24 hours with userId
     await col.deleteMany({ category });
     await col.insertOne({
       category,
       courses: courses.slice(0, COURSES_PER_CATEGORY),
       createdAt: new Date(),
       generatedBy: "gpt-4o-mini",
+      userId: new ObjectId(userId), // Track who generated these courses
     });
 
     return NextResponse.json({
