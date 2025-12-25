@@ -1,41 +1,82 @@
-// src/app/lib/planLimits.js
-// Centralized plan limits and enforcement
+/**
+ * Subscription Plan Limits for Actinova AI Tutor
+ * Centralized configuration for Free, Premium (Pro), and Enterprise plans
+ */
+
+export const PLAN_LIMITS = {
+    free: {
+        courses: 3,
+        flashcards: 5,
+        quizzes: 3,
+        aiResponses: 3, // per day
+        modules: 3,
+        lessonsPerModule: 3,
+        totalLessons: 9,
+        cards: 8,
+        monthlyGenerations: 3,
+    },
+    premium: {
+        courses: 50,
+        flashcards: 100,
+        quizzes: 50,
+        aiResponses: -1, // unlimited
+        modules: 20,
+        lessonsPerModule: 5,
+        totalLessons: 100,
+        cards: 40,
+        monthlyGenerations: 50,
+    },
+    enterprise: {
+        courses: -1, // unlimited
+        flashcards: -1,
+        quizzes: -1,
+        aiResponses: -1,
+        modules: 30,
+        lessonsPerModule: 8,
+        totalLessons: 240,
+        cards: 100,
+        monthlyGenerations: -1,
+    },
+};
 
 /**
- * Get user's current plan limits
- * @param {Object} user - User object with subscription info
- * @returns {Object} Plan limits
+ * Get the plan name for a user
+ * @param {Object} user - User object from database
+ * @returns {string} - 'free', 'premium', or 'enterprise'
  */
-export function getUserPlanLimits(user) {
-    if (!user) {
-        return getBasicLimits();
-    }
+export function getUserPlanName(user) {
+    if (!user) return 'free';
 
-    const subscription = user.subscription;
-    const isPremium = user.isPremium || (subscription?.plan === 'pro' && subscription?.status === 'active');
-    const isEnterprise = subscription?.plan === 'enterprise' && subscription?.status === 'active';
+    const hasActiveSubscription = user.subscription?.status === 'active';
+    const plan = user.subscription?.plan;
 
-    if (isEnterprise) {
-        return getEnterpriseLimits();
-    }
+    if (hasActiveSubscription && plan === 'enterprise') return 'enterprise';
+    if (hasActiveSubscription && plan === 'pro') return 'premium';
+    if (user.isPremium) return 'premium';
 
-    if (isPremium) {
-        return getPremiumLimits();
-    }
-
-    return getBasicLimits();
+    return 'free';
 }
 
 /**
- * Check if user has reached their limit for a specific feature
- * @param {Object} user - User object
- * @param {string} feature - Feature name (courses, quizzes, flashcards)
- * @param {number} currentUsage - Current usage count
- * @returns {Object} { allowed: boolean, limit: number, remaining: number }
+ * Get plan limits for a user
+ * @param {Object} user - User object from database
+ * @returns {Object} - Plan limits object
  */
-export function checkLimit(user, feature, currentUsage) {
+export function getUserPlanLimits(user) {
+    const planName = getUserPlanName(user);
+    return PLAN_LIMITS[planName] || PLAN_LIMITS.free;
+}
+
+/**
+ * Check if user has reached a specific limit
+ * @param {Object} user - User object from database
+ * @param {string} resource - Resource type ('courses', 'flashcards', 'quizzes', 'aiResponses')
+ * @param {number} currentUsage - Current usage count
+ * @returns {Object} - { allowed: boolean, limit: number, remaining: number }
+ */
+export function checkLimit(user, resource, currentUsage) {
     const limits = getUserPlanLimits(user);
-    const limit = limits[feature];
+    const limit = limits[resource];
 
     // -1 means unlimited
     if (limit === -1) {
@@ -43,85 +84,35 @@ export function checkLimit(user, feature, currentUsage) {
             allowed: true,
             limit: -1,
             remaining: -1,
-            isUnlimited: true,
         };
     }
 
-    const remaining = Math.max(0, limit - currentUsage);
     const allowed = currentUsage < limit;
+    const remaining = Math.max(0, limit - currentUsage);
 
     return {
         allowed,
         limit,
         remaining,
-        isUnlimited: false,
     };
 }
 
 /**
- * Get plan name from user
- * @param {Object} user - User object
- * @returns {string} Plan name
+ * Check if a feature is available for a user's plan
+ * @param {Object} user - User object from database
+ * @param {string} feature - Feature name
+ * @returns {boolean}
  */
-export function getUserPlanName(user) {
-    if (!user) return 'Basic';
+export function hasFeature(user, feature) {
+    const planName = getUserPlanName(user);
 
-    const subscription = user.subscription;
-    const isEnterprise = subscription?.plan === 'enterprise' && subscription?.status === 'active';
-    const isPremium = user.isPremium || (subscription?.plan === 'pro' && subscription?.status === 'active');
-
-    if (isEnterprise) return 'Enterprise';
-    if (isPremium) return 'Premium';
-    return 'Basic';
-}
-
-// Plan limit definitions
-function getBasicLimits() {
-    return {
-        courses: 2,
-        quizzes: 1,
-        flashcards: 8,
-        modules: 3,
-        lessonsPerModule: 3,
-        totalLessons: 9,
-        difficulties: ['beginner'],
-        aiResponses: 3, // per day
+    const features = {
+        free: ['basic_courses', 'limited_flashcards', 'limited_quizzes'],
+        premium: ['unlimited_ai', 'pdf_download', 'delete_courses', 'advanced_difficulty', 'priority_support'],
+        enterprise: ['unlimited_everything', 'api_access', 'custom_branding', 'dedicated_support'],
     };
-}
 
-function getPremiumLimits() {
-    return {
-        courses: 15,
-        quizzes: 20,
-        flashcards: 40,
-        modules: 20,
-        lessonsPerModule: 5,
-        totalLessons: 100,
-        difficulties: ['beginner', 'intermediate', 'advanced'],
-        aiResponses: -1, // unlimited
-    };
-}
-
-function getEnterpriseLimits() {
-    return {
-        courses: -1, // unlimited
-        quizzes: -1, // unlimited
-        flashcards: -1, // unlimited
-        modules: 20, // Match Premium structure cap for generation
-        lessonsPerModule: 5, // Match Premium
-        totalLessons: 100, // Match Premium
-        difficulties: ['beginner', 'intermediate', 'advanced'],
-        aiResponses: -1, // unlimited
-    };
-}
-
-/**
- * Format limit for display
- * @param {number} limit - Limit value (-1 for unlimited)
- * @returns {string} Formatted limit
- */
-export function formatLimit(limit) {
-    return limit === -1 ? 'Unlimited' : limit.toString();
+    return features[planName]?.includes(feature) || false;
 }
 
 /**
@@ -132,5 +123,15 @@ export function formatLimit(limit) {
  */
 export function canAccessDifficulty(user, difficulty) {
     const limits = getUserPlanLimits(user);
-    return limits.difficulties.includes(difficulty.toLowerCase());
+    const difficulties = limits.difficulties || (getUserPlanName(user) === 'free' ? ['beginner'] : ['beginner', 'intermediate', 'advanced']);
+    return difficulties.includes(difficulty.toLowerCase());
+}
+
+/**
+ * Format limit for display
+ * @param {number} limit - Limit value (-1 for unlimited)
+ * @returns {string} Formatted limit
+ */
+export function formatLimit(limit) {
+    return limit === -1 ? 'Unlimited' : limit.toString();
 }
