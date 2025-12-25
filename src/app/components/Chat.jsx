@@ -17,6 +17,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "./AuthProvider";
+import { useTheme } from "./ThemeProvider";
 import { useSearchParams } from "next/navigation";
 import ConfirmModal from "./ConfirmModal";
 import ActinovaLoader from "./ActinovaLoader";
@@ -69,6 +70,7 @@ const renderFormattedContent = (content) => {
 export default function Chat({ topic: propTopic }) {
   const searchParams = useSearchParams();
   const urlTopic = searchParams.get("topic");
+  const { theme } = useTheme();
 
   const [topic, setTopic] = useState(() => {
     if (propTopic) return propTopic;
