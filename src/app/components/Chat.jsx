@@ -224,6 +224,7 @@ export default function Chat({ topic: propTopic }) {
       setMessages([]);
       setShowTopicInput(true);
       setInput("");
+      setView("chat");
     }
   };
 
@@ -233,6 +234,7 @@ export default function Chat({ topic: propTopic }) {
     setShowTopicInput(true);
     setInput("");
     setShowNewChatModal(false);
+    setView("chat");
   };
 
   const handleLoadTopic = async (topicName) => {
@@ -240,6 +242,7 @@ export default function Chat({ topic: propTopic }) {
     setLoadingHistory(true);
     setTopic(topicName);
     setShowTopicInput(false);
+    setView("chat");
     await new Promise((resolve) => setTimeout(resolve, 100));
     const history = await loadChatHistory(topicName);
     setMessages(history);

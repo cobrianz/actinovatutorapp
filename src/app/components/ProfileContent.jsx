@@ -220,6 +220,19 @@ export default function ProfileContent() {
     }
   };
 
+  const handleLogout = async () => {
+    try {
+      await fetch("/api/logout", { method: "POST" });
+      logout();
+      toast.success("Successfully logged out");
+      router.push("/");
+    } catch (error) {
+      console.error("Logout error:", error);
+      logout();
+      router.push("/");
+    }
+  };
+
 
   const handleSaveUserInfo = () => {
     setUserData(editData);
