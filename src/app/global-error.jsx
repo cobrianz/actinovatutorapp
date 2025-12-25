@@ -1,11 +1,28 @@
 "use client";
 
+import React from "react";
+
 export default function GlobalError({ error, reset }) {
-    console.error("Global Error Caught:", error);
+    // Use a local effect for side effects like logging
+    React.useEffect(() => {
+        if (error) {
+            console.error("Global Error Caught:", error);
+        }
+    }, [error]);
+
+    const handleReset = () => {
+        if (typeof window !== "undefined") {
+            if (typeof reset === "function") {
+                reset();
+            } else {
+                window.location.reload();
+            }
+        }
+    };
 
     return (
-        <html lang="en">
-            <body>
+        <html lang="en" suppressHydrationWarning>
+            <body suppressHydrationWarning>
                 <div style={{
                     display: 'flex',
                     minHeight: '100vh',
@@ -16,22 +33,26 @@ export default function GlobalError({ error, reset }) {
                     color: '#111827',
                     padding: '20px',
                     textAlign: 'center',
-                    fontFamily: 'sans-serif'
+                    fontFamily: 'system-ui, -apple-system, sans-serif'
                 }}>
-                    <h1 style={{ fontSize: '2rem', marginBottom: '1rem' }}>Application Error</h1>
-                    <p style={{ marginBottom: '2rem', color: '#4b5563' }}>
-                        A fatal error occurred. Please try refreshing the page.
+                    <h1 style={{ fontSize: '2rem', fontWeight: 'bold', marginBottom: '1rem' }}>
+                        Application Error
+                    </h1>
+                    <p style={{ marginBottom: '2rem', color: '#4b5563', maxWidth: '400px' }}>
+                        A fatal error occurred in the application. Please try refreshing the page.
                     </p>
                     <button
-                        onClick={() => reset ? reset() : window.location.reload()}
+                        onClick={handleReset}
                         style={{
-                            padding: '10px 20px',
+                            padding: '12px 24px',
                             backgroundColor: '#2563eb',
                             color: 'white',
                             border: 'none',
-                            borderRadius: '5px',
+                            borderRadius: '8px',
                             cursor: 'pointer',
-                            fontSize: '1rem'
+                            fontSize: '1rem',
+                            fontWeight: '600',
+                            transition: 'background-color 0.2s'
                         }}
                     >
                         Try Again
