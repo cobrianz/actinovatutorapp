@@ -2,34 +2,39 @@
 
 import React from "react";
 import { useState } from "react";
-import Navbar from "./Navbar";
-import BottomNav from "./BottomNav";
+import Sidebar from "./Sidebar";
 import { ThemeProvider } from "./ThemeProvider";
 import ProtectedRoute from "./ProtectedRoute";
+
 export default function DashboardLayout({
   children,
   activeContent = "generate",
   setActiveContent,
 }) {
   const [hideNavs, setHideNavs] = useState(false);
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
   return (
     <ProtectedRoute>
       <ThemeProvider>
-        <div className="h-screen bg-gray-50 dark:bg-gray-900 flex flex-col">
-          {/* Top Navbar */}
-          {!hideNavs && <Navbar setActiveContent={setActiveContent} />}
+        <div className="h-screen bg-gray-50 dark:bg-gray-900 flex overflow-hidden">
+          {/* Sidebar Navigation */}
+          {!hideNavs && (
+            <Sidebar
+              activeContent={activeContent}
+              setActiveContent={setActiveContent}
+              isOpen={isSidebarOpen}
+              setIsOpen={setIsSidebarOpen}
+            />
+          )}
 
-          <div className={`flex flex-1 overflow-hidden ${!hideNavs ? 'pb-[80px]' : ''}`}>
-            <main className="flex-1 overflow-auto">
+          <div className="flex-1 flex flex-col min-w-0 overflow-hidden relative">
+            <main className="flex-1 overflow-auto relative">
               {React.Children.map(children, (child) =>
-                React.cloneElement(child, { sidebarOpen: false, setHideNavs })
+                React.cloneElement(child, { sidebarOpen: isSidebarOpen, setHideNavs })
               )}
             </main>
           </div>
-
-          {/* Bottom Navigation */}
-          {!hideNavs && <BottomNav activeContent={activeContent} setActiveContent={setActiveContent} />}
         </div>
       </ThemeProvider>
     </ProtectedRoute>

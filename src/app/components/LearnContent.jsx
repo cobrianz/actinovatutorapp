@@ -18,7 +18,7 @@ import {
   Sparkles,
   X,
   CheckCircle,
-  LayoutDashboard,
+  Home,
 } from "lucide-react";
 
 import { toast } from "sonner";
@@ -1469,6 +1469,14 @@ export default function LearnContent() {
         <div className="flex items-center justify-between w-full px-2 sm:px-4 lg:px-6">
           {/* Left Group - Navigation */}
           <div className="flex items-center space-x-2 sm:space-x-4">
+
+            <Link
+              href="/dashboard"
+              className="flex items-center space-x-2 px-3 py-1.5 text-xs sm:text-sm rounded-sm bg-gray-900 dark:bg-gray-100 text-white dark:text-gray-900 hover:opacity-90 transition-all font-bold shadow-sm"
+            >
+              <Home className="w-4 h-4" />
+              <span className="hidden md:inline">Dashboard</span>
+            </Link>
             <button
               onClick={() => setIsSidebarOpen(!isSidebarOpen)}
               className={`flex items-center space-x-2 px-3 py-1.5 text-xs sm:text-sm rounded-lg border transition-all font-medium ${isSidebarOpen
@@ -1479,14 +1487,6 @@ export default function LearnContent() {
               <Menu className="w-4 h-4" />
               <span className="hidden md:inline">Modules</span>
             </button>
-
-            <Link
-              href="/dashboard"
-              className="flex items-center space-x-2 px-3 py-1.5 text-xs sm:text-sm rounded-lg bg-gray-900 dark:bg-gray-100 text-white dark:text-gray-900 hover:opacity-90 transition-all font-bold shadow-sm"
-            >
-              <LayoutDashboard className="w-4 h-4" />
-              <span className="hidden md:inline">Dashboard</span>
-            </Link>
           </div>
 
           {/* Right Group - Controls */}
