@@ -1,13 +1,20 @@
+// src/app/global-error.js
 "use client";
 
 import React from "react";
 
 /**
- * Standard Next.js 15+ Global Error Boundary
- * Must be a Client Component and must contain <html> and <body> tags.
- * We use a plain .js extension and minimal React syntax for maximum build stability.
+ * Minimum possible Global Error handler for Next.js 16 / React 19.
+ * 
+ * IMPORTANT: This must be a Client Component and must contain <html> and <body>.
+ * We use strictly minimal HTML and no hooks to avoid any dispatcher errors during build.
  */
 export default function GlobalError({ error, reset }) {
+    // Log error for debugging if window is present
+    if (typeof window !== "undefined") {
+        console.error("Global Error Caught:", error);
+    }
+
     return React.createElement(
         "html",
         { lang: "en" },
@@ -16,47 +23,37 @@ export default function GlobalError({ error, reset }) {
             {
                 style: {
                     margin: 0,
-                    fontFamily: "system-ui, -apple-system, sans-serif",
+                    background: "white",
+                    color: "black",
                     display: "flex",
+                    flexDirection: "column",
                     alignItems: "center",
                     justifyContent: "center",
-                    minHeight: "100vh",
-                    backgroundColor: "#f8fafc",
-                    color: "#0f172a",
-                    textAlign: "center",
-                    padding: "20px"
+                    height: "100vh",
+                    fontFamily: "sans-serif"
                 }
             },
+            React.createElement("h1", null, "Application Error"),
+            React.createElement("p", null, "A critical error occurred. Please refresh the page."),
             React.createElement(
-                "div",
-                null,
-                React.createElement("h1", { style: { fontSize: "2rem", marginBottom: "1rem" } }, "Application Error"),
-                React.createElement("p", { style: { marginBottom: "2rem", color: "#64748b" } }, "A fatal error occurred. Please try refreshing the page."),
-                React.createElement(
-                    "button",
-                    {
-                        onClick: function () {
-                            if (typeof window !== "undefined") {
-                                if (typeof reset === "function") {
-                                    reset();
-                                } else {
-                                    window.location.reload();
-                                }
-                            }
-                        },
-                        style: {
-                            padding: "12px 24px",
-                            backgroundColor: "#2563eb",
-                            color: "white",
-                            border: "none",
-                            borderRadius: "8px",
-                            cursor: "pointer",
-                            fontSize: "1rem",
-                            fontWeight: "600"
+                "button",
+                {
+                    onClick: function () {
+                        if (typeof window !== "undefined") {
+                            window.location.reload();
                         }
                     },
-                    "Try Again"
-                )
+                    style: {
+                        marginTop: "1rem",
+                        padding: "8px 16px",
+                        background: "#2563eb",
+                        color: "white",
+                        border: "none",
+                        borderRadius: "4px",
+                        cursor: "pointer"
+                    }
+                },
+                "Refresh"
             )
         )
     );
