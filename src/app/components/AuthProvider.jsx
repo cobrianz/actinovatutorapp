@@ -11,6 +11,7 @@ import {
 } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import dynamic from "next/dynamic";
+import { getApiUrl } from "../lib/apiConfig";
 
 const InactivityModal = dynamic(() => import("./InactivityModal"), { ssr: false });
 const ToasterClient = dynamic(() => import("./ToasterClient"), { ssr: false });
@@ -54,7 +55,7 @@ export function AuthProvider({ children }) {
 
     refreshPromiseRef.current = (async () => {
       try {
-        const res = await fetch("/api/refresh", {
+        const res = await fetch(getApiUrl("/api/refresh"), {
           method: "POST",
           credentials: "include",
           headers: {
@@ -65,7 +66,7 @@ export function AuthProvider({ children }) {
         if (res.ok) {
           // After refreshing tokens, rehydrate user from server
           try {
-            const meRes = await fetch("/api/me", {
+            const meRes = await fetch(getApiUrl("/api/me"), {
               method: "GET",
               credentials: "include",
               headers: { "Content-Type": "application/json" },
@@ -99,7 +100,7 @@ export function AuthProvider({ children }) {
       setError(null);
 
       // Prefer server-sourced user via `/api/me` which reads secure cookies
-      let res = await fetch("/api/me", {
+      let res = await fetch(getApiUrl("/api/me"), {
         credentials: "include",
         headers: { "Content-Type": "application/json" },
       });
@@ -117,7 +118,7 @@ export function AuthProvider({ children }) {
       if (res.status === 401) {
         const refreshSuccess = await refreshToken();
         if (refreshSuccess) {
-          const retryRes = await fetch("/api/me", {
+          const retryRes = await fetch(getApiUrl("/api/me"), {
             credentials: "include",
             headers: { "Content-Type": "application/json" },
           });
@@ -248,7 +249,7 @@ export function AuthProvider({ children }) {
 
     // Perform logout
     try {
-      await fetch("/api/logout", {
+      await fetch(getApiUrl("/api/logout"), {
         method: "POST",
         credentials: "include",
         headers: {
@@ -332,7 +333,7 @@ export function AuthProvider({ children }) {
       setError(null);
       setLoading(true);
 
-      const res = await fetch("/api/login", {
+      const res = await fetch(getApiUrl("/api/login"), {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -344,6 +345,7 @@ export function AuthProvider({ children }) {
       const data = await res.json();
 
       if (!res.ok) {
+        console.error('[Actinova] Login failed status:', res.status, 'data:', data);
         // Check if verification is required
         if (data.requiresVerification) {
           return {
@@ -356,10 +358,12 @@ export function AuthProvider({ children }) {
         throw new Error(data.error || "Login failed");
       }
 
+      console.log('[Actinova] Login successful, fetching user profile...');
       // Sync client state from server-side secure cookie via `/api/me`
       const freshUser = await fetchUser();
       return { success: true, user: freshUser };
     } catch (err) {
+      console.error('[Actinova] Login exception:', err);
       setError(err.message);
       return { success: false, error: err.message };
     } finally {
@@ -372,7 +376,7 @@ export function AuthProvider({ children }) {
       setError(null);
       setLoading(true);
 
-      const res = await fetch("/api/signup", {
+      const res = await fetch(getApiUrl("/api/signup"), {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -403,7 +407,7 @@ export function AuthProvider({ children }) {
   const logout = async () => {
     try {
       setError(null);
-      await fetch("/api/logout", {
+      await fetch(getApiUrl("/api/logout"), {
         method: "POST",
         credentials: "include",
         headers: {
@@ -422,7 +426,7 @@ export function AuthProvider({ children }) {
   const forgotPassword = async (email) => {
     try {
       setError(null);
-      const res = await fetch("/api/forgot-password", {
+      const res = await fetch(getApiUrl("/api/forgot-password"), {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -446,7 +450,7 @@ export function AuthProvider({ children }) {
   const resetPassword = async (token, password, confirmPassword) => {
     try {
       setError(null);
-      const res = await fetch("/api/reset-password", {
+      const res = await fetch(getApiUrl("/api/reset-password"), {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -470,7 +474,7 @@ export function AuthProvider({ children }) {
   const verifyEmail = async (token) => {
     try {
       setError(null);
-      const res = await fetch("/api/verify-email", {
+      const res = await fetch(getApiUrl("/api/verify-email"), {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

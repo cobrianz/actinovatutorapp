@@ -13,6 +13,7 @@ import {
   HelpCircle,
 } from "lucide-react";
 import { toast } from "sonner";
+import { getApiUrl } from "../lib/apiConfig";
 import { useAuth } from "./AuthProvider";
 import ActinovaLoader from "./ActinovaLoader";
 import QuizInterface from "./QuizInterface";
@@ -96,7 +97,7 @@ export default function Generate({ setActiveContent }) {
       if (cached) {
         // Route immediately to existing course
         router.push(
-          `/learn/${encodeURIComponent(subject)}?format=${format}&difficulty=${difficulty}`
+          `/learn/content?topic=${encodeURIComponent(subject)}&format=${format}&difficulty=${difficulty}`
         );
         return;
       }
@@ -109,7 +110,7 @@ export default function Generate({ setActiveContent }) {
       setIsSubmitting(true);
 
       try {
-        const response = await fetch("/api/generate-flashcards", {
+        const response = await fetch(getApiUrl("/api/generate-flashcards"), {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           credentials: "include",
@@ -158,7 +159,7 @@ export default function Generate({ setActiveContent }) {
 
       try {
         // Generate quiz directly via API
-        const response = await fetch("/api/generate-course", {
+        const response = await fetch(getApiUrl("/api/generate-course"), {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
@@ -212,7 +213,7 @@ export default function Generate({ setActiveContent }) {
     // Navigate to learn page where generation will happen
     // Loader will stay visible during navigation and be cleared by LearnContent
     router.push(
-      `/learn/${encodeURIComponent(subject)}?format=${format}&difficulty=${difficulty}`
+      `/learn/content?topic=${encodeURIComponent(subject)}&format=${format}&difficulty=${difficulty}`
     );
   };
 
@@ -478,7 +479,7 @@ function PopularTopics({ setTopic, setLocalTopic }) {
   React.useEffect(() => {
     async function fetchTopics() {
       try {
-        const res = await fetch("/api/popular-topics", {
+        const res = await fetch(getApiUrl("/api/popular-topics"), {
           credentials: "include",
         });
         const data = await res.json();

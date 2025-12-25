@@ -1,5 +1,9 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  output: 'export',
+  images: {
+    unoptimized: true,
+  },
   // This forces a full rebuild when you have runtime errors
   webpack: (config, { dev, isServer }) => {
     if (dev) {

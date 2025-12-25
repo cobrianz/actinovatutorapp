@@ -23,6 +23,7 @@ import { useAuth } from "./AuthProvider";
 import ActinovaLoader from "./ActinovaLoader";
 import { useEnsureSession } from "./SessionGuard";
 import { toast } from "sonner";
+import { getApiUrl } from "../lib/apiConfig";
 
 export default function PremiumCourses() {
   const router = useRouter();
@@ -94,7 +95,7 @@ export default function PremiumCourses() {
 
   const fetchCourses = async () => {
     try {
-      const response = await fetch("/api/premium-courses");
+      const response = await fetch(getApiUrl("/api/premium-courses"));
       if (response.ok) {
         const data = await response.json();
         setCourses(data.courses);
@@ -114,7 +115,7 @@ export default function PremiumCourses() {
 
   const fetchTrendingCourses = async () => {
     try {
-      const response = await fetch("/api/premium-courses/trending", {
+      const response = await fetch(getApiUrl("/api/premium-courses/trending"), {
         credentials: "include",
         headers: {
           "x-user-id": user?._id || user?.id || "",
@@ -166,7 +167,7 @@ export default function PremiumCourses() {
       }
 
       // Fetch from API (auth via HttpOnly cookie)
-      const response = await fetch("/api/premium-courses/personalized", {
+      const response = await fetch(getApiUrl("/api/premium-courses/personalized"), {
         method: "POST",
         credentials: "include",
         headers: { "Content-Type": "application/json" },
@@ -223,7 +224,7 @@ export default function PremiumCourses() {
           .trim()
           .replace(/\s+/g, "-");
         router.push(
-          `/learn/${encodeURIComponent(safeTopic)}?format=course&difficulty=${course.difficulty || "intermediate"}&personalized=true&originalTopic=${encodeURIComponent(course.title)}`
+          `/learn/content?topic=${encodeURIComponent(safeTopic)}&format=course&difficulty=${course.difficulty || "intermediate"}&personalized=true&originalTopic=${encodeURIComponent(course.title)}`
         );
       }, 1500);
       return;
@@ -238,7 +239,7 @@ export default function PremiumCourses() {
 
     try {
       // Generate the course (auth via HttpOnly cookie)
-      const response = await fetch("/api/generate-course", {
+      const response = await fetch(getApiUrl("/api/generate-course"), {
         method: "POST",
         credentials: "include",
         headers: { "Content-Type": "application/json" },
@@ -270,7 +271,7 @@ export default function PremiumCourses() {
 
       // Track that user generated this premium course (so it won't be deleted)
       try {
-        await fetch("/api/profile/update", {
+        await fetch(getApiUrl("/api/profile/update"), {
           method: "POST",
           credentials: "include",
           headers: { "Content-Type": "application/json" },
@@ -300,7 +301,7 @@ export default function PremiumCourses() {
           .trim()
           .replace(/\s+/g, "-");
         router.push(
-          `/learn/${encodeURIComponent(safeTopic)}?format=course&difficulty=${course.difficulty || "beginner"}&originalTopic=${encodeURIComponent(course.title)}`
+          `/learn/content?topic=${encodeURIComponent(safeTopic)}&format=course&difficulty=${course.difficulty || "beginner"}&originalTopic=${encodeURIComponent(course.title)}`
         );
       }
     } catch (error) {
@@ -315,7 +316,7 @@ export default function PremiumCourses() {
 
   const handleUpgradePlan = async (plan) => {
     try {
-      const response = await fetch("/api/billing/create-session", {
+      const response = await fetch(getApiUrl("/api/billing/create-session"), {
         method: "POST",
         credentials: "include",
         headers: { "Content-Type": "application/json" },
@@ -358,7 +359,7 @@ export default function PremiumCourses() {
         .trim()
         .replace(/\s+/g, "-");
       router.push(
-        `/learn/${encodeURIComponent(safeTopic)}?format=course&difficulty=${course.difficulty || "intermediate"}&originalTopic=${encodeURIComponent(course.title)}`
+        `/learn/content?topic=${encodeURIComponent(safeTopic)}&format=course&difficulty=${course.difficulty || "intermediate"}&originalTopic=${encodeURIComponent(course.title)}`
       );
     }, 1500); // 1.5 seconds delay
   };
@@ -950,8 +951,8 @@ export default function PremiumCourses() {
                     key={page}
                     onClick={() => setCurrentPage(page)}
                     className={`px-3 py-2 rounded-lg text-sm font-medium cursor-pointer ${currentPage === page
-                        ? "bg-blue-600 text-white"
-                        : "border border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700"
+                      ? "bg-blue-600 text-white"
+                      : "border border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700"
                       }`}
                   >
                     {page}

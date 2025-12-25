@@ -12,11 +12,12 @@ import {
   Zap,
 } from "lucide-react";
 import Link from "next/link";
+import { getApiUrl } from "../lib/apiConfig";
 
 export default function PremiumCourses() {
   const handleUpgradePlan = async (plan) => {
     try {
-      const response = await fetch("/api/billing/create-session", {
+      const response = await fetch(getApiUrl("/api/billing/create-session"), {
         method: "POST",
         credentials: "include",
         headers: { "Content-Type": "application/json" },
@@ -257,11 +258,10 @@ export default function PremiumCourses() {
             key={category.name}
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
-            className={`px-4 py-2 rounded-full text-xs font-medium transition-colors ${
-              category.active
-                ? "bg-blue-600 text-white"
-                : "bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600"
-            }`}
+            className={`px-4 py-2 rounded-full text-xs font-medium transition-colors ${category.active
+              ? "bg-blue-600 text-white"
+              : "bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600"
+              }`}
           >
             {category.name} ({category.count})
           </motion.button>
@@ -374,7 +374,7 @@ export default function PremiumCourses() {
               </div>
 
               <Link
-                href={`/learn/${encodeURIComponent(course.title)}`}
+                href={`/learn/content?topic=${encodeURIComponent(course.title)}`}
                 className="w-full bg-blue-600 text-white py-2 px-4 rounded-lg font-medium hover:bg-blue-700 transition-colors text-center block"
               >
                 Start Learning

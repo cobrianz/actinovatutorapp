@@ -15,6 +15,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import QuizInterface from "./QuizInterface";
+import { getApiUrl } from "../lib/apiConfig";
 
 const TestYourself = ({ setHideNavs }) => {
   const [quizzes, setQuizzes] = useState([]);
@@ -37,7 +38,7 @@ const TestYourself = ({ setHideNavs }) => {
   useEffect(() => {
     const fetchQuizzes = async () => {
       try {
-        const response = await fetch("/api/quizzes", {
+        const response = await fetch(getApiUrl("/api/quizzes"), {
           credentials: "include",
         });
         if (response.ok) {
@@ -104,14 +105,14 @@ const TestYourself = ({ setHideNavs }) => {
     }
 
     try {
-      const response = await fetch(`/api/quizzes/${quizId}`, {
+      const response = await fetch(getApiUrl(`/api/quizzes/${quizId}`), {
         method: "DELETE",
       });
 
       if (response.ok) {
         toast.success("Quiz deleted successfully");
         // Refresh the quizzes list
-        const response = await fetch("/api/quizzes");
+        const response = await fetch(getApiUrl("/api/quizzes"));
         if (response.ok) {
           const data = await response.json();
           setQuizzes(data);

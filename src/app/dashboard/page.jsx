@@ -1,7 +1,7 @@
 import React, { Suspense } from "react";
 import DashboardContentWrapper from "../components/DashboardContentWrapper";
 
-export const dynamic = "force-dynamic";
+// Static export friendly
 
 export default function DashboardPage() {
   return (

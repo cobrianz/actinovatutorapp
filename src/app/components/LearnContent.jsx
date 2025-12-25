@@ -40,7 +40,7 @@ export default function LearnContent() {
 
   if (authLoading) return <ActinovaLoader />;
   if (!user) return null;
-  const topic = decodeURIComponent(params.topic);
+  const topic = decodeURIComponent(searchParams.get("topic") || "");
   const originalTopic = searchParams.get("originalTopic");
   const format = searchParams.get("format") || "course";
   const difficulty = searchParams.get("difficulty") || "beginner";

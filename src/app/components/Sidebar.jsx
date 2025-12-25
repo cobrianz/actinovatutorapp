@@ -24,6 +24,7 @@ import {
 import { motion, AnimatePresence, useDragControls } from "framer-motion";
 import { useTheme } from "./ThemeProvider";
 import { useAuth } from "./AuthProvider";
+import { getApiUrl } from "../lib/apiConfig";
 import { useRouter, usePathname } from "next/navigation";
 import { toast } from "sonner";
 import Link from "next/link";
@@ -48,7 +49,7 @@ export default function Sidebar({ activeContent, setActiveContent, isOpen, setIs
 
     const handleLogout = async () => {
         try {
-            await fetch("/api/logout", { method: "POST" });
+            await fetch(getApiUrl("/api/logout"), { method: "POST" });
             logout();
             toast.success("Logged out successfully");
             router.push("/");

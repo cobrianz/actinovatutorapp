@@ -31,6 +31,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import ConfirmModal from "./ConfirmModal";
 import { toast } from "sonner";
+import { getApiUrl } from "../lib/apiConfig";
 import { downloadCourseAsPDF } from "@/lib/pdfUtils";
 import { useAuth } from "./AuthProvider";
 
@@ -262,7 +263,7 @@ export default function Library({ setActiveContent, setHideNavs }) {
         search: searchQuery,
       });
 
-      const res = await fetch(`/api/library?${params}`, {
+      const res = await fetch(getApiUrl(`/api/library?${params}`), {
         credentials: "include", // This sends httpOnly cookies automatically
         headers: {
           "Content-Type": "application/json",
@@ -357,7 +358,7 @@ export default function Library({ setActiveContent, setHideNavs }) {
   const fetchExploreData = async () => {
     try {
       setLoadingExplore(true);
-      const res = await fetch("/api/premium-courses/trending", {
+      const res = await fetch(getApiUrl("/api/premium-courses/trending"), {
         credentials: "include"
       });
 
@@ -425,7 +426,7 @@ export default function Library({ setActiveContent, setHideNavs }) {
     }));
 
     try {
-      const res = await fetch("/api/library", {
+      const res = await fetch(getApiUrl("/api/library"), {
         method: "POST",
         credentials: "include",
         headers: {
@@ -485,7 +486,7 @@ export default function Library({ setActiveContent, setHideNavs }) {
     setCourses((prev) => prev.filter((c) => c.id !== courseToDelete.id));
 
     try {
-      const res = await fetch("/api/library", {
+      const res = await fetch(getApiUrl("/api/library"), {
         method: "POST",
         credentials: "include",
         headers: {
@@ -539,7 +540,7 @@ export default function Library({ setActiveContent, setHideNavs }) {
       }
 
       // Generate the course (server reads cookie for auth)
-      const response = await fetch("/api/generate-course", {
+      const response = await fetch(getApiUrl("/api/generate-course"), {
         method: "POST",
         credentials: "include",
         headers: { "Content-Type": "application/json" },
@@ -568,7 +569,7 @@ export default function Library({ setActiveContent, setHideNavs }) {
           .trim()
           .replace(/\s+/g, "-");
         router.push(
-          `/learn/${encodeURIComponent(safeTopic)}?format=course&difficulty=${difficulty}&originalTopic=${encodeURIComponent(course.title)}`
+          `/learn/content?topic=${encodeURIComponent(safeTopic)}?format=course&difficulty=${difficulty}&originalTopic=${encodeURIComponent(course.title)}`
         );
       }
     } catch (error) {
@@ -596,7 +597,7 @@ export default function Library({ setActiveContent, setHideNavs }) {
 
     const toastId = toast.loading(`Preparing PDF for ${course.title}...`);
     try {
-      const res = await fetch(`/api/library?id=${course.id}`, {
+      const res = await fetch(getApiUrl(`/api/library?id=${course.id}`), {
         credentials: "include",
       });
 

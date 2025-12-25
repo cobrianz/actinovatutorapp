@@ -1,7 +1,7 @@
 import { Suspense } from "react";
 import VerifyEmailContent from "../../components/VerifyEmailContent";
 
-export const dynamic = "force-dynamic";
+// Static export friendly
 
 export default function VerifyEmailPage() {
   return (

@@ -1,13 +1,13 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import SplashScreen from "./components/SplashScreen";
 import OnboardingSlider from "./components/OnboardingSlider";
+import { getApiUrl } from "./lib/apiConfig";
 import { useAuth } from "./components/AuthProvider";
 import { useRouter } from "next/navigation";
 
 export default function Home() {
-  const [showSplash, setShowSplash] = useState(true);
+  const [showSplash, setShowSplash] = useState(false);
   const [onboardingSeen, setOnboardingSeen] = useState(false);
   const { user, loading } = useAuth();
   const router = useRouter();
@@ -17,7 +17,7 @@ export default function Home() {
     setOnboardingSeen(seen);
 
     // Increment visitor counter on page load
-    fetch("/api/visitor-counter").catch(() => {
+    fetch(getApiUrl("/api/visitor-counter")).catch(() => {
       // Ignore errors for visitor counter in production
     });
 
@@ -28,9 +28,7 @@ export default function Home() {
     }
   }, [user, loading, router]);
 
-  if (showSplash) {
-    return <SplashScreen onComplete={() => setShowSplash(false)} />;
-  }
+  // SplashScreen removed to avoid redundancy with native splash
 
   if (loading) {
     return (

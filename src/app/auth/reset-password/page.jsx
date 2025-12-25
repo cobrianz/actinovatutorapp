@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, Suspense } from "react";
+import { getApiUrl } from "@/lib/apiConfig";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { Eye, EyeOff, Lock, CheckCircle, AlertCircle } from "lucide-react";
@@ -29,7 +30,7 @@ function ResetPasswordForm() {
     if (!formData.email || !formData.code) return;
 
     try {
-      const res = await fetch("/api/verify-reset-code", {
+      const res = await fetch(getApiUrl("/api/verify-reset-code"), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email: formData.email, code: formData.code }),
@@ -74,7 +75,7 @@ function ResetPasswordForm() {
 
   const validateToken = async () => {
     try {
-      const res = await fetch(`/api/validate-reset-token?token=${token}`);
+      const res = await fetch(getApiUrl(`/api/validate-reset-token?token=${token}`));
       const data = await res.json();
 
       if (!res.ok) {
@@ -136,11 +137,11 @@ function ResetPasswordForm() {
 
     try {
       // Use token-based flow if token exists, otherwise use code-based flow
-      const body = token 
+      const body = token
         ? { token, password: formData.password }
         : { email: formData.email, code: formData.code, password: formData.password };
-      
-      const res = await fetch("/api/reset-password", {
+
+      const res = await fetch(getApiUrl("/api/reset-password"), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(body),

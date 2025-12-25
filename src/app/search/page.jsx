@@ -1,7 +1,7 @@
 import SearchContent from "../components/SearchContent";
 import { Suspense } from "react";
 
-export const dynamic = "force-dynamic";
+// Static export friendly
 
 export default function SearchPage() {
   return (

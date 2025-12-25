@@ -17,6 +17,7 @@ import {
   Loader2
 } from "lucide-react";
 import { toast } from "sonner";
+import { getApiUrl } from "../lib/apiConfig";
 import { useAuth } from "./AuthProvider";
 import { useTheme } from "./ThemeProvider";
 import { useSearchParams } from "next/navigation";
@@ -123,7 +124,7 @@ export default function Chat({ topic: propTopic, setHideNavs }) {
     if (!currentTopic || !user || messagesToSave.length === 0) return;
 
     try {
-      await fetch("/api/chat/history", {
+      await fetch(getApiUrl("/api/chat/history"), {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -158,7 +159,7 @@ export default function Chat({ topic: propTopic, setHideNavs }) {
 
     setLoadingTopics(true);
     try {
-      const response = await fetch("/api/chat/history?action=topics", {
+      const response = await fetch(getApiUrl("/api/chat/history?action=topics"), {
         credentials: "include",
       });
 
@@ -353,7 +354,7 @@ export default function Chat({ topic: propTopic, setHideNavs }) {
         content: msg.content,
       }));
 
-      const response = await fetch("/api/chat", {
+      const response = await fetch(getApiUrl("/api/chat"), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({

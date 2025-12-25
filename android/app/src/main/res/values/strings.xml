@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Actinova</string>
+    <string name="title_activity_main">Actinova</string>
+    <string name="package_name">com.actinova.app</string>
+    <string name="custom_url_scheme">com.actinova.app</string>
+</resources>

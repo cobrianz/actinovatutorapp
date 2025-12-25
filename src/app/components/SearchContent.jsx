@@ -120,7 +120,7 @@ export default function SearchContent() {
                         {results.map((result) => (
                             <Link
                                 key={result.id}
-                                href={`/learn/${encodeURIComponent(result.title)}`}
+                                href={`/learn/content?topic=${encodeURIComponent(result.title)}`}
                                 className="block bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-6 hover:border-gray-300 dark:hover:border-gray-600 hover:shadow-sm transition-all"
                             >
                                 <div className="flex items-start justify-between">
@@ -136,10 +136,10 @@ export default function SearchContent() {
                                             </h3>
                                             <span
                                                 className={`px-2 py-1 text-xs rounded-full ${result.difficulty === "beginner"
-                                                        ? "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200"
-                                                        : result.difficulty === "intermediate"
-                                                            ? "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200"
-                                                            : "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200"
+                                                    ? "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200"
+                                                    : result.difficulty === "intermediate"
+                                                        ? "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200"
+                                                        : "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200"
                                                     }`}
                                             >
                                                 {result.difficulty}
