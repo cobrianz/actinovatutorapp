@@ -5,8 +5,9 @@ import { cookies } from "next/headers";
 import { connectToDatabase } from "@/lib/mongodb";
 import { ObjectId } from "mongodb";
 import { generateCsrfToken, setCsrfCookie } from "@/lib/csrf";
+import { withCORS } from "@/app/lib/middleware";
 
-export async function POST() {
+async function refreshHandler() {
   const cookieStore = await cookies();
   const refreshToken = cookieStore.get("refreshToken")?.value;
 
@@ -171,3 +172,9 @@ export async function POST() {
     return NextResponse.json({ error: "Session expired" }, { status: 401 });
   }
 }
+
+export const POST = withCORS()(refreshHandler);
+
+export const OPTIONS = withCORS()(async () => {
+  return new NextResponse(null, { status: 200 });
+});

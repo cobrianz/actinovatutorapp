@@ -97,3 +97,7 @@ const rateLimiter = withRateLimit({
 
 const finalHandler = withCORS()(rateLimiter);
 export const POST = withErrorHandling(finalHandler);
+
+export const OPTIONS = withCORS()(async () => {
+  return new NextResponse(null, { status: 200 });
+});

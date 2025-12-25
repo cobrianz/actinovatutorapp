@@ -4,8 +4,9 @@ import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { connectToDatabase } from "@/lib/mongodb";
 import { ObjectId } from "mongodb";
+import { withCORS } from "@/app/lib/middleware";
 
-export async function POST() {
+async function logoutHandler() {
   const cookieStore = await cookies();
   const refreshToken = cookieStore.get("refreshToken")?.value;
 
@@ -91,3 +92,9 @@ export async function POST() {
     timestamp: new Date().toISOString(),
   });
 }
+
+export const POST = withCORS()(logoutHandler);
+
+export const OPTIONS = withCORS()(async () => {
+  return new NextResponse(null, { status: 200 });
+});

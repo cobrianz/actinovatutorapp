@@ -5,11 +5,12 @@ import { cookies } from "next/headers";
 import { connectToDatabase } from "@/lib/mongodb";
 import { verifyPassword, generateTokenPair, sanitizeUser } from "@/lib/auth";
 import { generateCsrfToken, setCsrfCookie } from "@/lib/csrf";
+import { withCORS } from "@/app/lib/middleware";
 
 const RATE_LIMIT = { max: 8, windowMs: 15 * 60 * 1000 }; // 8 attempts per 15 min
 const loginAttempts = new Map(); // In-memory rate limiting (or use Redis in prod)
 
-export async function POST(request) {
+async function loginHandler(request) {
   const ip = request.headers.get("x-forwarded-for") || "unknown";
   const now = Date.now();
 
@@ -282,3 +283,10 @@ export async function POST(request) {
     );
   }
 }
+
+export const POST = withCORS()(loginHandler);
+
+// Handle OPTIONS for preflight
+export const OPTIONS = withCORS()(async () => {
+  return new NextResponse(null, { status: 200 });
+});

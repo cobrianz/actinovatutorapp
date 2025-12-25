@@ -5,11 +5,12 @@ import { cookies } from "next/headers";
 import { connectToDatabase } from "@/lib/mongodb";
 import { generateTokenPair } from "@/lib/auth";
 import { generateCsrfToken, setCsrfCookie } from "@/lib/csrf";
+import { withCORS } from "@/app/lib/middleware";
 
 const RATE_LIMIT = { max: 10, windowMs: 15 * 60 * 1000 };
 const attempts = new Map();
 
-export async function POST(request) {
+async function verifyEmailHandler(request) {
   const ip =
     request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "unknown";
   const now = Date.now();
@@ -215,3 +216,9 @@ export async function POST(request) {
     );
   }
 }
+
+export const POST = withCORS()(verifyEmailHandler);
+
+export const OPTIONS = withCORS()(async () => {
+  return new NextResponse(null, { status: 200 });
+});

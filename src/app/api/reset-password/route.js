@@ -4,11 +4,12 @@ import { NextResponse } from "next/server";
 import { connectToDatabase } from "@/lib/mongodb";
 import { hashPassword, verifyPassword } from "@/lib/auth";
 import { verifyResetCode } from "@/lib/db";
+import { withCORS } from "@/app/lib/middleware";
 
 const RATE_LIMIT = { max: 5, windowMs: 15 * 60 * 1000 };
 const attempts = new Map(); // Replace with Upstash Redis in prod
 
-export async function POST(request) {
+async function resetPasswordHandler(request) {
   const ip =
     request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "unknown";
   const now = Date.now();
@@ -177,3 +178,9 @@ export async function POST(request) {
     );
   }
 }
+
+export const POST = withCORS()(resetPasswordHandler);
+
+export const OPTIONS = withCORS()(async () => {
+  return new NextResponse(null, { status: 200 });
+});

@@ -5,8 +5,9 @@ import { cookies, headers } from "next/headers";
 import { connectToDatabase } from "@/lib/mongodb";
 import { verifyToken } from "@/lib/auth";
 import { ObjectId } from "mongodb";
+import { withCORS } from "@/app/lib/middleware";
 
-export async function GET() {
+async function meHandler() {
   let token = null;
   const authHeader = (await headers()).get("authorization");
   if (authHeader?.startsWith("Bearer ")) {
@@ -120,3 +121,10 @@ export async function GET() {
     return NextResponse.json({ user: null });
   }
 }
+
+export const GET = withCORS()(meHandler);
+
+// Handle OPTIONS for preflight
+export const OPTIONS = withCORS()(async () => {
+  return new NextResponse(null, { status: 200 });
+});
