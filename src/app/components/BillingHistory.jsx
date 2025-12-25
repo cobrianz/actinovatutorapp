@@ -1,7 +1,6 @@
 "use client";
 
-import React from "react";
-import dynamic from "next/dynamic";
+import React, { useState, useEffect } from "react";
 import {
     Receipt,
     Calendar,
@@ -9,10 +8,31 @@ import {
     Loader2
 } from "lucide-react";
 
-const PDFDownloadLink = dynamic(() => import("@react-pdf/renderer").then(mod => mod.PDFDownloadLink), { ssr: false });
-const ReceiptDocument = dynamic(() => import("./ReceiptDocument"), { ssr: false });
-
 export default function BillingHistory({ billingHistory, theme }) {
+    const [LinkComponent, setLinkComponent] = useState(null);
+    const [DocumentComponent, setDocumentComponent] = useState(null);
+    const [isLoaded, setIsLoaded] = useState(false);
+
+    useEffect(() => {
+        // Dynamically import only on the client
+        const loadPdfComponents = async () => {
+            try {
+                const [pdfMod, docMod] = await Promise.all([
+                    import("@react-pdf/renderer"),
+                    import("./ReceiptDocument")
+                ]);
+
+                setLinkComponent(() => pdfMod.PDFDownloadLink);
+                setDocumentComponent(() => docMod.default);
+                setIsLoaded(true);
+            } catch (error) {
+                console.error("Error loading PDF components:", error);
+            }
+        };
+
+        loadPdfComponents();
+    }, []);
+
     if (!billingHistory || billingHistory.length === 0) {
         return (
             <div className={`p-8 rounded-2xl border border-dashed text-center ${theme === 'dark' ? "bg-gray-800/20 border-gray-700" : "bg-gray-50 border-gray-200"}`}>
@@ -46,19 +66,26 @@ export default function BillingHistory({ billingHistory, theme }) {
                             </div>
                             <div className="text-[9px] font-bold text-emerald-500 uppercase tracking-widest mt-0.5">Success</div>
                         </div>
-                        <PDFDownloadLink
-                            document={<ReceiptDocument transaction={entry} />}
-                            fileName={`receipt-${entry.reference}.pdf`}
-                            className={`p-2 rounded-xl transition-all active:scale-95 ${theme === 'dark' ? "bg-gray-700 hover:bg-gray-600 text-white" : "bg-gray-100 hover:bg-gray-200 text-gray-600"}`}
-                        >
-                            {({ loading }) => (
-                                loading ? (
-                                    <Loader2 size={18} className="animate-spin opacity-50" />
-                                ) : (
-                                    <Download size={18} />
-                                )
-                            )}
-                        </PDFDownloadLink>
+
+                        {(isLoaded && LinkComponent && DocumentComponent) ? (
+                            <LinkComponent
+                                document={<DocumentComponent transaction={entry} />}
+                                fileName={`receipt-${entry.reference}.pdf`}
+                                className={`p-2 rounded-xl transition-all active:scale-95 ${theme === 'dark' ? "bg-gray-700 hover:bg-gray-600 text-white" : "bg-gray-100 hover:bg-gray-200 text-gray-600"}`}
+                            >
+                                {({ loading }) => (
+                                    loading ? (
+                                        <Loader2 size={18} className="animate-spin opacity-50" />
+                                    ) : (
+                                        <Download size={18} />
+                                    )
+                                )}
+                            </LinkComponent>
+                        ) : (
+                            <div className={`p-2 rounded-xl opacity-50 ${theme === 'dark' ? "bg-gray-700 text-white" : "bg-gray-100 text-gray-600"}`}>
+                                <Loader2 size={18} className="animate-spin" />
+                            </div>
+                        )}
                     </div>
                 </div>
             ))}

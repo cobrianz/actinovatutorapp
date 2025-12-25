@@ -13,7 +13,8 @@ import {
   ChevronLeft,
   Search,
   MoreVertical,
-  Paperclip
+  Paperclip,
+  Loader2
 } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "./AuthProvider";
@@ -89,7 +90,7 @@ export default function Chat({ topic: propTopic, setHideNavs }) {
   const [topicInput, setTopicInput] = useState("");
   const [showTopicInput, setShowTopicInput] = useState(!propTopic && !urlTopic);
   const messagesEndRef = useRef(null);
-  if (authLoading) return <ActinovaLoader />;
+  if (authLoading) return null;
   if (!user) return null;
 
   // Load chat history from database
@@ -398,21 +399,21 @@ export default function Chat({ topic: propTopic, setHideNavs }) {
           {/* New Chat Button at Top */}
           <button
             onClick={handleNewChat}
-            className="w-full flex items-center gap-4 p-4 rounded-3xl bg-indigo-600 text-white shadow-lg shadow-indigo-500/20 active:scale-[0.98] transition-all mb-8"
+            className="w-full flex items-center gap-4 p-3 rounded-2xl bg-indigo-600 text-white active:scale-[0.98] transition-all mb-8"
           >
-            <div className="w-12 h-12 rounded-2xl bg-white/20 flex items-center justify-center">
-              <Plus size={24} />
+            <div className="w-10 h-10 rounded-xl bg-white/20 flex items-center justify-center">
+              <Plus size={20} />
             </div>
             <div className="text-left">
               <span className="block font-black uppercase tracking-widest text-xs opacity-80">Start Fresh</span>
-              <span className="text-lg font-bold">New Question</span>
+              <span className="text-base font-bold">New Question</span>
             </div>
           </button>
 
           <div className="space-y-3">
             <h3 className="text-[10px] font-bold uppercase tracking-[0.2em] text-gray-500 mb-2 px-2">Recent Sessions</h3>
             {loadingTopics ? (
-              <div className="py-12 flex justify-center"><ActinovaLoader /></div>
+              <div className="py-12 flex justify-center text-indigo-600"><Loader2 className="animate-spin" /></div>
             ) : chatTopics.length === 0 ? (
               <div className="text-center py-20 bg-gray-50 dark:bg-gray-900/50 rounded-3xl border border-dashed border-gray-200 dark:border-gray-800">
                 <MessageSquare className="mx-auto mb-4 opacity-20" size={48} />
@@ -423,15 +424,15 @@ export default function Chat({ topic: propTopic, setHideNavs }) {
                 <button
                   key={chat.id || chat.topic}
                   onClick={() => handleLoadTopic(chat.topic)}
-                  className="w-full flex items-center justify-between p-4 rounded-2xl bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 shadow-sm active:scale-[0.98] transition-all"
+                  className="w-full flex items-center justify-between p-3 rounded-2xl bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 shadow-sm active:scale-[0.98] transition-all"
                 >
                   <div className="flex items-center gap-4 text-left">
                     <div className="w-10 h-10 rounded-xl bg-indigo-50 dark:bg-indigo-900/30 flex items-center justify-center">
                       <MessageSquare className="text-indigo-600 dark:text-indigo-400" size={20} />
                     </div>
                     <div>
-                      <span className="block font-bold text-sm tracking-tight truncate max-w-[200px]">{chat.topic}</span>
-                      <span className="text-[10px] text-gray-500 font-medium uppercase tracking-widest">
+                      <span className="block font-bold text-xs tracking-tight truncate max-w-[200px]">{chat.topic}</span>
+                      <span className="text-[9px] text-gray-500 font-medium uppercase tracking-widest">
                         {chat.messageCount || 0} messages
                       </span>
                     </div>

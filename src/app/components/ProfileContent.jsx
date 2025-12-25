@@ -325,9 +325,9 @@ export default function ProfileContent() {
       <main className="max-w-2xl mx-auto px-4 py-8">
 
         {/* User Stats Card - Mobile First */}
-        <div className={`p-6 rounded-[2.5rem] shadow-2xl relative overflow-hidden transition-all duration-500 hover:shadow-indigo-500/20 ${theme === 'dark' ? "bg-gray-900 border border-gray-800" : "bg-white border border-gray-100"}`}>
+        <div className={`p-6 rounded-[2.5rem] relative overflow-hidden transition-all duration-500 hover:shadow-indigo-500/20 ${theme === 'dark' ? "bg-gray-900 border border-gray-800" : "bg-white border border-gray-100"}`}>
           <div className="flex flex-col items-center text-center space-y-4">
-            <div className={`w-24 h-24 rounded-[2rem] flex items-center justify-center p-1 shadow-xl transform rotate-3 transition-transform hover:rotate-0 ${theme === 'dark' ? "bg-indigo-900/40" : "bg-indigo-50"}`}>
+            <div className={`w-24 h-24 rounded-[2rem] flex items-center justify-center p-1 transform rotate-3 transition-transform hover:rotate-0 ${theme === 'dark' ? "bg-indigo-900/40" : "bg-indigo-50"}`}>
               <div className={`w-full h-full rounded-[1.8rem] flex items-center justify-center text-white text-3xl font-black bg-gradient-to-br from-indigo-600 to-purple-600 overflow-hidden`}>
                 {profileData?.usage?.isPremium && user?.image ? (
                   <img src={user.image} alt="Avatar" className="w-full h-full object-cover" />
@@ -367,7 +367,7 @@ export default function ProfileContent() {
         </div>
 
         {/* Navigation Tabs - Mobile Styled */}
-        <div className="space-y-3">
+        <div className="space-y-3 mt-10">
           {tabItems.map((item) => {
             const Icon = item.icon;
             const isActive = activeTab === item.id;
@@ -376,8 +376,8 @@ export default function ProfileContent() {
               <button
                 key={item.id}
                 onClick={() => setActiveTab(item.id)}
-                className={`w-full flex items-center justify-between p-4 rounded-2xl transition-all ${isActive
-                  ? "bg-indigo-600 text-white shadow-lg shadow-indigo-500/20"
+                className={`w-full flex items-center justify-between p-3.5 rounded-2xl transition-all ${isActive
+                  ? "bg-indigo-600 text-white"
                   : theme === 'dark' ? "bg-gray-900 border border-gray-800 text-gray-300" : "bg-white border border-gray-100 text-gray-700"
                   }`}
               >
@@ -395,7 +395,7 @@ export default function ProfileContent() {
           {/* Logout Button */}
           <button
             onClick={handleLogout}
-            className={`w-full flex items-center justify-between p-4 rounded-2xl transition-all ${theme === 'dark' ? "bg-red-900/10 border border-red-900/20 text-red-400" : "bg-red-50 border border-red-100 text-red-600"
+            className={`w-full flex items-center justify-between p-3.5 rounded-2xl transition-all ${theme === 'dark' ? "bg-red-900/10 border border-red-900/20 text-red-400" : "bg-red-50 border border-red-100 text-red-600"
               } mt-6`}
           >
             <div className="flex items-center gap-4">
@@ -461,7 +461,7 @@ export default function ProfileContent() {
                 <button
                   onClick={handlePasswordChange}
                   disabled={updating}
-                  className="w-full py-4 bg-indigo-600 text-white rounded-2xl font-black text-sm uppercase tracking-widest shadow-lg shadow-indigo-500/20 active:scale-[0.98] transition-all"
+                  className="w-full py-3 bg-indigo-600 text-white rounded-2xl font-black text-sm uppercase tracking-widest active:scale-[0.98] transition-all"
                 >
                   {updating ? "Updating..." : "Update Security"}
                 </button>
@@ -499,7 +499,7 @@ export default function ProfileContent() {
                 <button
                   onClick={handleSaveSettings}
                   disabled={updating}
-                  className="w-full py-4 bg-indigo-600 text-white rounded-2xl font-black text-sm uppercase tracking-widest shadow-lg shadow-indigo-500/20 active:scale-[0.98] transition-all"
+                  className="w-full py-3 bg-indigo-600 text-white rounded-2xl font-black text-sm uppercase tracking-widest active:scale-[0.98] transition-all"
                 >
                   Save Settings
                 </button>
@@ -510,7 +510,7 @@ export default function ProfileContent() {
           {activeTab === "billing" && (
             <div className="space-y-6">
               <h2 className="text-lg font-black uppercase tracking-widest mb-4 text-center">Subscription</h2>
-              <div className={`p-8 rounded-3xl relative overflow-hidden bg-indigo-600 text-white shadow-xl mb-8`}>
+              <div className={`p-8 rounded-3xl relative overflow-hidden bg-indigo-600 text-white mb-8`}>
                 <div className="relative z-10 text-center">
                   <span className="px-3 py-1 bg-white/20 rounded-full text-[10px] font-bold uppercase tracking-widest">Active Plan</span>
                   <h3 className="text-3xl font-black mt-4 uppercase">
@@ -519,7 +519,7 @@ export default function ProfileContent() {
                   {!profileData?.usage?.isPremium && (
                     <button
                       onClick={() => router.push("/dashboard?tab=upgrade")}
-                      className="mt-6 px-8 py-3 bg-white text-indigo-600 rounded-2xl font-black text-xs uppercase tracking-widest"
+                      className="mt-6 px-6 py-2.5 bg-white text-indigo-600 rounded-2xl font-black text-xs uppercase tracking-widest"
                     >
                       Go Pro Now
                     </button>

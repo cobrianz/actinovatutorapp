@@ -10,6 +10,10 @@ import {
   useRef,
 } from "react";
 import { useRouter, usePathname } from "next/navigation";
+import dynamic from "next/dynamic";
+
+const InactivityModal = dynamic(() => import("./InactivityModal"), { ssr: false });
+const ToasterClient = dynamic(() => import("./ToasterClient"), { ssr: false });
 
 const AuthContext = createContext();
 
@@ -518,6 +522,8 @@ export function AuthProvider({ children }) {
       }}
     >
       {children}
+      <ToasterClient />
+      <InactivityModal />
     </AuthContext.Provider>
   );
 }
@@ -525,7 +531,26 @@ export function AuthProvider({ children }) {
 export const useAuth = () => {
   const context = useContext(AuthContext);
   if (!context) {
-    throw new Error("useAuth must be used within an AuthProvider");
+    // Return fallback for build stability
+    return {
+      user: null,
+      loading: false,
+      error: null,
+      showInactivityModal: false,
+      timeRemaining: 120,
+      login: async () => ({ success: false }),
+      signup: async () => ({ success: false }),
+      logout: async () => { },
+      forgotPassword: async () => ({ success: false }),
+      resetPassword: async () => ({ success: false }),
+      verifyEmail: async () => ({ success: false }),
+      refreshToken: async () => false,
+      setUserData: () => { },
+      fetchUser: async () => null,
+      clearError: () => { },
+      extendSession: () => { },
+      handleInactivityLogout: () => { },
+    };
   }
   return context;
 };

@@ -1,8 +1,7 @@
 import "./globals.css";
 import { Jost } from "next/font/google";
 import { AuthProvider } from "./components/AuthProvider";
-import ToasterClient from "./components/ToasterClient";
-import InactivityModal from "./components/InactivityModal";
+import { Suspense } from "react";
 
 const jost = Jost({ subsets: ["latin"] });
 
@@ -23,9 +22,9 @@ export default function RootLayout({ children }) {
         dir="ltr"
       >
         <AuthProvider>
-          {children}
-          <ToasterClient />
-          <InactivityModal />
+          <Suspense fallback={null}>
+            {children}
+          </Suspense>
         </AuthProvider>
       </body>
     </html>

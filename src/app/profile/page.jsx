@@ -1,7 +1,9 @@
 "use client";
+export const dynamic = "force-dynamic";
 
 import dynamic from "next/dynamic";
 import NavbarOnlyLayout from "../components/NavbarOnlyLayout";
+import { Suspense } from "react";
 
 const ProfileContent = dynamic(() => import("../components/ProfileContent"), {
   ssr: false,
@@ -9,8 +11,10 @@ const ProfileContent = dynamic(() => import("../components/ProfileContent"), {
 
 export default function ProfilePage() {
   return (
-    <NavbarOnlyLayout>
-      <ProfileContent />
-    </NavbarOnlyLayout>
+    <Suspense fallback={null}>
+      <NavbarOnlyLayout>
+        <ProfileContent />
+      </NavbarOnlyLayout>
+    </Suspense>
   );
 }
