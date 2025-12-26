@@ -20,7 +20,7 @@ import {
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { getApiUrl } from "../lib/apiConfig";
+import { getApiUrl, authenticatedFetch } from "../lib/apiConfig";
 import { useAuth } from "./AuthProvider";
 
 const staticCategories = [

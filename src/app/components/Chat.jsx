@@ -17,7 +17,7 @@ import {
   Loader2
 } from "lucide-react";
 import { toast } from "sonner";
-import { getApiUrl } from "../lib/apiConfig";
+import { getApiUrl, authenticatedFetch } from "../lib/apiConfig";
 import { useAuth } from "./AuthProvider";
 import { useTheme } from "./ThemeProvider";
 import { useSearchParams } from "next/navigation";
@@ -99,14 +99,8 @@ export default function Chat({ topic: propTopic, setHideNavs }) {
     if (!currentTopic || !user) return [];
 
     try {
-      const response = await fetch(
-        `/api/chat/history?topic=${encodeURIComponent(currentTopic)}`,
-        {
-          credentials: "include",
-          headers: {
-            "x-user-id": user?._id || user?.id || "",
-          },
-        }
+      const response = await authenticatedFetch(
+        `/api/chat/history?topic=${encodeURIComponent(currentTopic)}`
       );
 
       if (response.ok) {
@@ -124,17 +118,12 @@ export default function Chat({ topic: propTopic, setHideNavs }) {
     if (!currentTopic || !user || messagesToSave.length === 0) return;
 
     try {
-      await fetch(getApiUrl("/api/chat/history"), {
+      await authenticatedFetch("/api/chat/history", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "x-user-id": user?._id || user?.id || "",
-        },
         body: JSON.stringify({
           topic: currentTopic,
           messages: messagesToSave,
         }),
-        credentials: "include",
       });
     } catch (error) {
       console.error("Error saving chat history:", error);
@@ -159,9 +148,7 @@ export default function Chat({ topic: propTopic, setHideNavs }) {
 
     setLoadingTopics(true);
     try {
-      const response = await fetch(getApiUrl("/api/chat/history?action=topics"), {
-        credentials: "include",
-      });
+      const response = await authenticatedFetch("/api/chat/history?action=topics");
 
       if (response.ok) {
         const data = await response.json();
@@ -274,9 +261,9 @@ export default function Chat({ topic: propTopic, setHideNavs }) {
   const confirmClearHistory = async () => {
     if (!topic) return;
     try {
-      const response = await fetch(
+      const response = await authenticatedFetch(
         `/api/chat/history?topic=${encodeURIComponent(topic)}`,
-        { method: "DELETE", credentials: "include" }
+        { method: "DELETE" }
       );
       if (response.ok) {
         setMessages([]);
@@ -298,9 +285,9 @@ export default function Chat({ topic: propTopic, setHideNavs }) {
   const confirmDeleteTopic = async () => {
     if (!topicToDelete) return;
     try {
-      const response = await fetch(
+      const response = await authenticatedFetch(
         `/api/chat/history?topic=${encodeURIComponent(topicToDelete)}&action=delete`,
-        { method: "DELETE", credentials: "include" }
+        { method: "DELETE" }
       );
       if (response.ok) {
         toast.success(`Chat "${topicToDelete}" deleted`);
@@ -354,15 +341,13 @@ export default function Chat({ topic: propTopic, setHideNavs }) {
         content: msg.content,
       }));
 
-      const response = await fetch(getApiUrl("/api/chat"), {
+      const response = await authenticatedFetch("/api/chat", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           message: userMessage.content,
           conversationHistory,
           topic: topic,
         }),
-        credentials: "include",
       });
 
       const data = await response.json();

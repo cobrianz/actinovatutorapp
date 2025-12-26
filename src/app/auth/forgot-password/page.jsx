@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { getApiUrl } from "@/lib/apiConfig";
+import { getApiUrl, authenticatedFetch } from "@/lib/apiConfig";
 import {
   ArrowLeft,
   Mail,
@@ -38,9 +38,8 @@ export default function ForgotPasswordPage() {
           return;
         }
 
-        const res = await fetch(getApiUrl("/api/forgot-password"), {
+        const res = await authenticatedFetch("/api/forgot-password", {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ email }),
         });
 
@@ -67,9 +66,8 @@ export default function ForgotPasswordPage() {
           return;
         }
 
-        const res = await fetch(getApiUrl("/api/verify-reset-code"), {
+        const res = await authenticatedFetch("/api/verify-reset-code", {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ email, code }),
         });
 
@@ -99,9 +97,8 @@ export default function ForgotPasswordPage() {
           return;
         }
 
-        const res = await fetch(getApiUrl("/api/reset-password"), {
+        const res = await authenticatedFetch("/api/reset-password", {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ email, code, password }),
         });
 

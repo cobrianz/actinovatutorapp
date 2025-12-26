@@ -386,12 +386,8 @@ export function AuthProvider({ children }) {
       setError(null);
       setLoading(true);
 
-      const res = await fetch(getApiUrl("/api/signup"), {
+      const res = await authenticatedFetch("/api/signup", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        credentials: "include",
         body: JSON.stringify(userData),
       });
 
@@ -440,11 +436,8 @@ export function AuthProvider({ children }) {
   const forgotPassword = async (email) => {
     try {
       setError(null);
-      const res = await fetch(getApiUrl("/api/forgot-password"), {
+      const res = await authenticatedFetch("/api/forgot-password", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
         body: JSON.stringify({ email }),
       });
 
@@ -464,11 +457,8 @@ export function AuthProvider({ children }) {
   const resetPassword = async (token, password, confirmPassword) => {
     try {
       setError(null);
-      const res = await fetch(getApiUrl("/api/reset-password"), {
+      const res = await authenticatedFetch("/api/reset-password", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
         body: JSON.stringify({ token, password, confirmPassword }),
       });
 
@@ -488,11 +478,8 @@ export function AuthProvider({ children }) {
   const verifyEmail = async (token) => {
     try {
       setError(null);
-      const res = await fetch(getApiUrl("/api/verify-email"), {
+      const res = await authenticatedFetch("/api/verify-email", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
         body: JSON.stringify({ token }),
       });
 
