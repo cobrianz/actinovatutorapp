@@ -8,13 +8,15 @@
 const IS_BROWSER = typeof window !== 'undefined';
 const IS_CAPACITOR = IS_BROWSER && (
     !!window.Capacitor ||
-    window.location.protocol === 'capacitor:'
+    window.location.protocol === 'capacitor:' ||
+    (window.location.hostname === 'localhost' && window.location.port !== '3000' && window.location.port !== '3001')
 );
 
 console.log('[Actinova] Environment:', {
     origin: IS_BROWSER ? window.origin : 'N/A',
     isCapacitor: IS_CAPACITOR,
-    protocol: IS_BROWSER ? window.location.protocol : 'N/A'
+    protocol: IS_BROWSER ? window.location.protocol : 'N/A',
+    host: IS_BROWSER ? window.location.host : 'N/A'
 });
 
 // Replace with your actual production backend URL if NEXT_PUBLIC_API_URL is not set

@@ -15,11 +15,9 @@ import { getApiUrl, authenticatedFetch } from "../lib/apiConfig";
 
 // Detect Capacitor environment
 const IS_CAPACITOR = typeof window !== 'undefined' && (
-  window.Capacitor ||
+  !!window.Capacitor ||
   window.location.protocol === 'capacitor:' ||
-  window.origin?.startsWith('capacitor://') ||
-  window.origin?.startsWith('http://localhost') ||
-  window.origin?.startsWith('https://localhost')
+  (window.location.hostname === 'localhost' && window.location.port !== '3000' && window.location.port !== '3001')
 );
 
 const InactivityModal = dynamic(() => import("./InactivityModal"), { ssr: false });
