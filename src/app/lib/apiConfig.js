@@ -7,11 +7,8 @@
 
 const IS_BROWSER = typeof window !== 'undefined';
 const IS_CAPACITOR = IS_BROWSER && (
-    window.origin?.startsWith('capacitor://') ||
-    window.origin?.startsWith('http://localhost') ||
-    window.origin?.startsWith('https://localhost') ||
-    window.location.protocol === 'capacitor:' ||
-    !!window.Capacitor
+    !!window.Capacitor ||
+    window.location.protocol === 'capacitor:'
 );
 
 console.log('[Actinova] Environment:', {
