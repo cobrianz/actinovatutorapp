@@ -252,9 +252,8 @@ export function AuthProvider({ children }) {
 
     // Perform logout
     try {
-      await fetch(getApiUrl("/api/logout"), {
+      await authenticatedFetch("/api/logout", {
         method: "POST",
-        credentials: "include",
         headers: {
           "X-CSRF-Token": getCsrfToken(),
         },

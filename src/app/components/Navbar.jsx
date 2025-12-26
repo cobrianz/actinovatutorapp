@@ -15,7 +15,7 @@ import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import { useTheme } from "./ThemeProvider";
 import { useAuth } from "./AuthProvider";
-import { getApiUrl } from "../lib/apiConfig";
+
 import { useRouter, usePathname } from "next/navigation";
 import { toast } from "sonner";
 
@@ -29,7 +29,7 @@ export default function Navbar({ setActiveContent }) {
 
   const handleLogout = async () => {
     try {
-      await fetch(getApiUrl("/api/logout"), { method: "POST" });
+
       logout();
       toast.success("Successfully logged out");
       router.push("/");

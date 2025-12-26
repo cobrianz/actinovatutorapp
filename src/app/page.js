@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import OnboardingSlider from "./components/OnboardingSlider";
-import { getApiUrl } from "./lib/apiConfig";
+import { getApiUrl, authenticatedFetch } from "./lib/apiConfig";
 import { useAuth } from "./components/AuthProvider";
 import { useRouter } from "next/navigation";
 
@@ -17,7 +17,7 @@ export default function Home() {
     setOnboardingSeen(seen);
 
     // Increment visitor counter on page load
-    fetch(getApiUrl("/api/visitor-counter")).catch(() => {
+    authenticatedFetch("/api/visitor-counter").catch(() => {
       // Ignore errors for visitor counter in production
     });
 
