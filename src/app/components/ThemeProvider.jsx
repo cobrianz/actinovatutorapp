@@ -5,7 +5,7 @@ import { createContext, useContext, useEffect, useState } from "react";
 const ThemeContext = createContext();
 
 export function ThemeProvider({ children, initialTheme }) {
-  const [theme, setTheme] = useState(initialTheme || "light");
+  const [theme, setTheme] = useState(initialTheme || "system");
 
   useEffect(() => {
     const getSystemTheme = () => {
@@ -21,12 +21,20 @@ export function ThemeProvider({ children, initialTheme }) {
       if (initialTheme === "system") {
         return getSystemTheme();
       }
-      return initialTheme || localStorage.getItem("theme") || "light";
+      return initialTheme || localStorage.getItem("theme") || "system";
     };
 
     const savedTheme = getInitialTheme();
-    setTheme(savedTheme);
-    document.documentElement.classList.toggle("dark", savedTheme === "dark");
+
+    // Handle system theme resolution
+    if (savedTheme === "system") {
+      const resolved = getSystemTheme();
+      document.documentElement.classList.toggle("dark", resolved === "dark");
+      setTheme("system");
+    } else {
+      setTheme(savedTheme);
+      document.documentElement.classList.toggle("dark", savedTheme === "dark");
+    }
 
     // Listen for system theme changes if system theme is selected
     if (
@@ -37,6 +45,18 @@ export function ThemeProvider({ children, initialTheme }) {
       const handleChange = (e) => {
         const newTheme = e.matches ? "dark" : "light";
         setTheme(newTheme);
+        document.documentElement.classList.toggle("dark", newTheme === "dark");
+      };
+      mediaQuery.addEventListener("change", handleChange);
+      return () => mediaQuery.removeEventListener("change", handleChange);
+      return () => mediaQuery.removeEventListener("change", handleChange);
+    }
+
+    // Also listen if we just fell back to system
+    if (!initialTheme && !localStorage.getItem("theme")) {
+      const mediaQuery = window.matchMedia("(prefers-color-scheme: dark)");
+      const handleChange = (e) => {
+        const newTheme = e.matches ? "dark" : "light";
         document.documentElement.classList.toggle("dark", newTheme === "dark");
       };
       mediaQuery.addEventListener("change", handleChange);

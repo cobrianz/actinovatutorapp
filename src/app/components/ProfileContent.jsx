@@ -35,7 +35,9 @@ import {
   Receipt,
   LogOut,
   TrendingUp,
-  Target as TargetIcon
+  TrendingUp,
+  Target as TargetIcon,
+  LifeBuoy
 } from "lucide-react";
 import { useAuth } from "./AuthProvider";
 import { useTheme } from "./ThemeProvider";
@@ -79,6 +81,12 @@ export default function ProfileContent() {
     ...defaultSettings,
     emailNotifications: true,
   });
+  const [contactForm, setContactForm] = useState({
+    subject: "",
+    category: "general",
+    message: "",
+  });
+  const [isSubmittingContact, setIsSubmittingContact] = useState(false);
 
 
   useEffect(() => {
@@ -245,7 +253,42 @@ export default function ProfileContent() {
     { id: "password", label: "Security", icon: Shield },
     { id: "settings", label: "Preferences", icon: SettingsIcon },
     { id: "billing", label: "Billing & Plan", icon: CreditCard },
+    { id: "support", label: "Contact Support", icon: LifeBuoy },
   ];
+
+  const handleContactSubmit = async (e) => {
+    e.preventDefault();
+    if (!contactForm.subject.trim() || !contactForm.message.trim()) {
+      toast.error("Subject and message are required");
+      return;
+    }
+
+    try {
+      setIsSubmittingContact(true);
+      const response = await authenticatedFetch("/api/contact", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: `${user?.firstName || ""} ${user?.lastName || ""}`.trim() || user?.name,
+          email: user?.email,
+          ...contactForm
+        }),
+      });
+
+      if (response.ok) {
+        toast.success("Message sent successfully! We'll get back to you soon.");
+        setContactForm({ subject: "", category: "general", message: "" });
+      } else {
+        const data = await response.json();
+        toast.error(data.error || "Failed to send message");
+      }
+    } catch (error) {
+      console.error("Contact error:", error);
+      toast.error("Failed to send message. Please try again.");
+    } finally {
+      setIsSubmittingContact(false);
+    }
+  };
 
   const handleSaveSettings = async () => {
     try {
@@ -498,6 +541,60 @@ export default function ProfileContent() {
                   Save Settings
                 </button>
               </div>
+            </div>
+          )}
+
+          {activeTab === "support" && (
+            <div className="space-y-8">
+              <h2 className="text-lg font-black uppercase tracking-widest mb-4">Contact Support</h2>
+              <form onSubmit={handleContactSubmit} className="space-y-6">
+                <div>
+                  <label className="block text-[10px] font-bold uppercase text-gray-500 mb-1.5 ml-1">Category</label>
+                  <select
+                    value={contactForm.category}
+                    onChange={(e) => setContactForm({ ...contactForm, category: e.target.value })}
+                    className={`w-full px-4 py-3 rounded-2xl border text-sm ${theme === 'dark' ? "bg-gray-800 border-gray-700" : "bg-gray-50 border-gray-100"}`}
+                  >
+                    <option value="general">General Inquiry</option>
+                    <option value="technical">Technical Support</option>
+                    <option value="billing">Billing Issue</option>
+                    <option value="feature">Feature Request</option>
+                    <option value="feedback">Feedback</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-[10px] font-bold uppercase text-gray-500 mb-1.5 ml-1">Subject</label>
+                  <input
+                    type="text"
+                    value={contactForm.subject}
+                    onChange={(e) => setContactForm({ ...contactForm, subject: e.target.value })}
+                    placeholder="Brief summary of your inquiry"
+                    className={`w-full px-4 py-3 rounded-2xl border text-sm focus:ring-2 focus:ring-indigo-500 outline-none transition-all ${theme === 'dark' ? "bg-gray-800 border-gray-700" : "bg-gray-50 border-gray-100"}`}
+                    required
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-[10px] font-bold uppercase text-gray-500 mb-1.5 ml-1">Message</label>
+                  <textarea
+                    value={contactForm.message}
+                    onChange={(e) => setContactForm({ ...contactForm, message: e.target.value })}
+                    placeholder="How can we help you today?"
+                    rows={5}
+                    className={`w-full px-4 py-3 rounded-2xl border text-sm focus:ring-2 focus:ring-indigo-500 outline-none transition-all resize-none ${theme === 'dark' ? "bg-gray-800 border-gray-700" : "bg-gray-50 border-gray-100"}`}
+                    required
+                  />
+                </div>
+
+                <button
+                  type="submit"
+                  disabled={isSubmittingContact}
+                  className="w-full py-3 bg-indigo-600 text-white rounded-2xl font-black text-sm uppercase tracking-widest active:scale-[0.98] transition-all disabled:opacity-70 disabled:cursor-not-allowed"
+                >
+                  {isSubmittingContact ? "Sending..." : "Send Message"}
+                </button>
+              </form>
             </div>
           )}
 

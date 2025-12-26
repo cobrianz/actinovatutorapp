@@ -60,6 +60,46 @@ export default function Sidebar({ activeContent, setActiveContent, isOpen, setIs
         }
     };
 
+    // Mobile Swipe Logic
+    useEffect(() => {
+        let touchStartX = 0;
+        let touchStartY = 0;
+
+        const handleTouchStart = (e) => {
+            touchStartX = e.touches[0].clientX;
+            touchStartY = e.touches[0].clientY;
+        };
+
+        const handleTouchEnd = (e) => {
+            if (isOpen) return; // Already open, handled by backdrop click or close button
+
+            const touchEndX = e.changedTouches[0].clientX;
+            const touchEndY = e.changedTouches[0].clientY;
+
+            const diffX = touchEndX - touchStartX;
+            const diffY = touchEndY - touchStartY;
+
+            // Check for horizontal swipe (right)
+            // Allow swipe from left 30% of screen to be generous ("not touching left")
+            // Ensure vertical movement is minimal to avoid scrolling interference
+            if (
+                touchStartX < window.innerWidth * 0.3 &&
+                diffX > 70 &&
+                Math.abs(diffY) < 50
+            ) {
+                setIsOpen(true);
+            }
+        };
+
+        window.addEventListener('touchstart', handleTouchStart, { passive: true });
+        window.addEventListener('touchend', handleTouchEnd, { passive: true });
+
+        return () => {
+            window.removeEventListener('touchstart', handleTouchStart);
+            window.removeEventListener('touchend', handleTouchEnd);
+        };
+    }, [isOpen, setIsOpen]);
+
     const sidebarVariants = {
         open: { x: 0, opacity: 1 },
         closed: { x: "-100%", opacity: 0 },

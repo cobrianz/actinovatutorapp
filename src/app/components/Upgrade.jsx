@@ -126,33 +126,7 @@ export default function Upgrade() {
     }
   };
 
-  // Use centralized plan limits
-  const comparisonFeatures = [
-    {
-      category: "Limits",
-      features: [
-        { name: "Course Generations", basic: `${PLAN_LIMITS.free.courses}/month`, premium: `${PLAN_LIMITS.premium.courses}/month`, enterprise: "Unlimited" },
-        { name: "Quiz Generations", basic: `${PLAN_LIMITS.free.quizzes}/month`, premium: `${PLAN_LIMITS.premium.quizzes}/month`, enterprise: "Unlimited" },
-        { name: "Flashcard Sets", basic: `${PLAN_LIMITS.free.flashcards}/month`, premium: `${PLAN_LIMITS.premium.flashcards}/month`, enterprise: "Unlimited" },
-      ]
-    },
-    {
-      category: "Learning Features",
-      features: [
-        { name: "Modules per Course", basic: `${PLAN_LIMITS.free.modules}`, premium: `${PLAN_LIMITS.premium.modules}`, enterprise: `${PLAN_LIMITS.enterprise.modules}` },
-        { name: "Lessons per Module", basic: `${PLAN_LIMITS.free.lessonsPerModule}`, premium: `${PLAN_LIMITS.premium.lessonsPerModule}`, enterprise: `${PLAN_LIMITS.enterprise.lessonsPerModule}` },
-        { name: "Difficulty Levels", basic: "Beginner only", premium: "All Levels", enterprise: "All Levels" },
-      ],
-    },
-    {
-      category: "Support & Access",
-      features: [
-        { name: "Support", basic: "Community", premium: "Priority", enterprise: "Dedicated Agent" },
-        { name: "Analytics", basic: "Basic", premium: "Advanced", enterprise: "Advanced + Reports" },
-        { name: "Mentorship", basic: false, premium: "1-on-1", enterprise: "Priority Access" },
-      ],
-    },
-  ];
+
 
   if (isLoadingPlans) {
     return (
@@ -385,75 +359,7 @@ export default function Upgrade() {
         </motion.div>
 
         {/* Feature Comparison */}
-        <motion.div
-          className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-8 mb-16 overflow-hidden"
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5, delay: 0.4 }}
-        >
-          <h2 className="text-2xl font-bold text-gray-900 dark:text-white text-center mb-8">
-            Detailed Feature Comparison
-          </h2>
 
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead>
-                <tr className="border-b border-gray-200 dark:border-gray-700">
-                  <th className="text-left py-4 px-4 text-gray-900 dark:text-white font-semibold">
-                    Features
-                  </th>
-                  <th className="text-center py-4 px-4 text-gray-900 dark:text-white font-semibold">
-                    Basic
-                  </th>
-                  <th className="text-center py-4 px-4 text-gray-900 dark:text-white font-semibold">
-                    Premium
-                  </th>
-                  <th className="text-center py-4 px-4 text-gray-900 dark:text-white font-semibold">
-                    Enterprise
-                  </th>
-                </tr>
-              </thead>
-              <tbody>
-                {comparisonFeatures.map((category, categoryIndex) => (
-                  <React.Fragment key={categoryIndex}>
-                    <tr>
-                      <td colSpan={4} className="py-4 px-4">
-                        <h4 className="font-semibold text-gray-900 dark:text-white bg-gray-50 dark:bg-gray-700 px-3 py-2 rounded">
-                          {category.category}
-                        </h4>
-                      </td>
-                    </tr>
-                    {category.features.map((feature, featureIndex) => (
-                      <tr
-                        key={featureIndex}
-                        className="border-b border-gray-100 dark:border-gray-700"
-                      >
-                        <td className="py-3 px-4 text-gray-700 dark:text-gray-300 font-medium">
-                          {feature.name}
-                        </td>
-                        <td className="py-3 px-4 text-center">
-                          {typeof feature.basic === "boolean" ? (
-                            feature.basic ? <Check className="w-5 h-5 text-green-500 mx-auto" /> : <X className="w-5 h-5 text-red-500 mx-auto" />
-                          ) : <span className="text-gray-600 dark:text-gray-400">{feature.basic}</span>}
-                        </td>
-                        <td className="py-3 px-4 text-center">
-                          {typeof feature.premium === "boolean" ? (
-                            feature.premium ? <Check className="w-5 h-5 text-green-500 mx-auto" /> : <X className="w-5 h-5 text-red-500 mx-auto" />
-                          ) : <span className="text-gray-600 dark:text-gray-400 font-medium">{feature.premium}</span>}
-                        </td>
-                        <td className="py-3 px-4 text-center">
-                          {typeof feature.enterprise === "boolean" ? (
-                            feature.enterprise ? <Check className="w-5 h-5 text-green-500 mx-auto" /> : <X className="w-5 h-5 text-red-500 mx-auto" />
-                          ) : <span className="text-gray-600 dark:text-gray-400 font-bold">{feature.enterprise}</span>}
-                        </td>
-                      </tr>
-                    ))}
-                  </React.Fragment>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </motion.div>
       </div>
     </div>
   );
