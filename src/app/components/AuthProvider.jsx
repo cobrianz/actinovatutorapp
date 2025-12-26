@@ -11,7 +11,7 @@ import {
 } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import dynamic from "next/dynamic";
-import { getApiUrl } from "../lib/apiConfig";
+import { getApiUrl, authenticatedFetch } from "../lib/apiConfig";
 
 // Detect Capacitor environment
 const IS_CAPACITOR = typeof window !== 'undefined' && (
@@ -64,22 +64,14 @@ export function AuthProvider({ children }) {
 
     refreshPromiseRef.current = (async () => {
       try {
-        const res = await fetch(getApiUrl("/api/refresh"), {
+        const res = await authenticatedFetch("/api/refresh", {
           method: "POST",
-          credentials: "include",
-          headers: {
-            "Content-Type": "application/json",
-          },
         });
 
         if (res.ok) {
           // After refreshing tokens, rehydrate user from server
           try {
-            const meRes = await fetch(getApiUrl("/api/me"), {
-              method: "GET",
-              credentials: "include",
-              headers: { "Content-Type": "application/json" },
-            });
+            const meRes = await authenticatedFetch("/api/me");
             if (meRes.ok) {
               const meData = await meRes.json();
               setUser(meData.user);
@@ -110,19 +102,7 @@ export function AuthProvider({ children }) {
 
       console.log(`[Actinova] Fetching user from: ${getApiUrl("/api/me")}`);
 
-      // Build headers with token for Capacitor
-      const headers = { "Content-Type": "application/json" };
-      if (IS_CAPACITOR) {
-        const token = localStorage.getItem('auth_token');
-        if (token) {
-          headers['Authorization'] = `Bearer ${token}`;
-        }
-      }
-
-      let res = await fetch(getApiUrl("/api/me"), {
-        credentials: IS_CAPACITOR ? "omit" : "include",
-        headers,
-      });
+      let res = await authenticatedFetch("/api/me");
 
       console.log(`[Actinova] /api/me status: ${res.status}`);
       let data = null;
@@ -144,10 +124,7 @@ export function AuthProvider({ children }) {
       if (res.status === 401) {
         const refreshSuccess = await refreshToken();
         if (refreshSuccess) {
-          const retryRes = await fetch(getApiUrl("/api/me"), {
-            credentials: "include",
-            headers: { "Content-Type": "application/json" },
-          });
+          const retryRes = await authenticatedFetch("/api/me");
           if (retryRes.ok) {
             data = await retryRes.json();
             setUser(data.user);
@@ -440,13 +417,17 @@ export function AuthProvider({ children }) {
   const logout = async () => {
     try {
       setError(null);
-      await fetch(getApiUrl("/api/logout"), {
+      await authenticatedFetch("/api/logout", {
         method: "POST",
-        credentials: "include",
         headers: {
           "X-CSRF-Token": getCsrfToken(),
         },
       });
+
+      // Clear token from localStorage for Capacitor
+      if (IS_CAPACITOR) {
+        localStorage.removeItem('auth_token');
+      }
     } catch (err) {
       console.error("Logout failed:", err);
     } finally {

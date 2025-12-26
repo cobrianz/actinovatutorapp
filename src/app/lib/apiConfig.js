@@ -52,3 +52,41 @@ export function getApiUrl(path) {
     // Default to absolute URL for Capacitor (Mobile)
     return `${API_BASE_URL}${cleanPath}`;
 }
+
+/**
+ * Authenticated fetch wrapper that automatically includes Bearer token for Capacitor
+ * @param {string} path - The API path (e.g., '/api/library')
+ * @param {RequestInit} options - Fetch options
+ * @returns {Promise<Response>} - Fetch response
+ */
+export async function authenticatedFetch(path, options = {}) {
+    const url = getApiUrl(path);
+
+    // Prepare headers
+    const headers = {
+        'Content-Type': 'application/json',
+        ...options.headers,
+    };
+
+    // For Capacitor, add Bearer token from localStorage
+    if (IS_CAPACITOR) {
+        const token = typeof window !== 'undefined' ? localStorage.getItem('auth_token') : null;
+        if (token) {
+            headers['Authorization'] = `Bearer ${token}`;
+        }
+
+        // Use omit credentials for Capacitor (we're using tokens instead)
+        return fetch(url, {
+            ...options,
+            headers,
+            credentials: 'omit',
+        });
+    }
+
+    // For web, use include credentials (cookies)
+    return fetch(url, {
+        ...options,
+        headers,
+        credentials: 'include',
+    });
+}
