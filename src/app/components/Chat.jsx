@@ -548,7 +548,7 @@ export default function Chat({ topic: propTopic, setHideNavs }) {
                     }
                   }}
                   placeholder="Type a question..."
-                  className="w-full bg-transparent border-none focus:ring-0 resize-none max-h-32 py-2 text-sm text-gray-900 dark:text-white font-medium"
+                  className="w-full bg-transparent border-none resize-none max-h-32 py-2 text-sm text-gray-900 dark:text-white font-medium outline-none"
                   rows={1}
                   onInput={(e) => {
                     e.target.style.height = 'auto';

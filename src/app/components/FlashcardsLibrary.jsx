@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { useAuth } from "./AuthProvider";
 import { toast } from "sonner";
+import { authenticatedFetch } from "../lib/apiConfig";
 import Flashcards from "./Flashcards";
 import {
   Trash2,
@@ -51,8 +52,7 @@ export default function FlashcardsLibrary({ setActiveContent, setHideNavs }) {
 
   const fetchFlashcards = async (retryAfterRefresh = true) => {
     try {
-      const response = await fetch("/api/flashcards", {
-        credentials: "include",
+      const response = await authenticatedFetch("/api/flashcards", {
         headers: {
           "Content-Type": "application/json",
         },
@@ -93,9 +93,8 @@ export default function FlashcardsLibrary({ setActiveContent, setHideNavs }) {
     if (!flashcardToDelete) return;
 
     try {
-      const response = await fetch(`/api/flashcards/${flashcardToDelete._id}`, {
+      const response = await authenticatedFetch(`/api/flashcards/${flashcardToDelete._id}`, {
         method: "DELETE",
-        credentials: "include",
       });
 
       if (response.status === 401 && retryAfterRefresh) {
@@ -144,9 +143,8 @@ export default function FlashcardsLibrary({ setActiveContent, setHideNavs }) {
     } catch { }
 
     try {
-      const response = await fetch("/api/library", {
+      const response = await authenticatedFetch("/api/library", {
         method: "POST",
-        credentials: "include",
         headers: {
           "Content-Type": "application/json",
           "x-user-id": user?._id || user?.id || "",

@@ -10,6 +10,7 @@ import { CheckCircle, XCircle, ArrowLeft, Eye, Download } from "lucide-react";
 import Link from "next/link";
 import { useAuth } from "./AuthProvider";
 import { downloadQuizAsPDF } from "@/lib/pdfUtils";
+import { authenticatedFetch } from "../lib/apiConfig";
 
 const QuizInterface = ({ quizData, topic, onBack, existingQuizId }) => {
   const [answers, setAnswers] = useState({});
@@ -167,12 +168,8 @@ const QuizInterface = ({ quizData, topic, onBack, existingQuizId }) => {
     ) {
       console.log("Saving performance for quiz ID:", quizId);
       // Don't await this - make it non-blocking so quiz completion isn't delayed
-      fetch(`/api/quizzes/${quizId}/performance`, {
+      authenticatedFetch(`/api/quizzes/${quizId}/performance`, {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        credentials: "include",
         body: JSON.stringify({
           score: totalScore,
           totalMarks: loadedQuestions.reduce(

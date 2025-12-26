@@ -40,7 +40,7 @@ import {
 import { useAuth } from "./AuthProvider";
 import { useTheme } from "./ThemeProvider";
 import { toast } from "sonner";
-import { getApiUrl } from "../lib/apiConfig";
+import { getApiUrl, authenticatedFetch } from "../lib/apiConfig";
 import dynamic from "next/dynamic";
 
 const BillingHistory = dynamic(() => import("./BillingHistory"), { ssr: false });
@@ -106,9 +106,8 @@ export default function ProfileContent() {
   const fetchProfileData = async () => {
     try {
       setLoading(true);
-      const response = await fetch(getApiUrl("/api/profile"), {
-        credentials: "include",
-      });
+      setLoading(true);
+      const response = await authenticatedFetch("/api/profile");
 
       if (response.ok) {
         const data = await response.json();
@@ -133,9 +132,8 @@ export default function ProfileContent() {
       formData.append("lastName", editData.lastName);
       // bio and location removed from profile updates
 
-      const response = await fetch(getApiUrl("/api/profile"), {
+      const response = await authenticatedFetch("/api/profile", {
         method: "PUT",
-        credentials: "include",
         body: formData,
       });
 
@@ -190,12 +188,8 @@ export default function ProfileContent() {
     try {
       setUpdating(true);
 
-      const response = await fetch(getApiUrl("/api/change-password"), {
+      const response = await authenticatedFetch("/api/change-password", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        credentials: "include",
         body: JSON.stringify({
           currentPassword: passwordData.current,
           newPassword: passwordData.new,
@@ -228,7 +222,8 @@ export default function ProfileContent() {
 
   const handleLogout = async () => {
     try {
-      await fetch(getApiUrl("/api/logout"), { method: "POST" });
+      // No need to manually fetch logout here, useAuth().logout() handles it
+      // await authenticatedFetch("/api/logout", { method: "POST" });
       logout();
       toast.success("Successfully logged out");
       router.push("/");
@@ -275,10 +270,8 @@ export default function ProfileContent() {
         },
       };
 
-      const response = await fetch(getApiUrl("/api/settings/update"), {
+      const response = await authenticatedFetch("/api/settings/update", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
         body: JSON.stringify(payload),
       });
 

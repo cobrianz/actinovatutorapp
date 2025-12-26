@@ -119,7 +119,13 @@ export default function Generate({ setActiveContent }) {
         });
 
         if (!response.ok) {
-          const errorData = await response.json();
+          let errorData = {};
+          try {
+            errorData = await response.json();
+          } catch (e) {
+            // If parsing fails (e.g. HTML 404/500 from Vercel), just throw generic or text
+            throw new Error(`Server Error (${response.status}): Request failed`);
+          }
           if (response.status === 429) {
             toast.error("Monthly limit reached. Upgrade to Pro for more!");
             return;
@@ -168,7 +174,12 @@ export default function Generate({ setActiveContent }) {
         });
 
         if (!response.ok) {
-          const errorData = await response.json();
+          let errorData = {};
+          try {
+            errorData = await response.json();
+          } catch (e) {
+            throw new Error(`Server Error (${response.status}): Request failed`);
+          }
           if (response.status === 429) {
             toast.error("Monthly limit reached. Upgrade to Pro for more!");
             return;
@@ -249,13 +260,13 @@ export default function Generate({ setActiveContent }) {
         </p>
       </div>
 
-      <div className="bg-white dark:bg-gray-800 p-8 mb-10">
+      <div className="p-8 mb-10">
         <div className="text-center mb-8">
           <h2 className="text-2xl font-semibold text-gray-900 dark:text-gray-100 mb-2">
             What can I help you learn today?
           </h2>
           <p className="text-gray-600 dark:text-gray-400">
-            Enter a topic below to generate a personalized course or flashcards
+            Enter a topic below to generate a personalized content
           </p>
           {!isPremium && atLimit && (
             <div className="mt-4 mx-auto max-w-md p-3 rounded-lg border border-red-200 dark:border-red-800 bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-200 text-sm">
@@ -280,7 +291,7 @@ export default function Generate({ setActiveContent }) {
                 e.target.style.height =
                   Math.min(e.target.scrollHeight, 200) + "px";
               }}
-              placeholder="Describe what you want to learn in detail... (e.g., I want to learn Python programming from scratch, including data structures, web development with Django, and machine learning basics)"
+              
               className="w-full px-3 sm:px-4 py-3 sm:py-4 text-base sm:text-lg border border-blue-300 dark:border-gray-600 rounded-lg sm:rounded-xl bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-transparent transition-all duration-200 resize-none min-h-[100px] sm:min-h-[120px] max-h-[200px]"
               onKeyDown={(e) => {
                 if (e.key === "Enter" && e.ctrlKey) {
