@@ -18,6 +18,7 @@ import { toast } from "sonner";
 import { useAuth } from "./AuthProvider";
 
 import { PLAN_LIMITS } from "@/lib/planLimits";
+import { authenticatedFetch } from "@/lib/apiConfig";
 
 export default function Upgrade() {
   const { user, loading } = useAuth();
@@ -37,9 +38,7 @@ export default function Upgrade() {
   useEffect(() => {
     const fetchUsage = async () => {
       try {
-        const res = await fetch("/api/user/usage", {
-          credentials: "include",
-        });
+        const res = await authenticatedFetch("/api/user/usage");
         if (res.ok) {
           const data = await res.json();
           setUsage(data);
@@ -51,7 +50,7 @@ export default function Upgrade() {
 
     const fetchPlans = async () => {
       try {
-        const res = await fetch("/api/plans");
+        const res = await authenticatedFetch("/api/plans");
         if (res.ok) {
           const data = await res.json();
           setPlans(data.plans || []);
@@ -83,10 +82,8 @@ export default function Upgrade() {
     setIsProcessing(true);
 
     try {
-      const response = await fetch("/api/billing/create-session", {
+      const response = await authenticatedFetch("/api/billing/create-session", {
         method: "POST",
-        credentials: "include",
-        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           plan: planName === 'premium' ? 'pro' : planName,
           paymentMethod: paymentMethod,

@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
-import { getApiUrl } from "../lib/apiConfig";
+import { getApiUrl, authenticatedFetch } from "../lib/apiConfig";
 import { CheckCircle, AlertCircle, Mail, ArrowLeft, Key } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "./AuthProvider";
@@ -38,9 +38,8 @@ export default function VerifyEmailContent() {
         setLoading(true);
 
         try {
-            const res = await fetch(getApiUrl("/api/verify-email"), {
+            const res = await authenticatedFetch("/api/verify-email", {
                 method: "POST",
-                headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ token }),
             });
 
@@ -56,9 +55,8 @@ export default function VerifyEmailContent() {
 
                 // Send welcome email
                 try {
-                    await fetch(getApiUrl("/api/send-welcome-email"), {
+                    await authenticatedFetch("/api/send-welcome-email", {
                         method: "POST",
-                        headers: { "Content-Type": "application/json" },
                         body: JSON.stringify({
                             email: data.user.email,
                             firstName: data.user.name?.split(" ")[0] || "User",
@@ -90,9 +88,8 @@ export default function VerifyEmailContent() {
 
         setResendLoading(true);
         try {
-            const response = await fetch(getApiUrl("/api/resend-verification"), {
+            const response = await authenticatedFetch("/api/resend-verification", {
                 method: "POST",
-                headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ email: userEmail }),
             });
 
@@ -131,9 +128,8 @@ export default function VerifyEmailContent() {
         setLoading(true);
 
         try {
-            const res = await fetch(getApiUrl("/api/verify-email"), {
+            const res = await authenticatedFetch("/api/verify-email", {
                 method: "POST",
-                headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ code }),
             });
 
