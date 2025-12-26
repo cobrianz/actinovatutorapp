@@ -51,7 +51,44 @@ export default function PremiumCourses() {
     }
   };
 
-  const featuredPick = {
+  const [staffPicks, setStaffPicks] = React.useState([]);
+  const [loading, setLoading] = React.useState(true);
+
+  React.useEffect(() => {
+    const fetchTrending = async () => {
+      try {
+        const response = await fetch(getApiUrl("/api/explore/trending-topics"));
+        if (response.ok) {
+          const data = await response.json();
+          if (data.success && data.topics) {
+            // Map AI topics to staffPicks format
+            const mapped = data.topics.map((topic, idx) => ({
+              id: idx + 2,
+              title: topic.title,
+              description: topic.description,
+              instructor: "AI Tutor Executive",
+              duration: topic.estimatedDuration || "8 weeks",
+              students: Math.floor(Math.random() * 5000) + 1000,
+              rating: (Math.random() * (5 - 4.5) + 4.5).toFixed(1),
+              difficulty: topic.difficulty || "Beginner",
+              category: topic.category || "General",
+              thumbnail: "/placeholder.svg?height=200&width=300",
+              staffNote: topic.whyTrending || "Highly recommended for all learners.",
+              badge: "Trending",
+            }));
+            setStaffPicks(mapped);
+          }
+        }
+      } catch (error) {
+        console.error("Failed to fetch trending for staff picks:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchTrending();
+  }, []);
+
+  const featuredPick = staffPicks[0] || {
     id: 1,
     title: "Complete Full-Stack Development Bootcamp",
     description:
@@ -74,98 +111,8 @@ export default function PremiumCourses() {
       "This course perfectly balances theory and practice. Sarah's teaching style makes complex concepts accessible to everyone.",
   };
 
-  const staffPicks = [
-    {
-      id: 2,
-      title: "AI and Machine Learning Fundamentals",
-      description:
-        "Dive into the world of artificial intelligence and machine learning",
-      instructor: "Dr. Michael Rodriguez",
-      duration: "8 weeks",
-      students: 8930,
-      rating: 4.8,
-      difficulty: "Beginner",
-      category: "AI/ML",
-      thumbnail: "/placeholder.svg?height=200&width=300",
-      staffNote: "Perfect introduction to AI concepts with hands-on projects.",
-      badge: "Trending",
-    },
-    {
-      id: 3,
-      title: "Advanced React Patterns",
-      description: "Master advanced React concepts and design patterns",
-      instructor: "Emma Thompson",
-      duration: "6 weeks",
-      students: 5670,
-      rating: 4.9,
-      difficulty: "Advanced",
-      category: "Frontend",
-      thumbnail: "/placeholder.svg?height=200&width=300",
-      staffNote:
-        "Essential for React developers looking to level up their skills.",
-      badge: "Expert Level",
-    },
-    {
-      id: 4,
-      title: "Cloud Architecture with AWS",
-      description: "Design and deploy scalable cloud solutions",
-      instructor: "James Wilson",
-      duration: "10 weeks",
-      students: 7240,
-      rating: 4.7,
-      difficulty: "Intermediate",
-      category: "Cloud Computing",
-      thumbnail: "/placeholder.svg?height=200&width=300",
-      staffNote:
-        "Comprehensive coverage of AWS services with real-world scenarios.",
-      badge: "Industry Favorite",
-    },
-    {
-      id: 5,
-      title: "UX Research and Design Thinking",
-      description: "Learn user-centered design principles and research methods",
-      instructor: "Lisa Park",
-      duration: "7 weeks",
-      students: 4580,
-      rating: 4.8,
-      difficulty: "Beginner",
-      category: "UX/UI Design",
-      thumbnail: "/placeholder.svg?height=200&width=300",
-      staffNote: "Excellent foundation for anyone interested in UX design.",
-      badge: "Creative Choice",
-    },
-    {
-      id: 6,
-      title: "Cybersecurity Essentials",
-      description: "Protect systems and data with modern security practices",
-      instructor: "Robert Kim",
-      duration: "9 weeks",
-      students: 6120,
-      rating: 4.6,
-      difficulty: "Intermediate",
-      category: "Security",
-      thumbnail: "/placeholder.svg?height=200&width=300",
-      staffNote: "Critical knowledge for today's digital landscape.",
-      badge: "High Demand",
-    },
-    {
-      id: 7,
-      title: "Data Visualization with D3.js",
-      description: "Create stunning interactive data visualizations",
-      instructor: "Anna Martinez",
-      duration: "5 weeks",
-      students: 3890,
-      rating: 4.9,
-      difficulty: "Intermediate",
-      category: "Data Science",
-      thumbnail: "/placeholder.svg?height=200&width=300",
-      staffNote: "Beautiful course that makes data come alive.",
-      badge: "Visual Excellence",
-    },
-  ];
-
   const categories = [
-    { name: "All Picks", count: staffPicks.length + 1, active: true },
+    { name: "All Picks", count: staffPicks.length + (staffPicks[0] ? 0 : 1), active: true },
     { name: "Programming", count: 3 },
     { name: "Design", count: 2 },
     { name: "Data Science", count: 2 },

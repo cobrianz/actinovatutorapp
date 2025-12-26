@@ -549,7 +549,7 @@ export default function Library({ setActiveContent, setHideNavs }) {
           .trim()
           .replace(/\s+/g, "-");
         router.push(
-          `/learn/content?topic=${encodeURIComponent(safeTopic)}?format=course&difficulty=${difficulty}&originalTopic=${encodeURIComponent(course.title)}`
+          `/learn/content?topic=${encodeURIComponent(safeTopic)}&format=course&difficulty=${difficulty}&originalTopic=${encodeURIComponent(course.title)}`
         );
       }
     } catch (error) {
@@ -791,7 +791,7 @@ export default function Library({ setActiveContent, setHideNavs }) {
                   key={idx}
                   whileHover={{ y: -4 }}
                   className="flex-shrink-0 w-[260px] bg-white dark:bg-gray-800 rounded-3xl p-5 border border-gray-100 dark:border-gray-700/50 shadow-sm relative overflow-hidden group cursor-pointer"
-                  onClick={() => setActiveContent("explore")}
+                  onClick={() => handleGenerateCourse(course)}
                 >
                   <div className="flex items-center gap-3 mb-4">
                     <div className="w-10 h-10 rounded-2xl bg-gray-50 dark:bg-gray-700/50 flex items-center justify-center text-gray-400 group-hover:text-indigo-500 transition-colors">

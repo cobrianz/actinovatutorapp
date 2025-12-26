@@ -83,9 +83,8 @@ export default function Sidebar({ activeContent, setActiveContent, isOpen, setIs
             // Allow swipe from left 30% of screen to be generous ("not touching left")
             // Ensure vertical movement is minimal to avoid scrolling interference
             if (
-                touchStartX < window.innerWidth * 0.3 &&
-                diffX > 70 &&
-                Math.abs(diffY) < 50
+                diffX > 100 &&
+                Math.abs(diffY) < 60
             ) {
                 setIsOpen(true);
             }

@@ -1088,7 +1088,7 @@ export default function Explore({ setHideNavs }) {
           .trim()
           .replace(/\s+/g, "-");
         router.push(
-          `/learn/${encodeURIComponent(safeTopic)}?format=course&difficulty=${topic.difficulty || "beginner"}&originalTopic=${encodeURIComponent(topic.title)}`
+          `/learn/content?topic=${encodeURIComponent(safeTopic)}&format=course&difficulty=${difficulty}&originalTopic=${encodeURIComponent(topic.title)}`
         );
       }
     } catch (error) {
@@ -1293,11 +1293,11 @@ export default function Explore({ setHideNavs }) {
         {!minimizedSections.has("categories") && (
           <>
             {loading ? (
-              <div className="flex gap-4overflow-x-auto pb-4 -mx-4 my-4 px-4 scrollbar-hide no-scrollbar">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
                 {[...Array(6)].map((_, index) => (
                   <div
                     key={index}
-                    className="flex-shrink-0 w-[240px] bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-3xl p-6 animate-pulse"
+                    className="bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700/50 rounded-2xl p-6 animate-pulse"
                   >
                     <div className="h-4 bg-gray-300 dark:bg-gray-600 rounded mb-4"></div>
                     <div className="h-3 bg-gray-300 dark:bg-gray-600 rounded mb-2"></div>
@@ -1319,7 +1319,7 @@ export default function Explore({ setHideNavs }) {
                 </p>
               </div>
             ) : (
-              <div className="flex gap-3 overflow-x-auto pb-4 -mx-4 px-4 scrollbar-hide no-scrollbar scroll-smooth">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
                 {filteredCategories.map((category, index) => {
                   const colors = [
                     "from-blue-500 to-indigo-600",

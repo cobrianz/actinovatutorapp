@@ -1,62 +1,76 @@
-import { NextResponse } from 'next/server';
+import { NextResponse } from "next/server";
 
+/**
+ * Next.js Middleware for Actinova AI Tutor.
+ * Runs on the Edge Runtime.
+ */
 export function middleware(request) {
-    const origin = request.headers.get('origin');
+    try {
+        const { pathname } = request.nextUrl;
 
-    // Define allowed origins
-    // Note: We use a function or regex if we want unlimited subdomains, 
-    // but for this app, we have specific origins.
-    const allowedOrigins = [
-        'http://localhost:3000',
-        'https://localhost', // Android Capacitor
-        'capacitor://localhost', // iOS Capacitor
-        'https://actinovatutorapp.vercel.app', // Production
-    ];
+        // 0. Explicitly skip API routes and static files to be absolutely safe
+        // This is a redundant safety check for the matcher
+        if (pathname.startsWith("/api") || pathname.startsWith("/_next") || pathname.includes("favicon.ico")) {
+            return NextResponse.next();
+        }
 
-    // Check if origin is allowed
-    // If no origin (server-to-server or same-origin navigation), usually we allow it.
-    const isAllowedOrigin = origin && allowedOrigins.includes(origin);
+        const hostname = request.headers.get("host") || "";
+        const token = request.cookies.get("token")?.value;
 
-    // Prepare response headers
-    // If allowed, reflect the origin. If not allowed, we don't set the header (blocking it).
-    // If no origin, we don't set Access-Control-Allow-Origin usually, but we can set it to '*' if credentials false.
-    // With credentials true, we MUST return specific origin.
+        // 1. Handle Admin Subdomain
+        if (hostname.startsWith("admin.") || hostname === "admin.localhost:3000") {
+            // Avoid infinite rewrite loops if already on /admin
+            if (!pathname.startsWith("/admin")) {
+                const url = request.nextUrl.clone();
+                url.pathname = `/admin${pathname === "/" ? "" : pathname}`;
+                return NextResponse.rewrite(url);
+            }
+        }
 
-    const headers = new Headers();
+        // 2. Define Protected and Auth Paths
+        // Standardizing paths to match actual src/app structure
+        const protectedPaths = ["/dashboard", "/profile", "/settings", "/course/", "/learning", "/quiz"];
+        const isProtected = protectedPaths.some(path => pathname.startsWith(path));
 
-    if (isAllowedOrigin) {
-        headers.set('Access-Control-Allow-Origin', origin);
-    } else if (!origin) {
-        // Optional: Allow non-CORS requests (like server side fetches) pass through without headers
-        // Or set to *? No, credentials require explicit origin.
+        const isAuthPage = pathname.startsWith("/auth") ||
+            pathname === "/login" ||
+            pathname === "/signup";
+
+        // 3. Redirection Logic
+        if (isProtected && !token) {
+            // Redirect to correct /auth/login route
+            const url = request.nextUrl.clone();
+            url.pathname = "/auth/login";
+            // Optional: append original path as query param for post-login redirect
+            // url.searchParams.set("callbackUrl", pathname);
+            return NextResponse.redirect(url);
+        }
+
+        if (isAuthPage && token) {
+            // Already logged in, go to dashboard
+            const url = request.nextUrl.clone();
+            url.pathname = "/dashboard";
+            return NextResponse.redirect(url);
+        }
+
+        return NextResponse.next();
+    } catch (error) {
+        // Fail-safe: continue to next if middleware errors out
+        console.error("Middleware processing error:", error);
+        return NextResponse.next();
     }
-
-    headers.set('Access-Control-Allow-Credentials', 'true');
-    headers.set('Access-Control-Allow-Methods', 'GET,DELETE,PATCH,POST,PUT,OPTIONS');
-    headers.set(
-        'Access-Control-Allow-Headers',
-        'X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version, Authorization'
-    );
-
-    // Handle Preflight OPTIONS requests directly
-    if (request.method === 'OPTIONS') {
-        return new NextResponse(null, {
-            status: 200,
-            headers: headers,
-        });
-    }
-
-    // Continue with the request, appending headers to the response
-    const response = NextResponse.next();
-
-    // Append CORS headers to the response
-    headers.forEach((value, key) => {
-        response.headers.set(key, value);
-    });
-
-    return response;
 }
 
 export const config = {
-    matcher: '/api/:path*',
+    matcher: [
+        /*
+         * Match all request paths except for:
+         * - api (API routes)
+         * - _next/static (static files)
+         * - _next/image (image optimization files)
+         * - favicon.ico (favicon file)
+         * - public files (logo.png, etc)
+         */
+        "/((?!api|_next/static|_next/image|favicon.ico|logo.png|.*\\.jpg|.*\\.png).*)",
+    ],
 };

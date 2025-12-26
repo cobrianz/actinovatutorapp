@@ -345,7 +345,35 @@ export const downloadCourseAsPDF = async (data, mode = "course") => {
     }
 
     const fileName = `${data.title?.replace(/\s+/g, "_").toLowerCase() || "actinova_study"}.pdf`;
-    pdf.save(fileName);
+
+    // Mobile/Capacitor Support
+    const isCapacitor = typeof window !== 'undefined' && (window.Capacitor || window.location.protocol === 'capacitor:');
+
+    if (isCapacitor) {
+        try {
+            const pdfBase64 = pdf.output('datauristring').split(',')[1];
+            const { Filesystem, Directory } = await import('@capacitor/filesystem');
+            const { Share } = await import('@capacitor/share');
+
+            const result = await Filesystem.writeFile({
+                path: fileName,
+                data: pdfBase64,
+                directory: Directory.Cache,
+            });
+
+            await Share.share({
+                title: 'Actinova PDF Download',
+                text: `Personalized material for ${data.title}`,
+                url: result.uri,
+                dialogTitle: 'Open PDF',
+            });
+        } catch (error) {
+            console.error('Capacitor PDF error:', error);
+            pdf.save(fileName); // Fallback
+        }
+    } else {
+        pdf.save(fileName);
+    }
 };
 
 export const downloadQuizAsPDF = async (data) => {
