@@ -14,6 +14,8 @@ import {
   Smartphone,
   TrendingUp,
 } from "lucide-react";
+import { Browser } from "@capacitor/browser";
+import { Capacitor } from "@capacitor/core";
 import { toast } from "sonner";
 import { useAuth } from "./AuthProvider";
 
@@ -105,7 +107,11 @@ export default function Upgrade() {
       const data = await response.json();
 
       if (data.sessionUrl) {
-        window.location.href = data.sessionUrl;
+        if (Capacitor.isNativePlatform()) {
+          await Browser.open({ url: data.sessionUrl });
+        } else {
+          window.location.href = data.sessionUrl;
+        }
       } else {
         throw new Error("No payment URL received");
       }

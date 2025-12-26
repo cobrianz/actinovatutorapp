@@ -20,7 +20,6 @@ const IS_CAPACITOR = typeof window !== 'undefined' && (
   (window.location.hostname === 'localhost' && window.location.port !== '3000' && window.location.port !== '3001')
 );
 
-const InactivityModal = dynamic(() => import("./InactivityModal"), { ssr: false });
 const ToasterClient = dynamic(() => import("./ToasterClient"), { ssr: false });
 
 const AuthContext = createContext();
@@ -39,16 +38,9 @@ export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [showInactivityModal, setShowInactivityModal] = useState(false);
-  const [timeRemaining, setTimeRemaining] = useState(120); // 2 minutes in seconds
   const router = useRouter();
   const pathname = usePathname();
 
-  // Refs for timers
-  const inactivityTimerRef = useRef(null);
-  const warningTimerRef = useRef(null);
-  const countdownTimerRef = useRef(null);
-  const lastActivityRef = useRef(Date.now());
   const refreshPromiseRef = useRef(null);
 
   // Do not hydrate user from localStorage; always source user from secure server-side cookie via `/api/me`
@@ -184,149 +176,44 @@ export function AuthProvider({ children }) {
     }
   }, [user, loading, pathname, router]);
 
-  // Activity tracking and inactivity timeout
-  const resetInactivityTimer = useCallback(() => {
-    lastActivityRef.current = Date.now();
+  // Initial user fetch
+  useEffect(() => {
+    // Always fetch server-sourced user (reads secure HttpOnly cookies)
+    fetchUser();
+  }, [fetchUser]);
 
-    // Clear existing timers
-    if (inactivityTimerRef.current) {
-      clearTimeout(inactivityTimerRef.current);
-    }
-    if (warningTimerRef.current) {
-      clearTimeout(warningTimerRef.current);
-    }
-    if (countdownTimerRef.current) {
-      clearInterval(countdownTimerRef.current);
-    }
-
-    // Hide modal if shown
-    setShowInactivityModal(false);
-    setTimeRemaining(120);
-
-    // Only set timers if user is logged in
-    if (user) {
-      // Set warning timer for 13 minutes (13 * 60 * 1000 = 780000ms)
-      warningTimerRef.current = setTimeout(
-        () => {
-          setShowInactivityModal(true);
-          setTimeRemaining(120);
-
-          // Start countdown timer
-          countdownTimerRef.current = setInterval(() => {
-            setTimeRemaining((prev) => {
-              if (prev <= 1) {
-                // Time's up - logout
-                handleInactivityLogout();
-                return 0;
-              }
-              return prev - 1;
-            });
-          }, 1000);
-        },
-        13 * 60 * 1000
-      );
-
-      // Set final logout timer for 15 minutes (15 * 60 * 1000 = 900000ms)
-      inactivityTimerRef.current = setTimeout(
-        () => {
-          handleInactivityLogout();
-        },
-        15 * 60 * 1000
-      );
-    }
-  }, [user]);
-
-  const handleInactivityLogout = useCallback(async () => {
-    // Clear all timers
-    if (inactivityTimerRef.current) {
-      clearTimeout(inactivityTimerRef.current);
-    }
-    if (warningTimerRef.current) {
-      clearTimeout(warningTimerRef.current);
-    }
-    if (countdownTimerRef.current) {
-      clearInterval(countdownTimerRef.current);
-    }
-
-    // Perform logout
-    try {
-      await authenticatedFetch("/api/logout", {
-        method: "POST",
-        headers: {
-          "X-CSRF-Token": getCsrfToken(),
-        },
-      });
-    } catch (err) {
-      console.error("Logout failed:", err);
-    }
-
-    setUser(null);
-    setShowInactivityModal(false);
-    router.push("/?loggedOut=inactivity");
-  }, [router]);
-
-  const extendSession = useCallback(() => {
-    resetInactivityTimer();
-  }, [resetInactivityTimer]);
-
-  // Set up activity listeners
+  // Refresh token when page becomes visible (user returns to tab)
   useEffect(() => {
     if (!user) return;
 
-    const activityEvents = [
-      "mousedown",
-      "mousemove",
-      "keypress",
-      "scroll",
-      "touchstart",
-      "click",
-    ];
-
-    const handleActivity = () => {
-      resetInactivityTimer();
+    const handleVisibilityChange = async () => {
+      if (document.visibilityState === "visible") {
+        await refreshToken();
+      }
     };
 
-    // Add event listeners
-    activityEvents.forEach((event) => {
-      document.addEventListener(event, handleActivity, true);
-    });
-
-    // Start the initial timer
-    resetInactivityTimer();
-
-    // Cleanup
+    document.addEventListener("visibilitychange", handleVisibilityChange);
     return () => {
-      activityEvents.forEach((event) => {
-        document.removeEventListener(event, handleActivity, true);
-      });
-
-      if (inactivityTimerRef.current) {
-        clearTimeout(inactivityTimerRef.current);
-      }
-      if (warningTimerRef.current) {
-        clearTimeout(warningTimerRef.current);
-      }
-      if (countdownTimerRef.current) {
-        clearInterval(countdownTimerRef.current);
-      }
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
     };
-  }, [user, resetInactivityTimer]);
+  }, [user, refreshToken]);
 
-  // Clear timers when user logs out
+  // Redirect after login if on an auth page
   useEffect(() => {
-    if (!user) {
-      if (inactivityTimerRef.current) {
-        clearTimeout(inactivityTimerRef.current);
+    if (!loading && user && pathname.startsWith("/auth")) {
+      // Don't auto-redirect from verification page
+      if (pathname === "/auth/verify-email") {
+        return;
       }
-      if (warningTimerRef.current) {
-        clearTimeout(warningTimerRef.current);
+
+      // Check if onboarding is completed
+      if (user.onboardingCompleted === false) {
+        router.replace("/onboarding");
+      } else {
+        router.replace("/dashboard");
       }
-      if (countdownTimerRef.current) {
-        clearInterval(countdownTimerRef.current);
-      }
-      setShowInactivityModal(false);
     }
-  }, [user]);
+  }, [user, loading, pathname, router]);
 
   const login = async (credentials) => {
     try {
@@ -342,7 +229,14 @@ export function AuthProvider({ children }) {
         body: JSON.stringify(credentials),
       });
 
-      const data = await res.json();
+      let data = null;
+      const responseText = await res.text();
+      try {
+        data = JSON.parse(responseText);
+      } catch (e) {
+        console.error('[Actinova] Failed to parse login response:', responseText.substring(0, 100));
+        throw new Error("Invalid server response format (expected JSON)");
+      }
 
       if (!res.ok) {
         console.error('[Actinova] Login failed status:', res.status, 'data:', data);
@@ -388,7 +282,14 @@ export function AuthProvider({ children }) {
         body: JSON.stringify(userData),
       });
 
-      const data = await res.json();
+      let data = null;
+      const responseText = await res.text();
+      try {
+        data = JSON.parse(responseText);
+      } catch (e) {
+        console.error('[Actinova] Failed to parse signup response:', responseText.substring(0, 100));
+        throw new Error("Invalid server response format (expected JSON)");
+      }
 
       if (!res.ok) {
         throw new Error(data.error || "Signup failed");
@@ -507,8 +408,6 @@ export function AuthProvider({ children }) {
         user,
         loading,
         error,
-        showInactivityModal,
-        timeRemaining,
         login,
         signup,
         logout,
@@ -519,14 +418,11 @@ export function AuthProvider({ children }) {
         setUserData,
         fetchUser,
         clearError,
-        extendSession,
-        handleInactivityLogout,
       }}
     >
       <>
         {children}
         <ToasterClient />
-        <InactivityModal />
       </>
     </AuthContext.Provider>
   );
@@ -541,7 +437,7 @@ export const useAuth = () => {
       loading: false,
       error: null,
       showInactivityModal: false,
-      timeRemaining: 120,
+      timeRemaining: 0,
       login: async () => ({ success: false }),
       signup: async () => ({ success: false }),
       logout: async () => { },
@@ -552,8 +448,6 @@ export const useAuth = () => {
       setUserData: () => { },
       fetchUser: async () => null,
       clearError: () => { },
-      extendSession: () => { },
-      handleInactivityLogout: () => { },
     };
   }
   return context;

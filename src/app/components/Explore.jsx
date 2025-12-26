@@ -1293,11 +1293,11 @@ export default function Explore({ setHideNavs }) {
         {!minimizedSections.has("categories") && (
           <>
             {loading ? (
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+              <div className="flex overflow-x-auto pb-4 gap-6 scrollbar-hide">
                 {[...Array(6)].map((_, index) => (
                   <div
                     key={index}
-                    className="bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700/50 rounded-2xl p-6 animate-pulse"
+                    className="flex-shrink-0 w-[300px] bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700/50 rounded-2xl p-6 animate-pulse"
                   >
                     <div className="h-4 bg-gray-300 dark:bg-gray-600 rounded mb-4"></div>
                     <div className="h-3 bg-gray-300 dark:bg-gray-600 rounded mb-2"></div>
@@ -1319,7 +1319,7 @@ export default function Explore({ setHideNavs }) {
                 </p>
               </div>
             ) : (
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+              <div className="flex overflow-x-auto pb-4 gap-6 scrollbar-hide snap-x">
                 {filteredCategories.map((category, index) => {
                   const colors = [
                     "from-blue-500 to-indigo-600",
@@ -1389,7 +1389,7 @@ export default function Explore({ setHideNavs }) {
             </div>
 
             {/* Fading Cards Loader */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 gap-6">
               {[...Array(6)].map((_, index) => (
                 <div
                   key={index}
@@ -1459,7 +1459,7 @@ export default function Explore({ setHideNavs }) {
             </div>
 
             {!minimizedSections.has(generatedSet.id) && (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              <div className="grid grid-cols-1 gap-6">
                 {generatedSet.courses.map((course, index) => (
                   <div
                     key={index}

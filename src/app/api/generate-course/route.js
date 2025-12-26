@@ -7,6 +7,7 @@ import { connectToDatabase } from "@/lib/mongodb";
 import { verifyToken } from "@/lib/auth";
 import { ObjectId } from "mongodb";
 import { getUserPlanLimits, checkLimit, getUserPlanName } from "@/lib/planLimits";
+import { withCORS } from "@/lib/middleware";
 
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
@@ -19,7 +20,7 @@ const LEGACY_LIMITS = {
 
 const MONTHLY = { free: 2, premium: 15 };
 
-export async function POST(request) {
+async function generateCourseHandler(request) {
   let userId = null;
   let isPremium = false;
 
@@ -493,6 +494,13 @@ Exactly ${modules} modules, exactly ${lessonsPerModule} lessons each. No content
     );
   }
 }
+
+export const POST = withCORS()(generateCourseHandler);
+
+// Handle OPTIONS for preflight
+export const OPTIONS = withCORS()(async () => {
+  return new NextResponse(null, { status: 200 });
+});
 
 async function generateQuiz(topic, difficulty, questions, userId, db, monthlyUsage, resetDate, isPremium) {
   const questionsCount = questions || 10;

@@ -18,6 +18,8 @@ import {
   ChevronRight,
   Sparkles,
 } from "lucide-react";
+import { Browser } from "@capacitor/browser";
+import { Capacitor } from "@capacitor/core";
 import Link from "next/link";
 import { useAuth } from "./AuthProvider";
 import ActinovaLoader from "./ActinovaLoader";
@@ -334,7 +336,11 @@ export default function PremiumCourses() {
       const data = await response.json();
 
       if (data.sessionUrl) {
-        window.location.href = data.sessionUrl;
+        if (Capacitor.isNativePlatform()) {
+          await Browser.open({ url: data.sessionUrl });
+        } else {
+          window.location.href = data.sessionUrl;
+        }
       } else {
         throw new Error("No payment URL received");
       }

@@ -206,3 +206,10 @@ async function signupHandler(request) {
     );
   }
 }
+
+export const POST = withCORS()(signupHandler);
+
+// Handle OPTIONS for preflight
+export const OPTIONS = withCORS()(async () => {
+  return new NextResponse(null, { status: 200 });
+});
