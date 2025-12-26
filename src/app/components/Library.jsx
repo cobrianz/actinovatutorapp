@@ -31,7 +31,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import ConfirmModal from "./ConfirmModal";
 import { toast } from "sonner";
-import { getApiUrl } from "../lib/apiConfig";
+import { getApiUrl, authenticatedFetch } from "../lib/apiConfig";
 import { downloadCourseAsPDF } from "@/lib/pdfUtils";
 import { useAuth } from "./AuthProvider";
 
@@ -263,12 +263,7 @@ export default function Library({ setActiveContent, setHideNavs }) {
         search: searchQuery,
       });
 
-      const res = await fetch(getApiUrl(`/api/library?${params}`), {
-        credentials: "include", // This sends httpOnly cookies automatically
-        headers: {
-          "Content-Type": "application/json",
-        },
-      });
+      const res = await authenticatedFetch(`/api/library?${params}`);
 
       if (!res.ok) {
         if (res.status === 401 && retryAfterRefresh) {
@@ -338,9 +333,8 @@ export default function Library({ setActiveContent, setHideNavs }) {
       const isPro = !!(user?.subscription?.plan === "pro" || user?.isPremium);
       const endpoint = isPro ? "/api/premium-courses/personalized" : "/api/premium-courses/trending";
 
-      const res = await fetch(endpoint, {
-        method: isPro ? "POST" : "GET",
-        credentials: "include"
+      const res = await authenticatedFetch(endpoint, {
+        method: isPro ? "POST" : "GET"
       });
 
       if (res.ok) {
@@ -358,9 +352,7 @@ export default function Library({ setActiveContent, setHideNavs }) {
   const fetchExploreData = async () => {
     try {
       setLoadingExplore(true);
-      const res = await fetch(getApiUrl("/api/premium-courses/trending"), {
-        credentials: "include"
-      });
+      const res = await authenticatedFetch("/api/premium-courses/trending");
 
       if (res.ok) {
         const data = await res.json();
@@ -426,13 +418,8 @@ export default function Library({ setActiveContent, setHideNavs }) {
     }));
 
     try {
-      const res = await fetch(getApiUrl("/api/library"), {
+      const res = await authenticatedFetch("/api/library", {
         method: "POST",
-        credentials: "include",
-        headers: {
-          "Content-Type": "application/json",
-          "x-user-id": user?._id || user?.id || "",
-        },
         body: JSON.stringify({ action: "pin", itemId: courseId }),
       });
 
@@ -486,13 +473,8 @@ export default function Library({ setActiveContent, setHideNavs }) {
     setCourses((prev) => prev.filter((c) => c.id !== courseToDelete.id));
 
     try {
-      const res = await fetch(getApiUrl("/api/library"), {
+      const res = await authenticatedFetch("/api/library", {
         method: "POST",
-        credentials: "include",
-        headers: {
-          "Content-Type": "application/json",
-          "x-user-id": user?._id || user?.id || "",
-        },
         body: JSON.stringify({ action: "delete", itemId: courseToDelete.id }),
       });
 
@@ -540,10 +522,8 @@ export default function Library({ setActiveContent, setHideNavs }) {
       }
 
       // Generate the course (server reads cookie for auth)
-      const response = await fetch(getApiUrl("/api/generate-course"), {
+      const response = await authenticatedFetch("/api/generate-course", {
         method: "POST",
-        credentials: "include",
-        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           topic: course.title,
           format: "course",
@@ -597,9 +577,7 @@ export default function Library({ setActiveContent, setHideNavs }) {
 
     const toastId = toast.loading(`Preparing PDF for ${course.title}...`);
     try {
-      const res = await fetch(getApiUrl(`/api/library?id=${course.id}`), {
-        credentials: "include",
-      });
+      const res = await authenticatedFetch(`/api/library?id=${course.id}`);
 
       if (!res.ok) throw new Error("Failed to fetch full course data");
 

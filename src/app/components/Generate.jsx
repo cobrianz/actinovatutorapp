@@ -13,7 +13,7 @@ import {
   HelpCircle,
 } from "lucide-react";
 import { toast } from "sonner";
-import { getApiUrl } from "../lib/apiConfig";
+import { getApiUrl, authenticatedFetch } from "../lib/apiConfig";
 import { useAuth } from "./AuthProvider";
 import ActinovaLoader from "./ActinovaLoader";
 import QuizInterface from "./QuizInterface";
@@ -110,10 +110,8 @@ export default function Generate({ setActiveContent }) {
       setIsSubmitting(true);
 
       try {
-        const response = await fetch(getApiUrl("/api/generate-flashcards"), {
+        const response = await authenticatedFetch("/api/generate-flashcards", {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
-          credentials: "include",
           body: JSON.stringify({
             topic: subject,
             difficulty,
@@ -159,12 +157,8 @@ export default function Generate({ setActiveContent }) {
 
       try {
         // Generate quiz directly via API
-        const response = await fetch(getApiUrl("/api/generate-course"), {
+        const response = await authenticatedFetch("/api/generate-course", {
           method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          credentials: "include",
           body: JSON.stringify({
             topic: subject,
             difficulty,
@@ -479,9 +473,7 @@ function PopularTopics({ setTopic, setLocalTopic }) {
   React.useEffect(() => {
     async function fetchTopics() {
       try {
-        const res = await fetch(getApiUrl("/api/popular-topics"), {
-          credentials: "include",
-        });
+        const res = await authenticatedFetch("/api/popular-topics");
         const data = await res.json();
         setTopics(data.topics || []);
       } catch (error) {

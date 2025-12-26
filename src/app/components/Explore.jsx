@@ -920,9 +920,7 @@ export default function Explore({ setHideNavs }) {
       // If no valid courses in localStorage, check database (server reads auth from HttpOnly cookie)
       if (courses.length === 0) {
         try {
-          const response = await fetch(getApiUrl("/api/explore/persisted-courses"), {
-            credentials: "include",
-          });
+          const response = await authenticatedFetch("/api/explore/persisted-courses");
 
           if (response.ok) {
             const dbData = await response.json();
@@ -965,12 +963,8 @@ export default function Explore({ setHideNavs }) {
 
   const saveCoursesToDatabase = async (courses) => {
     try {
-      await fetch(getApiUrl("/api/explore/persisted-courses"), {
+      await authenticatedFetch("/api/explore/persisted-courses", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        credentials: "include",
         body: JSON.stringify({ courses }),
       });
     } catch (error) {
@@ -999,9 +993,7 @@ export default function Explore({ setHideNavs }) {
     try {
       setLoading(true);
       // Fetch AI-generated trending topics (auth via HttpOnly cookie)
-      const trendingResponse = await fetch(getApiUrl("/api/explore/trending-topics"), {
-        credentials: "include",
-      });
+      const trendingResponse = await authenticatedFetch("/api/explore/trending-topics");
       if (trendingResponse.ok) {
         const trendingData = await trendingResponse.json();
         setTrendingTopics((trendingData.topics || []).slice(0, 9));
@@ -1024,9 +1016,7 @@ export default function Explore({ setHideNavs }) {
         isPremium: isPremium,
       });
 
-      const response = await fetch(getApiUrl(`/api/courses?${params}`), {
-        credentials: "include",
-      });
+      const response = await authenticatedFetch(`/api/courses?${params}`);
       if (response.ok) {
         const data = await response.json();
         setPagination(data.pagination || {});
@@ -1057,10 +1047,8 @@ export default function Explore({ setHideNavs }) {
       }
 
       // Generate the course (server reads cookie for auth)
-      const response = await fetch(getApiUrl("/api/generate-course"), {
+      const response = await authenticatedFetch("/api/generate-course", {
         method: "POST",
-        credentials: "include",
-        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           topic: topic.title,
           format: "course",
@@ -1202,10 +1190,8 @@ export default function Explore({ setHideNavs }) {
   const handleBookmark = async (itemId, type, itemData) => {
     try {
       const headers = { "Content-Type": "application/json" };
-      const response = await fetch(getApiUrl("/api/library"), {
+      const response = await authenticatedFetch("/api/library", {
         method: "POST",
-        headers: { ...headers, "x-user-id": user?._id || user?.id || "" },
-        credentials: "include",
         body: JSON.stringify({
           action: "bookmark",
           courseId: itemId,
