@@ -27,6 +27,12 @@ export function withCsrf(handler) {
             const headersList = await headers();
             const cookieStore = await cookies();
 
+            // BYPASS CSRF for Bearer tokens (Mobile/Capacitor)
+            const authHeader = headersList.get("Authorization");
+            if (authHeader?.startsWith("Bearer ")) {
+                return handler(request, context);
+            }
+
             const csrfHeader = headersList.get(CSRF_HEADER_NAME);
             const csrfCookie = cookieStore.get(CSRF_COOKIE_NAME)?.value;
 

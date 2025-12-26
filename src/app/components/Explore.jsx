@@ -1115,10 +1115,10 @@ export default function Explore({ setHideNavs }) {
     setExploringCategory(category.name);
 
     try {
-      const response = await fetch(
+      const response = await authenticatedFetch(
         `/api/explore/category-courses?category=${encodeURIComponent(category.name)}`,
         {
-          credentials: "include",
+          method: "GET",
         }
       );
 
@@ -1177,11 +1177,20 @@ export default function Explore({ setHideNavs }) {
         const errorData = await response.json();
         toast.error(errorData.message || "Premium subscription required");
       } else {
-        toast.error("Failed to generate category courses");
+        let errorData = {};
+        try {
+          const text = await response.text();
+          try {
+            errorData = JSON.parse(text);
+          } catch (e) {
+            console.error("Failed to parse error JSON:", text.substring(0, 100));
+          }
+        } catch (e) { }
+        toast.error(errorData.error || errorData.message || "Failed to generate category courses");
       }
     } catch (error) {
       console.error("Error generating category courses:", error);
-      toast.error("Failed to generate category courses");
+      toast.error("Failed to generate category courses: " + error.message);
     } finally {
       setExploringCategory(null);
     }

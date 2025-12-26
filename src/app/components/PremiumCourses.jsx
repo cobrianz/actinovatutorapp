@@ -250,7 +250,17 @@ export default function PremiumCourses() {
       });
 
       if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
+        let errorData = {};
+        try {
+          const text = await response.text();
+          try {
+            errorData = JSON.parse(text);
+          } catch (e) {
+            errorData = { error: "Invalid server response" };
+          }
+        } catch (e) {
+          errorData = { error: "Failed to read response" };
+        }
 
         // Handle monthly limit reached error
         if (response.status === 429) {
@@ -286,7 +296,18 @@ export default function PremiumCourses() {
         // Don't fail the whole operation if tracking fails
       }
 
-      const responseData = await response.json();
+      let responseData = {};
+      try {
+        const text = await response.text();
+        try {
+          responseData = JSON.parse(text);
+        } catch (e) {
+          console.error("Failed to parse success JSON:", text.substring(0, 100));
+          throw new Error("Server returned invalid success response format.");
+        }
+      } catch (e) {
+        throw new Error("Failed to read success response.");
+      }
 
       toast.success(`Course "${course.title}" generated successfully!`, {
         id: "generating",
@@ -321,7 +342,17 @@ export default function PremiumCourses() {
       });
 
       if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
+        let errorData = {};
+        try {
+          const text = await response.text();
+          try {
+            errorData = JSON.parse(text);
+          } catch (e) {
+            errorData = { error: "Invalid server response" };
+          }
+        } catch (e) {
+          errorData = { error: "Failed to read response" };
+        }
         if (response.status === 401) {
           toast.error("Please log in to upgrade.");
           setTimeout(() => {
@@ -336,7 +367,7 @@ export default function PremiumCourses() {
       const data = await response.json();
 
       if (data.sessionUrl) {
-        if (Capacitor.isNativePlatform()) {
+        if (typeof window !== 'undefined' && (window.Capacitor || window.location.protocol === 'capacitor:')) {
           await Browser.open({ url: data.sessionUrl });
         } else {
           window.location.href = data.sessionUrl;

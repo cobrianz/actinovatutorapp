@@ -93,7 +93,12 @@ export default function Upgrade() {
       });
 
       if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
+        let errorData = {};
+        try {
+          errorData = await response.json();
+        } catch (e) {
+          console.error("Failed to parse error response:", e);
+        }
         if (response.status === 401) {
           toast.error("Please log in to upgrade.");
           setTimeout(() => {
@@ -107,7 +112,7 @@ export default function Upgrade() {
       const data = await response.json();
 
       if (data.sessionUrl) {
-        if (Capacitor.isNativePlatform()) {
+        if (typeof window !== 'undefined' && (window.Capacitor || window.location.protocol === 'capacitor:')) {
           await Browser.open({ url: data.sessionUrl });
         } else {
           window.location.href = data.sessionUrl;
@@ -265,6 +270,18 @@ export default function Upgrade() {
             const isCurrentPlan = plan.id === currentPlanId;
             const isPopular = plan.popular;
 
+            const PLAN_RANKS = {
+              'free': 0,
+              'basic': 1,
+              'premium': 2,
+              'pro': 2,
+              'enterprise': 3
+            };
+
+            const currentRank = PLAN_RANKS[currentPlanId] || 0;
+            const planRank = PLAN_RANKS[plan.id] || 0;
+            const isDowngrade = planRank < currentRank;
+
             return (
               <motion.div
                 key={plan.id}
@@ -341,11 +358,11 @@ export default function Upgrade() {
                   </ul>
 
                   <motion.button
-                    onClick={() => !isCurrentPlan && handleUpgrade(plan.id)}
-                    disabled={isCurrentPlan || isProcessing}
-                    whileHover={{ scale: isCurrentPlan ? 1 : 1.02 }}
-                    whileTap={{ scale: isCurrentPlan ? 1 : 0.98 }}
-                    className={`w-full py-3 px-4 rounded-lg font-medium transition-all ${isCurrentPlan
+                    onClick={() => !isCurrentPlan && !isDowngrade && handleUpgrade(plan.id)}
+                    disabled={isCurrentPlan || isDowngrade || isProcessing}
+                    whileHover={{ scale: (isCurrentPlan || isDowngrade) ? 1 : 1.02 }}
+                    whileTap={{ scale: (isCurrentPlan || isDowngrade) ? 1 : 0.98 }}
+                    className={`w-full py-3 px-4 rounded-lg font-medium transition-all ${(isCurrentPlan || isDowngrade)
                       ? "bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400 cursor-not-allowed"
                       : isPopular
                         ? "bg-gradient-to-r from-blue-600 to-purple-600 text-white hover:from-blue-700 hover:to-purple-700 shadow-lg"
@@ -354,9 +371,11 @@ export default function Upgrade() {
                   >
                     {isCurrentPlan
                       ? "Current Plan"
-                      : isProcessing
-                        ? "Processing..."
-                        : `Upgrade to ${plan.name}`}
+                      : isDowngrade
+                        ? "Contact Support"
+                        : isProcessing
+                          ? "Processing..."
+                          : `Upgrade to ${plan.name}`}
                   </motion.button>
                 </div>
               </motion.div>

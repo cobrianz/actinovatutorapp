@@ -29,7 +29,7 @@ import {
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { getApiUrl } from "../lib/apiConfig";
+import { getApiUrl, authenticatedFetch } from "../lib/apiConfig";
 import { useAuth } from "./AuthProvider";
 
 const onboardingSteps = [
@@ -718,10 +718,9 @@ export default function Onboarding({ onComplete }) {
 
       console.log("[Onboarding] Sending profile data:", profileData);
 
-      const response = await fetch(getApiUrl("/api/profile/update"), {
+      const response = await authenticatedFetch("/api/profile/update", {
         method: "POST",
         headers,
-        credentials: "include",
         body: JSON.stringify(profileData),
       });
 
