@@ -35,7 +35,6 @@ import {
   Receipt,
   LogOut,
   TrendingUp,
-  TrendingUp,
   Target as TargetIcon,
   LifeBuoy
 } from "lucide-react";
