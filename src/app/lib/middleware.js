@@ -240,68 +240,15 @@ export function withRateLimit(options = {}) {
 }
 
 // CORS middleware
+// DEPRECATED logic: Global CORS is now handled by src/middleware.js
+// This wrapper is kept for backward compatibility with existing route imports but acts as a pass-through.
 export function withCORS(options = {}) {
-  const allowedOrigins = options.origins || [
-    process.env.CORS_ORIGIN || "http://localhost:3000",
-    "https://actinovatutorapp.vercel.app",
-    "http://localhost",
-    "https://localhost",
-    "capacitor://localhost"
-  ];
-  const allowedMethods = options.methods || [
-    "GET",
-    "POST",
-    "PUT",
-    "DELETE",
-    "OPTIONS",
-  ];
-  const allowedHeaders = options.headers || ["Content-Type", "Authorization"];
-
   return (handler) => {
     return async (req, context) => {
-      const origin = req.headers?.get("origin");
-
-      // Flexible origin matching
-      let isAllowedOrigin = false;
-      if (origin) {
-        if (allowedOrigins.includes(origin)) {
-          isAllowedOrigin = true;
-        } else if (origin.startsWith('https://actinova') && origin.endsWith('.vercel.app')) {
-          isAllowedOrigin = true;
-        } else if (origin === 'http://localhost' || origin === 'https://localhost') {
-          isAllowedOrigin = true;
-        }
-      }
-
-      // Handle preflight requests
-      if (req.method === "OPTIONS") {
-        return new NextResponse(null, {
-          status: 200,
-          headers: {
-            "Access-Control-Allow-Origin": isAllowedOrigin
-              ? origin
-              : allowedOrigins[0],
-            "Access-Control-Allow-Methods": allowedMethods.join(", "),
-            "Access-Control-Allow-Headers": allowedHeaders.join(", "),
-            "Access-Control-Allow-Credentials": "true",
-            "Access-Control-Max-Age": "86400",
-            "X-Actinova-CORS": "active"
-          },
-        });
-      }
-
-      const response = await handler(req, context);
-
-      // Add CORS headers to response
-      if (response) {
-        response.headers.set(
-          "Access-Control-Allow-Origin",
-          isAllowedOrigin ? origin : allowedOrigins[0]
-        );
-        response.headers.set("Access-Control-Allow-Credentials", "true");
-      }
-
-      return response;
+      // Pass directly to handler. 
+      // OPTIONS requests are intercepted by src/middleware.js so this handler's code for OPTIONS won't run, which is fine.
+      // GET/POST/etc requests will flow through, and src/middleware.js appends headers.
+      return handler(req, context);
     };
   };
 }
