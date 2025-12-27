@@ -1196,7 +1196,8 @@ export default function LearnContent() {
             return;
           }
           const errorData = await response.json();
-          throw new Error(errorData.error || "Failed to generate course");
+          console.error("Course generation debug:", errorData);
+          throw new Error(errorData.details || errorData.error || "Failed to generate course");
         }
 
         const data = await response.json();

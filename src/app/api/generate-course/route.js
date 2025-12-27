@@ -508,7 +508,7 @@ Exactly ${modules} modules, exactly ${lessonsPerModule} lessons each. No content
       {
         error: "Failed to generate course",
         details:
-          process.env.NODE_ENV === "development" ? error.message : undefined,
+          details: error.message, // Temporarily exposed for debugging
       },
       { status: 500 }
     );
