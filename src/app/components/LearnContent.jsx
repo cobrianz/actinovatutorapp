@@ -1196,7 +1196,7 @@ export default function LearnContent() {
             return;
           }
           const errorData = await response.json();
-          console.error("Course generation debug:", errorData);
+          console.error("Course generation debug:", JSON.stringify(errorData));
           throw new Error(errorData.details || errorData.error || "Failed to generate course");
         }
 
@@ -1316,7 +1316,7 @@ export default function LearnContent() {
         initializedCoursesRef.current.add(courseKey);
         console.log("Course data set successfully");
       } catch (err) {
-        console.error("Error fetching course data:", err);
+        console.error("Error fetching course data:", JSON.stringify(err, Object.getOwnPropertyNames(err)));
         if (isMounted) {
           setError(err.message);
           toast.error(`Failed to load course: ${err.message}`);
