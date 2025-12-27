@@ -23,6 +23,7 @@ import {
 
 import { toast } from "sonner";
 import { downloadCourseAsPDF } from "@/lib/pdfUtils";
+import { authenticatedFetch } from "@/lib/apiConfig";
 import { useAuth } from "./AuthProvider";
 import { useEnsureSession } from "./SessionGuard";
 import { useRouter } from "next/navigation";

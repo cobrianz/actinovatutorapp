@@ -2,5 +2,5 @@
 2:I[55687,["3930","static/chunks/164f4fb6-d59d935c79eab611.js","293","static/chunks/280273a7-c1f7f9747efb3735.js","6609","static/chunks/6609-8cd166f3de711412.js","8500","static/chunks/8500-c06c4ddedc716401.js","8894","static/chunks/8894-94d7d2ac843318d7.js","5333","static/chunks/5333-e264698454d54b29.js","9776","static/chunks/9776-ae1e746a3fddd42c.js","5687","static/chunks/5687-a2252e64a8556531.js","3248","static/chunks/app/quizzes/page-ccce3348cbeae4c5.js"],"default"]
 3:I[90484,[],"OutletBoundary"]
 4:"$Sreact.suspense"
-0:{"buildId":"euq1v9C8dJ5RihMhMdPzN","rsc":["$","$1","c",{"children":[["$","div",null,{"children":["$","$L2",null,{}]}],null,["$","$L3",null,{"children":["$","$4",null,{"name":"Next.MetadataOutlet","children":"$@5"}]}]]}],"loading":null,"isPartial":false}
+0:{"buildId":"DPIEvBotLQbA20PuBGWlX","rsc":["$","$1","c",{"children":[["$","div",null,{"children":["$","$L2",null,{}]}],null,["$","$L3",null,{"children":["$","$4",null,{"name":"Next.MetadataOutlet","children":"$@5"}]}]]}],"loading":null,"isPartial":false}
 5:null
