@@ -16,9 +16,9 @@ export const PLAN_LIMITS = {
         monthlyGenerations: 3,
     },
     premium: {
-        courses: 50,
+        courses: 15,
         flashcards: 100,
-        quizzes: 50,
+        quizzes: 60,
         aiResponses: -1, // unlimited
         modules: 20,
         lessonsPerModule: 5,

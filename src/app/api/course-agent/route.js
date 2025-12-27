@@ -249,7 +249,7 @@ async function handleGenerateLesson(body, userId, db) {
 
   // === Generate New Content ===
   const promptBase = `Write an extremely detailed, high-quality educational lesson in Markdown.
-The lesson should be comprehensive, in-depth, and around 1000-1500 words minimum.
+The lesson should be comprehensive, in-depth, and around 1000-1500 words minimum no tables use tables instead use lists incase of comparisons.
 
 Topic: ${courseTopic}
 Module: ${moduleTitle || "Core Concepts"}
