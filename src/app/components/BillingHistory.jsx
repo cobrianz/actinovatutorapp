@@ -104,12 +104,27 @@ export default function BillingHistory({ billingHistory, theme }) {
                                             try {
                                                 const { Filesystem, Directory } = await import('@capacitor/filesystem');
                                                 const { Share } = await import('@capacitor/share');
+                                                const { LocalNotifications } = await import('@capacitor/local-notifications');
                                                 const fileName = `receipt-${entry.reference}.pdf`;
 
                                                 const result = await Filesystem.writeFile({
                                                     path: fileName,
                                                     data: base64data,
                                                     directory: Directory.Cache
+                                                });
+
+                                                // Schedule notification
+                                                await LocalNotifications.schedule({
+                                                    notifications: [{
+                                                        title: 'Receipt Downloaded',
+                                                        body: `Receipt for ${entry.plan} has been saved.`,
+                                                        id: Math.floor(Math.random() * 100000),
+                                                        schedule: { at: new Date(Date.now() + 100) },
+                                                        sound: null,
+                                                        attachments: null,
+                                                        actionTypeId: "",
+                                                        extra: null
+                                                    }]
                                                 });
 
                                                 await Share.share({

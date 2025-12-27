@@ -355,10 +355,26 @@ export const downloadCourseAsPDF = async (data, mode = "course") => {
             const { Filesystem, Directory } = await import('@capacitor/filesystem');
             const { Share } = await import('@capacitor/share');
 
+            const { LocalNotifications } = await import('@capacitor/local-notifications');
+
             const result = await Filesystem.writeFile({
                 path: fileName,
                 data: pdfBase64,
                 directory: Directory.Cache,
+            });
+
+            // Schedule notification
+            await LocalNotifications.schedule({
+                notifications: [{
+                    title: 'Download Complete',
+                    body: `${data.title} has been saved to your device.`,
+                    id: Math.floor(Math.random() * 100000),
+                    schedule: { at: new Date(Date.now() + 100) },
+                    sound: null,
+                    attachments: null,
+                    actionTypeId: "",
+                    extra: null
+                }]
             });
 
             await Share.share({
@@ -488,10 +504,26 @@ export const downloadQuizAsPDF = async (data) => {
             const { Filesystem, Directory } = await import('@capacitor/filesystem');
             const { Share } = await import('@capacitor/share');
 
+            const { LocalNotifications } = await import('@capacitor/local-notifications');
+
             const result = await Filesystem.writeFile({
                 path: fileName,
                 data: pdfBase64,
                 directory: Directory.Cache,
+            });
+
+            // Schedule notification
+            await LocalNotifications.schedule({
+                notifications: [{
+                    title: 'Download Complete',
+                    body: `Assessment for ${data.title} has been saved.`,
+                    id: Math.floor(Math.random() * 100000),
+                    schedule: { at: new Date(Date.now() + 100) },
+                    sound: null,
+                    attachments: null,
+                    actionTypeId: "",
+                    extra: null
+                }]
             });
 
             await Share.share({
