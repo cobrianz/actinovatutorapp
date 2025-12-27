@@ -504,7 +504,7 @@ Exactly ${modules} modules, exactly ${lessonsPerModule} lessons each. No content
             isPremium,
             monthly: {
               used: monthlyUsage + 1, // may have been incremented by the other insert
-              limit: isPremium ? MONTHLY.premium : MONTHLY.free,
+              limit: limits.monthlyGenerations,
               resetsOn: resetDate.toLocaleDateString(),
             },
             features: [
@@ -537,7 +537,7 @@ Exactly ${modules} modules, exactly ${lessonsPerModule} lessons each. No content
       isPremium,
       monthly: {
         used: monthlyUsage + 1,
-        limit: isPremium ? MONTHLY.premium : MONTHLY.free,
+        limit: limits.monthlyGenerations,
         resetsOn: resetDate.toLocaleDateString(),
       },
       features: [
@@ -728,7 +728,7 @@ Return ONLY valid JSON with this exact structure:
       content: quiz,
       monthly: {
         used: (monthlyUsage || 0) + 1,
-        limit: isPremium ? MONTHLY.premium : MONTHLY.free,
+        limit: isPremium ? 20 : 1, // Fallback hardcoded as limits not passed to quiz generator correctly
         resetsOn: resetDate ? resetDate.toLocaleDateString() : new Date().toLocaleDateString(),
       },
     });
