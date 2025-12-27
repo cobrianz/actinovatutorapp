@@ -901,7 +901,7 @@ export default function Library({ setActiveContent, setHideNavs }) {
                       .trim()
                       .replace(/\s+/g, "-");
                     router.push(
-                      `/learn/${encodeURIComponent(safeTopic)}?format=${course.format}&difficulty=${course.difficulty || "beginner"}&originalTopic=${encodeURIComponent(course.topic)}`
+                      `/learn/content?topic=${encodeURIComponent(course.topic)}&format=${course.format}&difficulty=${course.difficulty || "beginner"}&originalTopic=${encodeURIComponent(course.topic)}`
                     );
                   }}
                   className={`w-full bg-gradient-to-br ${cardColor} rounded-2xl p-6 relative overflow-hidden group cursor-pointer transition-all hover:scale-[1.01] shadow-xl shadow-gray-200/20 dark:shadow-none`}

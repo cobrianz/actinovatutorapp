@@ -477,5 +477,42 @@ export const downloadQuizAsPDF = async (data) => {
         addBranding(i, totalPages);
     }
 
-    pdf.save(`assessment_${data.title?.replace(/\s+/g, "_").toLowerCase() || "exam"}.pdf`);
+    // Mobile/Capacitor Support
+    const isCapacitor = typeof window !== 'undefined' && (window.Capacitor || window.location.protocol === 'capacitor:');
+
+    const fileName = `assessment_${data.title?.replace(/\s+/g, "_").toLowerCase() || "exam"}.pdf`;
+
+    if (isCapacitor) {
+        try {
+            const pdfBase64 = pdf.output('datauristring').split(',')[1];
+            const { Filesystem, Directory } = await import('@capacitor/filesystem');
+            const { Share } = await import('@capacitor/share');
+
+            const result = await Filesystem.writeFile({
+                path: fileName,
+                data: pdfBase64,
+                directory: Directory.Cache,
+            });
+
+            await Share.share({
+                title: 'Actinova Assessment Download',
+                text: `Assessment paper for ${data.title}`,
+                url: result.uri,
+                dialogTitle: 'Open Assessment PDF',
+            });
+        } catch (error) {
+            console.error('Capacitor PDF error:', error);
+            pdf.save(fileName); // Fallback
+        }
+    } else {
+        pdf.save(fileName);
+    }
+};
+
+export const downloadReceiptAsPDF = async (data) => {
+    // Basic implementation for receipts if not handled by React-PDF
+    // This is a placeholder if the user is using jsPDF for receipts too
+    // If they use @react-pdf/renderer, that logic will be in the component
+    // But based on user request "download lessons, courses and receipts are saved in the phone"
+    // we should ensure whatever method they use supports Capacitor.
 };

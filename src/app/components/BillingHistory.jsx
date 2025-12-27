@@ -86,6 +86,52 @@ export default function BillingHistory({ billingHistory, theme }) {
                                 <Loader2 size={18} className="animate-spin" />
                             </div>
                         )}
+
+                        {(isLoaded && DocumentComponent) && (
+                            <button
+                                onClick={async () => {
+                                    try {
+                                        // Capacitor check
+                                        const isCapacitor = typeof window !== 'undefined' && (window.Capacitor || window.location.protocol === 'capacitor:');
+                                        if (!isCapacitor) return; // LinkComponent handles web
+
+                                        const { pdf } = await import("@react-pdf/renderer");
+                                        const blob = await pdf(<DocumentComponent transaction={entry} />).toBlob();
+                                        const reader = new FileReader();
+                                        reader.readAsDataURL(blob);
+                                        reader.onloadend = async () => {
+                                            const base64data = reader.result.split(',')[1];
+                                            try {
+                                                const { Filesystem, Directory } = await import('@capacitor/filesystem');
+                                                const { Share } = await import('@capacitor/share');
+                                                const fileName = `receipt-${entry.reference}.pdf`;
+
+                                                const result = await Filesystem.writeFile({
+                                                    path: fileName,
+                                                    data: base64data,
+                                                    directory: Directory.Cache
+                                                });
+
+                                                await Share.share({
+                                                    title: 'Receipt Download',
+                                                    text: `Receipt for ${entry.plan}`,
+                                                    url: result.uri,
+                                                    dialogTitle: 'Open Receipt'
+                                                });
+                                            } catch (err) {
+                                                console.error("Capacitor save error", err);
+                                            }
+                                        };
+                                    } catch (e) {
+                                        console.error("Download handling error", e);
+                                    }
+                                }}
+                                className={`md:hidden flex items-center p-2 rounded-xl bg-blue-600 text-white`}
+                                title="Save to Phone"
+                            >
+                                <Download size={18} />
+                            </button>
+                        )}
                     </div>
                 </div>
             ))}

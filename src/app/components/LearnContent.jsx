@@ -133,7 +133,6 @@ export default function LearnContent() {
         return;
       }
     } catch { }
-    // Try backend
     try {
       const res = await authenticatedFetch("/api/library", {
         method: "POST",
@@ -161,6 +160,36 @@ export default function LearnContent() {
         }
       }
     } catch { }
+  };
+
+  // Swipe handlers
+  const touchStart = useRef(null);
+  const touchEnd = useRef(null);
+
+  // Minimum swipe distance
+  const minSwipeDistance = 50;
+
+  const onTouchStart = (e) => {
+    touchEnd.current = null;
+    touchStart.current = e.targetTouches[0].clientX;
+  };
+
+  const onTouchMove = (e) => {
+    touchEnd.current = e.targetTouches[0].clientX;
+  };
+
+  const onTouchEnd = () => {
+    if (!touchStart.current || !touchEnd.current) return;
+    const distance = touchStart.current - touchEnd.current;
+    const isLeftSwipe = distance > minSwipeDistance;
+    const isRightSwipe = distance < -minSwipeDistance;
+
+    if (isRightSwipe) {
+      setIsSidebarOpen(true);
+    } else if (isLeftSwipe) {
+      // Optional: Close sidebar on left swipe
+      setIsSidebarOpen(false);
+    }
   };
 
   useEffect(() => {
@@ -1460,102 +1489,14 @@ export default function LearnContent() {
   }
 
   return (
-    <div className="h-screen flex flex-col bg-gray-50 dark:bg-gray-900 overflow-hidden">
-      {/* Permanent Navbar Header */}
-      <div className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 p-3 sm:p-4 z-50 shadow-sm relative">
-        <div className="flex items-center justify-between w-full px-2 sm:px-4 lg:px-6">
-          {/* Left Group - Navigation */}
-          <div className="flex items-center space-x-2 sm:space-x-4">
-
-            <Link
-              href="/dashboard"
-              className="flex items-center space-x-2 px-3 py-1.5 text-xs sm:text-sm rounded-sm bg-gray-900 dark:bg-gray-100 text-white dark:text-gray-900 hover:opacity-90 transition-all font-bold shadow-sm"
-            >
-              <Home className="w-4 h-4" />
-              <span className="hidden md:inline">Dashboard</span>
-            </Link>
-            <button
-              onClick={() => setIsSidebarOpen(!isSidebarOpen)}
-              className={`flex items-center space-x-2 px-3 py-1.5 text-xs sm:text-sm rounded-lg border transition-all font-medium ${isSidebarOpen
-                ? "bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 border-blue-200 dark:border-blue-900/50"
-                : "bg-gray-50 dark:bg-gray-700/50 text-gray-700 dark:text-gray-300 border-gray-200 dark:border-gray-700"
-                }`}
-            >
-              <Menu className="w-4 h-4" />
-              <span className="hidden md:inline">Modules</span>
-            </button>
-          </div>
-
-          {/* Right Group - Controls */}
-          <div className="flex items-center space-x-2 sm:space-x-4">
-            <button
-              onClick={async () => {
-                if (!activeLesson || lessonContentLoading) return;
-                const lessonId = `${activeLesson.moduleId}-${activeLesson.lessonIndex}`;
-                const isCurrentlyCompleted = completedLessons.has(lessonId);
-                const action = isCurrentlyCompleted ? "incomplete" : "complete";
-                toast.loading(`Marking lesson as ${action}...`, { id: "mark-complete" });
-
-                try {
-                  await toggleLessonCompletion(activeLesson.moduleId, activeLesson.lessonIndex);
-                  toast.success(`Lesson marked as ${action}!`, { id: "mark-complete" });
-                } catch (error) {
-                  toast.error(`Error: ${error.message}`, { id: "mark-complete" });
-                }
-              }}
-              className={`flex items-center space-x-2 px-3 py-1.5 text-xs sm:text-sm rounded-lg transition-all font-medium border ${completedLessons.has(`${activeLesson.moduleId}-${activeLesson.lessonIndex}`)
-                ? "bg-orange-50 dark:bg-orange-900/20 text-orange-600 dark:text-orange-400 border-orange-200 dark:border-orange-900/50"
-                : "bg-green-50 dark:bg-green-900/20 text-green-600 dark:text-green-400 border-green-200 dark:border-green-900/50"
-                }`}
-              disabled={!currentLesson?.content || lessonContentLoading}
-            >
-              <CheckCircle className="w-4 h-4" />
-              <span className="hidden md:inline">
-                {completedLessons.has(`${activeLesson.moduleId}-${activeLesson.lessonIndex}`)
-                  ? "Mark Incomplete"
-                  : "Mark Complete"}
-              </span>
-            </button>
-
-            <button
-              onClick={() => {
-                const isPro = user && ((user.subscription?.plan === "pro" && user.subscription?.status === "active") || user.isPremium);
-                if (!isPro) {
-                  toast.error("Lesson PDF export is a Pro feature. Please upgrade.");
-                  router.push("/dashboard?tab=upgrade");
-                  return;
-                }
-                if (!currentLesson?.content) {
-                  toast.error("No lesson content to download.");
-                  return;
-                }
-                downloadCourseAsPDF({
-                  title: currentLesson.title,
-                  content: currentLesson.content
-                }, "notes");
-                toast.success("Download started!");
-              }}
-              className="flex items-center space-x-2 px-3 py-1.5 text-xs sm:text-sm rounded-lg bg-gray-50 dark:bg-gray-700/50 text-gray-700 dark:text-gray-300 border border-gray-200 dark:border-gray-700 hover:bg-gray-100 dark:hover:bg-gray-700 transition-all font-medium"
-            >
-              <Download className="w-4 h-4" />
-              <span className="hidden md:inline">Download Lesson</span>
-            </button>
-
-            <button
-              onClick={() => setIsRightPanelOpen(!isRightPanelOpen)}
-              className={`flex items-center space-x-2 px-3 py-1.5 text-xs sm:text-sm rounded-lg border transition-all font-medium ${isRightPanelOpen
-                ? "bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 border-blue-200 dark:border-blue-900/50"
-                : "bg-gray-50 dark:bg-gray-700/50 text-gray-700 dark:text-gray-300 border-gray-200 dark:border-gray-700"
-                }`}
-            >
-              <MessageCircle className="w-4 h-4" />
-              <span className="hidden md:inline">{isRightPanelOpen ? "Hide Tools" : "Show Tools"}</span>
-            </button>
-          </div>
-        </div>
-      </div>
-
-      {/* Main Layout Area below navbar */}
+    <div
+      className="h-screen flex flex-col bg-gray-50 dark:bg-gray-900 overflow-hidden"
+      onTouchStart={onTouchStart}
+      onTouchMove={onTouchMove}
+      onTouchEnd={onTouchEnd}
+    >
+      {/* Navbar moved to bottom */}
+      {/* Main Layout Area */}
       <div className="flex flex-1 overflow-hidden relative">
         {/* Backdrops - moved outside to fix blur and hidden on large screens */}
         {isSidebarOpen && (
@@ -1925,7 +1866,7 @@ export default function LearnContent() {
                       >
                         <div
                           className={`max-w-[85%] px-3 py-2 rounded-xl text-sm relative shadow-sm ${isUser
-                            ? "bg-[#dcf8c6] dark:bg-[#005c4b] text-gray-800 dark:text-gray-100 rounded-tr-none"
+                            ? "bg-blue-600 dark:bg-blue-700 text-white rounded-tr-none"
                             : "bg-white dark:bg-[#202c33] text-gray-900 dark:text-gray-100 rounded-tl-none"
                             }`}
                         >
@@ -2008,6 +1949,100 @@ export default function LearnContent() {
                 </div>
               </div>
             )}
+          </div>
+        </div>
+      </div>
+
+      {/* Navbar Footer - Moved from Top */}
+      <div className="bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700 p-3 sm:p-4 z-50 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.1)] relative shrink-0">
+        <div className="flex items-center justify-between w-full px-2 sm:px-4 lg:px-6">
+          {/* Left Group - Navigation */}
+          <div className="flex items-center space-x-2 sm:space-x-4">
+
+            <Link
+              href="/dashboard"
+              className="flex items-center space-x-2 px-3 py-1.5 text-xs sm:text-sm rounded-sm bg-gray-900 dark:bg-gray-100 text-white dark:text-gray-900 hover:opacity-90 transition-all font-bold shadow-sm"
+            >
+              <Home className="w-4 h-4" />
+              <span className="hidden md:inline">Dashboard</span>
+            </Link>
+            <button
+              onClick={() => setIsSidebarOpen(!isSidebarOpen)}
+              className={`flex items-center space-x-2 px-3 py-1.5 text-xs sm:text-sm rounded-lg border transition-all font-medium ${isSidebarOpen
+                ? "bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 border-blue-200 dark:border-blue-900/50"
+                : "bg-gray-50 dark:bg-gray-700/50 text-gray-700 dark:text-gray-300 border-gray-200 dark:border-gray-700"
+                }`}
+            >
+              <Menu className="w-4 h-4" />
+              <span className="hidden md:inline">Modules</span>
+            </button>
+          </div>
+
+          {/* Right Group - Controls */}
+          <div className="flex items-center space-x-2 sm:space-x-4">
+            <button
+              onClick={async () => {
+                if (!activeLesson || lessonContentLoading) return;
+                const lessonId = `${activeLesson.moduleId}-${activeLesson.lessonIndex}`;
+                const isCurrentlyCompleted = completedLessons.has(lessonId);
+                const action = isCurrentlyCompleted ? "incomplete" : "complete";
+                toast.loading(`Marking lesson as ${action}...`, { id: "mark-complete" });
+
+                try {
+                  await toggleLessonCompletion(activeLesson.moduleId, activeLesson.lessonIndex);
+                  toast.success(`Lesson marked as ${action}!`, { id: "mark-complete" });
+                } catch (error) {
+                  toast.error(`Error: ${error.message}`, { id: "mark-complete" });
+                }
+              }}
+              className={`flex items-center space-x-2 px-3 py-1.5 text-xs sm:text-sm rounded-lg transition-all font-medium border ${completedLessons.has(`${activeLesson.moduleId}-${activeLesson.lessonIndex}`)
+                ? "bg-orange-50 dark:bg-orange-900/20 text-orange-600 dark:text-orange-400 border-orange-200 dark:border-orange-900/50"
+                : "bg-green-50 dark:bg-green-900/20 text-green-600 dark:text-green-400 border-green-200 dark:border-green-900/50"
+                }`}
+              disabled={!currentLesson?.content || lessonContentLoading}
+            >
+              <CheckCircle className="w-4 h-4" />
+              <span className="hidden md:inline">
+                {completedLessons.has(`${activeLesson.moduleId}-${activeLesson.lessonIndex}`)
+                  ? "Mark Incomplete"
+                  : "Mark Complete"}
+              </span>
+            </button>
+
+            <button
+              onClick={() => {
+                const isPro = user && ((user.subscription?.plan === "pro" && user.subscription?.status === "active") || user.isPremium);
+                if (!isPro) {
+                  toast.error("Lesson PDF export is a Pro feature. Please upgrade.");
+                  router.push("/dashboard?tab=upgrade");
+                  return;
+                }
+                if (!currentLesson?.content) {
+                  toast.error("No lesson content to download.");
+                  return;
+                }
+                downloadCourseAsPDF({
+                  title: currentLesson.title,
+                  content: currentLesson.content
+                }, "notes");
+                toast.success("Download started!");
+              }}
+              className="flex items-center space-x-2 px-3 py-1.5 text-xs sm:text-sm rounded-lg bg-gray-50 dark:bg-gray-700/50 text-gray-700 dark:text-gray-300 border border-gray-200 dark:border-gray-700 hover:bg-gray-100 dark:hover:bg-gray-700 transition-all font-medium"
+            >
+              <Download className="w-4 h-4" />
+              <span className="hidden md:inline">Download Lesson</span>
+            </button>
+
+            <button
+              onClick={() => setIsRightPanelOpen(!isRightPanelOpen)}
+              className={`flex items-center space-x-2 px-3 py-1.5 text-xs sm:text-sm rounded-lg border transition-all font-medium ${isRightPanelOpen
+                ? "bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 border-blue-200 dark:border-blue-900/50"
+                : "bg-gray-50 dark:bg-gray-700/50 text-gray-700 dark:text-gray-300 border-gray-200 dark:border-gray-700"
+                }`}
+            >
+              <MessageCircle className="w-4 h-4" />
+              <span className="hidden md:inline">{isRightPanelOpen ? "Hide Tools" : "Show Tools"}</span>
+            </button>
           </div>
         </div>
       </div>
