@@ -557,7 +557,7 @@ Exactly ${modules} modules, exactly ${lessonsPerModule} lessons each. No content
       { status: 500 }
     );
   }
-}
+} // forcing Vercel rebuild
 
 export const POST = withCORS()(generateCourseHandler);
 
