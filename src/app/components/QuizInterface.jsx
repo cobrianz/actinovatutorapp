@@ -233,68 +233,62 @@ const QuizInterface = ({ quizData, topic, onBack, existingQuizId }) => {
 
   return (
     <div
-      className={`p-4 sm:p-8 lg:p-12 bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900 text-gray-900 dark:text-white min-h-screen transition-opacity duration-700 ${loaded ? "opacity-100" : "opacity-0"}`}
+      className={`p-4 sm:p-8 lg:p-12 bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-white min-h-screen transition-opacity duration-700 ${loaded ? "opacity-100" : "opacity-0"}`}
+      style={{ paddingTop: 'calc(env(safe-area-inset-top) + 1rem)' }}
     >
-      <div className="max-w-full mx-auto">
+      <div className="max-w-3xl mx-auto">
         {onBack ? (
           <button
             onClick={onBack}
-            className="flex items-center text-sm text-blue-500 hover:underline mb-4"
+            className="flex items-center text-sm text-gray-500 hover:text-gray-900 dark:hover:text-gray-100 transition-colors mb-6"
           >
             <ArrowLeft className="w-4 h-4 mr-1" />
-            Back to Tests
+            Back
           </button>
         ) : (
           <Link
             href="/dashboard?tab=quizzes"
-            className="flex items-center text-sm text-blue-500 hover:underline mb-4"
+            className="flex items-center text-sm text-gray-500 hover:text-gray-900 dark:hover:text-gray-100 transition-colors mb-6"
           >
             <ArrowLeft className="w-4 h-4 mr-1" />
-            Back to Tests
+            Back
           </Link>
         )}
-        <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold text-slate-800 dark:text-slate-100 mb-8">
+
+        <div className="mb-8">
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-6 text-center">
             {quizData.title}
           </h1>
 
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-            <div className="bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-xl p-6 text-center">
-              <div className="text-3xl font-bold text-slate-800 dark:text-slate-100 mb-2">
-                {loadedQuestions.length}/{totalQuestions}
+          <div className="grid grid-cols-2 gap-3 sm:gap-4">
+            <div className="bg-white dark:bg-gray-800 rounded-2xl p-4 shadow-sm border border-gray-100 dark:border-gray-700 flex flex-col items-center justify-center">
+              <span className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">Questions</span>
+              <div className="text-xl font-bold text-gray-900 dark:text-white">
+                {loadedQuestions.length}<span className="text-gray-400 text-sm font-normal">/{totalQuestions}</span>
               </div>
-              <p className="text-sm text-slate-600 dark:text-slate-400">
-                Loaded Questions
-              </p>
             </div>
 
-            <div className="bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-xl p-6 text-center">
-              <div className="text-3xl font-bold text-slate-800 dark:text-slate-100 mb-2">
+            <div className="bg-white dark:bg-gray-800 rounded-2xl p-4 shadow-sm border border-gray-100 dark:border-gray-700 flex flex-col items-center justify-center">
+              <span className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">Points</span>
+              <div className="text-xl font-bold text-indigo-600 dark:text-indigo-400">
                 {loadedQuestions.reduce((acc, q) => acc + q.points, 0)}
               </div>
-              <p className="text-sm text-slate-600 dark:text-slate-400">
-                Total Points
-              </p>
             </div>
 
-            <div className="bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-xl p-6 text-center">
-              <div className="text-3xl font-bold text-slate-800 dark:text-slate-100 mb-2">
-                {Object.keys(answers).length}/{loadedQuestions.length}
+            <div className="bg-white dark:bg-gray-800 rounded-2xl p-4 shadow-sm border border-gray-100 dark:border-gray-700 flex flex-col items-center justify-center">
+              <span className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">Answered</span>
+              <div className="text-xl font-bold text-green-600 dark:text-green-400">
+                {Object.keys(answers).length}<span className="text-gray-400 text-sm font-normal">/{loadedQuestions.length}</span>
               </div>
-              <p className="text-sm text-slate-600 dark:text-slate-400">
-                Questions Answered
-              </p>
             </div>
 
-            <div className="bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-xl p-6 text-center">
+            <div className="bg-white dark:bg-gray-800 rounded-2xl p-4 shadow-sm border border-gray-100 dark:border-gray-700 flex flex-col items-center justify-center">
+              <span className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">Time Left</span>
               <div
-                className={`text-3xl font-bold mb-2 ${timeRemaining < 300 ? "text-red-600" : "text-slate-800 dark:text-slate-100"}`}
+                className={`text-xl font-bold font-mono ${timeRemaining < 300 ? "text-red-500 animate-pulse" : "text-gray-900 dark:text-white"}`}
               >
                 {formatTime(timeRemaining)}
               </div>
-              <p className="text-sm text-slate-600 dark:text-slate-400">
-                Time Remaining
-              </p>
             </div>
           </div>
 

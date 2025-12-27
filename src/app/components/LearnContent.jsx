@@ -1491,6 +1491,7 @@ export default function LearnContent() {
   return (
     <div
       className="h-screen flex flex-col bg-gray-50 dark:bg-gray-900 overflow-hidden"
+      style={{ paddingTop: 'env(safe-area-inset-top)' }}
       onTouchStart={onTouchStart}
       onTouchMove={onTouchMove}
       onTouchEnd={onTouchEnd}
