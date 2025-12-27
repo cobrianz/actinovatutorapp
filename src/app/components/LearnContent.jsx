@@ -915,10 +915,8 @@ export default function LearnContent() {
 
       // First, try to get from library (saves tokens!)
       try {
-        const libraryResponse = await fetch("/api/library", {
-          credentials: "include",
+        const libraryResponse = await authenticatedFetch("/api/library", {
           headers: {
-            "Content-Type": "application/json",
             "x-user-id": user?._id || user?.id || user?.idString || "",
           },
         });
@@ -1040,11 +1038,7 @@ export default function LearnContent() {
       // For flashcards, check the flashcards collection
       if (format === "flashcards") {
         try {
-          const cardsResponse = await fetch("/api/flashcards", {
-            credentials: "include",
-            headers: {
-              "Content-Type": "application/json",
-            },
+          const cardsResponse = await authenticatedFetch("/api/flashcards", {
             cache: "no-store",
           });
 
