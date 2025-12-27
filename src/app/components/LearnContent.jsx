@@ -106,11 +106,9 @@ export default function LearnContent() {
     }
     // Also persist to backend library for reloads
     try {
-      fetch("/api/library", {
+      authenticatedFetch("/api/library", {
         method: "POST",
-        credentials: "include",
         headers: {
-          "Content-Type": "application/json",
           "x-user-id": user?._id || user?.id || user?.idString || "",
         },
         body: JSON.stringify({
@@ -137,11 +135,9 @@ export default function LearnContent() {
     } catch { }
     // Try backend
     try {
-      const res = await fetch("/api/library", {
+      const res = await authenticatedFetch("/api/library", {
         method: "POST",
-        credentials: "include",
         headers: {
-          "Content-Type": "application/json",
           "x-user-id": user?._id || user?.id || user?.idString || "",
         },
         body: JSON.stringify({
@@ -285,12 +281,8 @@ export default function LearnContent() {
       setLessonContentLoading(true);
       setTypingContent("");
 
-      const response = await fetch("/api/course-agent", {
+      const response = await authenticatedFetch("/api/course-agent", {
         method: "POST",
-        credentials: "include",
-        headers: {
-          "Content-Type": "application/json",
-        },
         body: JSON.stringify({
           action: "generateLesson",
           courseId: courseData?._id || null,
@@ -475,10 +467,8 @@ export default function LearnContent() {
           )
           .join("\n\n---\n\n") || "";
 
-      const relevanceCheck = await fetch("/api/course-agent", {
+      const relevanceCheck = await authenticatedFetch("/api/course-agent", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
         body: JSON.stringify({
           action: "checkRelevance",
           question: userMessage.message,
@@ -517,10 +507,8 @@ export default function LearnContent() {
       }
 
       // Step 2: Question is relevant, get the answer
-      const response = await fetch("/api/course-agent", {
+      const response = await authenticatedFetch("/api/course-agent", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
         body: JSON.stringify({
           action: "answer",
           question: userMessage.message,
@@ -789,12 +777,8 @@ export default function LearnContent() {
     try {
       setIsSavingNotes(true);
 
-      const response = await fetch("/api/notes", {
+      const response = await authenticatedFetch("/api/notes", {
         method: "POST",
-        credentials: "include",
-        headers: {
-          "Content-Type": "application/json",
-        },
         body: JSON.stringify({
           itemId: `course_${courseData?._id}`,
           lessonId: `${activeLesson.moduleId}-${activeLesson.lessonIndex}`,
@@ -916,7 +900,8 @@ export default function LearnContent() {
 
       // First, try to get from library (saves tokens!)
       try {
-        const libraryResponse = await authenticatedFetch("/api/library", {
+        // Search specifically for this topic to avoid pagination issues
+        const libraryResponse = await authenticatedFetch(`/api/library?search=${encodeURIComponent(actualTopic)}&limit=50`, {
           headers: {
             "x-user-id": user?._id || user?.id || user?.idString || "",
           },
