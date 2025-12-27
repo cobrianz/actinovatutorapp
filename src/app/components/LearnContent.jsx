@@ -1161,12 +1161,8 @@ export default function LearnContent() {
       }
 
       try {
-        const response = await fetch(apiEndpoint, {
+        const response = await authenticatedFetch(apiEndpoint, {
           method: "POST",
-          credentials: "include",
-          headers: {
-            "Content-Type": "application/json",
-          },
           body: JSON.stringify(requestBody),
         });
 

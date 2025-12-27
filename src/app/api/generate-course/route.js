@@ -12,13 +12,7 @@ import { withCORS } from "@/lib/middleware";
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
 
-// Legacy constants - now using planLimits.js
-const LEGACY_LIMITS = {
-  free: { modules: 3, lessonsPerModule: 3, totalLessons: 9, cards: 8, monthlyGenerations: 2 },
-  premium: { modules: 20, lessonsPerModule: 5, totalLessons: 100, cards: 40, monthlyGenerations: 20 },
-};
 
-const MONTHLY = { free: 2, premium: 15 };
 
 async function generateCourseHandler(request) {
   let userId = null;
@@ -58,8 +52,6 @@ async function generateCourseHandler(request) {
         { status: 400 }
       );
 
-
-
     const { db } = await connectToDatabase();
 
     // ─── USER & MONTHLY LIMITS (auto-reset) ───
@@ -78,7 +70,7 @@ async function generateCourseHandler(request) {
         ((user?.subscription?.plan === "pro" || user?.subscription?.plan === "enterprise") && user?.subscription?.status === "active");
 
       const planName = getUserPlanName(user);
-      const planLimits = getUserPlanLimits(user);
+      const limits = getUserPlanLimits(user);
 
       const now = new Date();
       const resetOn = user?.usageResetDate
@@ -100,9 +92,28 @@ async function generateCourseHandler(request) {
         resetDate = resetOn;
       }
 
+      // Check global monthly generation limit
+      const monthlyLimit = limits.monthlyGenerations;
+      if (monthlyLimit !== -1 && monthlyUsage >= monthlyLimit) {
+        return NextResponse.json(
+          {
+            error: `Monthly generation limit reached (${monthlyLimit}). ${isEnterprise ? "Contact support." : "Upgrade for more!"}`,
+            used: monthlyUsage,
+            limit: monthlyLimit,
+            remaining: 0,
+            plan: planName,
+            isPremium,
+            isEnterprise,
+            resetsOn: resetDate.toLocaleDateString(),
+            upgrade: !isPremium && !isEnterprise,
+          },
+          { status: 429 }
+        );
+      }
+
       const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
 
-      // Check course generation limits
+      // Check specific course limit
       if (format === "course") {
         const courseCount = await db.collection("library").countDocuments({
           userId: new ObjectId(userId),
@@ -149,7 +160,9 @@ async function generateCourseHandler(request) {
       // Scenario 1: Course exists, user is premium, but course is NOT premium. Upgrade it.
       if (isPremium && !existingCourse.isPremium) {
         // Regenerate as a premium course and update
-        const { modules, lessonsPerModule, totalLessons } = LEGACY_LIMITS.premium;
+        // Regenerate as a premium course and update
+        // Since isPremium is true, 'limits' (fetched at top) contains premium limits
+        const { modules, lessonsPerModule, totalLessons } = limits;
 
         const completion = await openai.chat.completions.create({
           model: "gpt-4o-mini",
@@ -247,6 +260,19 @@ Exactly ${modules} modules, exactly ${lessonsPerModule} lessons each. No content
 
         const finalCourse = { ...existingCourse, ...updatedCourseDoc };
 
+        // Increment usage for upgrade
+        if (userId) {
+          try {
+            await db.collection("users").updateOne(
+              { _id: new ObjectId(userId) },
+              { $inc: { monthlyUsage: 1 } }
+            );
+            monthlyUsage++; // Update local variable for response
+          } catch (e) {
+            console.error("Failed to increment monthly usage for upgrade", e);
+          }
+        }
+
         return NextResponse.json({
           success: true,
           courseId: finalCourse._id.toString(),
@@ -281,14 +307,8 @@ Exactly ${modules} modules, exactly ${lessonsPerModule} lessons each. No content
     }
 
     // ─── GENERATE NEW COURSE ───
-    // Get user object for plan limits
-    let user = null;
-    if (userId) {
-      user = await db.collection("users").findOne({ _id: new ObjectId(userId) });
-    }
-
-    const planLimits = getUserPlanLimits(user);
-    const { modules, lessonsPerModule, totalLessons } = planLimits;
+    // User and limits are already fetched at the top of the function
+    const { modules, lessonsPerModule, totalLessons } = limits;
     const completion = await openai.chat.completions.create({
       model: "gpt-4o-mini",
       temperature: 0.7,
@@ -537,6 +557,36 @@ async function generateQuiz(topic, difficulty, questions, userId, db, monthlyUsa
       });
     }
 
+    // Check user limits for quiz generation BEFORE calling OpenAI (saves tokens!)
+    let quizCount = 0;
+    if (userId) {
+      const user = await db
+        .collection("users")
+        .findOne({ _id: new ObjectId(userId) });
+      const now = new Date();
+      const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+      // Count existing tests for this user created this month
+      quizCount = await db.collection("tests").countDocuments({
+        createdBy: new ObjectId(userId),
+        createdAt: { $gte: startOfMonth }
+      });
+
+      const limit = isPremium ? 20 : 1;
+      if (quizCount >= limit) {
+        return NextResponse.json(
+          {
+            error: `Monthly test limit reached (${limit}). ${!isPremium ? "Upgrade to premium for up to 20 tests/mo." : ""}`,
+            limit,
+            used: quizCount,
+            current: quizCount,
+            isPremium: isPremium,
+            resetsOn: resetDate ? resetDate.toLocaleDateString() : new Date().toLocaleDateString(),
+          },
+          { status: 429 }
+        );
+      }
+    }
+
     const completion = await openai.chat.completions.create({
       model: "gpt-4o-mini",
       temperature: 0.7,
@@ -598,33 +648,9 @@ Return ONLY valid JSON with this exact structure:
       );
     }
 
-    // Check user limits for quiz generation (Total Cap)
-    let quizCount = 0;
-    if (userId) {
-      const user = await db
-        .collection("users")
-        .findOne({ _id: new ObjectId(userId) });
-      const now = new Date();
-      const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
-      // Count existing tests for this user created this month
-      quizCount = await db.collection("tests").countDocuments({
-        createdBy: new ObjectId(userId),
-        createdAt: { $gte: startOfMonth }
-      });
 
-      const limit = isPremium ? 20 : 1;
-      if (quizCount >= limit) {
-        return NextResponse.json(
-          {
-            error: `Monthly test limit reached (${limit}). ${!isPremium ? "Upgrade to premium for up to 20 tests/mo." : ""}`,
-            limit,
-            current: quizCount,
-            isPremium: isPremium,
-          },
-          { status: 429 }
-        );
-      }
-    }
+    // Limit check already performed before AI call (lines 540-567)
+
 
     const testDoc = {
       ...quiz,
