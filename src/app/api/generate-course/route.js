@@ -148,13 +148,58 @@ async function generateCourseHandler(request) {
 
     const normalizedTopic = topic.trim().toLowerCase();
 
-    // Check for existing course
-    const existingCourse = await db.collection("library").findOne({
-      userId: userId ? new ObjectId(userId) : null,
-      topic: normalizedTopic,
-      format: "course",
-      difficulty,
+    // Enhanced Check: Find existing course with fuzzy matching logic
+    // 1. Fetch all user's course topics to check in code (more flexible than Mongo regex for complex cases)
+    const userCourses = await db.collection("library")
+      .find({
+        userId: userId ? new ObjectId(userId) : null,
+        format: "course",
+      })
+      .project({ topic: 1, title: 1, originalTopic: 1, difficulty: 1, isPremium: 1 })
+      .toArray();
+
+    // Helper to normalize strings for comparison
+    const normalizeForMatch = (str) => {
+      if (!str) return "";
+      return str.toLowerCase()
+        .replace(/[^\w\s]/g, "") // Remove punctuation
+        .replace(/\b(course|complete|introduction|to|guide|tutorial|from|a|an|the|bootcamp|masterclass|zero|hero)\b/g, "") // Remove stop words
+        .replace(/\s+/g, " ") // Collapse spaces
+        .trim();
+    };
+
+    const targetNormalized = normalizeForMatch(topic);
+
+    // Find a match
+    let existingCourse = userCourses.find(c => {
+      // 1. Check strict difficulty match first (unless upgrading)
+      if (c.difficulty && c.difficulty !== difficulty) return false;
+
+      // 2. Check normalized topic similarity
+      const cTopic = normalizeForMatch(c.topic || c.title || "");
+      const cOriginal = normalizeForMatch(c.originalTopic || "");
+
+      // Direct inclusion check
+      if (cTopic === targetNormalized || cOriginal === targetNormalized) return true;
+      if (cTopic.includes(targetNormalized) || targetNormalized.includes(cTopic)) return true; // "web dev" vs "full stack web dev"
+
+      // Token overlap check (for mixed order words like "web dev complete" vs "complete web dev")
+      const targetTokens = new Set(targetNormalized.split(" ").filter(t => t.length > 2));
+      const cTokens = new Set(cTopic.split(" ").filter(t => t.length > 2));
+
+      if (targetTokens.size === 0 || cTokens.size === 0) return false;
+
+      let matchCount = 0;
+      targetTokens.forEach(t => { if (cTokens.has(t)) matchCount++; });
+
+      const overlapRatio = matchCount / Math.min(targetTokens.size, cTokens.size);
+      return overlapRatio >= 0.75; // 75% token overlap required
     });
+
+    // If match found in lightweight list, fetch full document
+    if (existingCourse) {
+      existingCourse = await db.collection("library").findOne({ _id: existingCourse._id });
+    }
 
     if (existingCourse) {
       // Scenario 1: Course exists, user is premium, but course is NOT premium. Upgrade it.
@@ -507,8 +552,7 @@ Exactly ${modules} modules, exactly ${lessonsPerModule} lessons each. No content
     return NextResponse.json(
       {
         error: "Failed to generate course",
-        details:
-          details: error.message, // Temporarily exposed for debugging
+        details: error.message,
       },
       { status: 500 }
     );

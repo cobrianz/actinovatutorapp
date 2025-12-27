@@ -5,7 +5,7 @@ import DashboardContentWrapper from "../components/DashboardContentWrapper";
 
 export default function DashboardPage() {
   return (
-    <Suspense fallback={<div className="p-6">Loading dashboard...</div>}>
+    <Suspense fallback={<div className="p-6">Loading cards...</div>}>
       <DashboardContentWrapper />
     </Suspense>
   );
