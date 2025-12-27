@@ -57,9 +57,11 @@ async function generateCourseHandler(request) {
     // ─── USER & MONTHLY LIMITS (auto-reset) ───
     let monthlyUsage = 0;
     let resetDate = new Date();
+    let user = null;
+    let limits = getUserPlanLimits(null); // Default to free limits
 
     if (userId) {
-      const user = await db
+      user = await db
         .collection("users")
         .findOne({ _id: new ObjectId(userId) });
 
@@ -70,7 +72,7 @@ async function generateCourseHandler(request) {
         ((user?.subscription?.plan === "pro" || user?.subscription?.plan === "enterprise") && user?.subscription?.status === "active");
 
       const planName = getUserPlanName(user);
-      const limits = getUserPlanLimits(user);
+      limits = getUserPlanLimits(user);
 
       const now = new Date();
       const resetOn = user?.usageResetDate
