@@ -532,11 +532,28 @@ export default function Library({ setActiveContent, setHideNavs }) {
       });
 
       if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
+        const contentType = response.headers.get("content-type");
+        let errorData = {};
+
+        if (contentType && contentType.includes("application/json")) {
+          errorData = await response.json().catch(() => ({}));
+        } else {
+          const errorText = await response.text();
+          console.error("Non-JSON error response:", errorText);
+          throw new Error("Server returned an error. Please try again.");
+        }
+
         throw new Error(errorData.error || "Failed to generate course");
       }
 
-      const responseData = await response.json();
+      let responseData;
+      try {
+        responseData = await response.json();
+      } catch (jsonErr) {
+        const responseText = await response.text();
+        console.error("Failed to parse JSON response:", responseText);
+        throw new Error("Invalid response from server. Please try again.");
+      }
 
       toast.success(`Course "${course.title}" generated successfully!`, {
         id: "generating",

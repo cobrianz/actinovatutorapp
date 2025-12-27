@@ -1279,8 +1279,21 @@ export default function LearnContent() {
               },
             }),
           });
+
           if (!libRes.ok) {
-            console.warn("Failed to store course in library");
+            const errorText = await libRes.text();
+            console.warn("Failed to store course in library:", {
+              status: libRes.status,
+              statusText: libRes.statusText,
+              response: errorText
+            });
+          } else {
+            try {
+              const libData = await libRes.json();
+              console.log("Course saved to library:", libData);
+            } catch (jsonErr) {
+              console.warn("Library response was not JSON:", await libRes.text());
+            }
           }
         } catch (libErr) {
           console.warn("Error storing course in library:", libErr);

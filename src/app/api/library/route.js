@@ -370,6 +370,111 @@ export async function POST(request) {
       });
     }
 
+    if (action === "add") {
+      const { course } = body;
+      if (!course) {
+        return NextResponse.json(
+          { error: "course object required" },
+          { status: 400 }
+        );
+      }
+
+      try {
+        // Determine the collection and format based on course data
+        const format = course.format || course.courseData?.format || "course";
+        const courseData = course.courseData || course;
+
+        let collection, itemData;
+
+        if (format === "flashcards" || format === "cards") {
+          // Save to cardSets collection
+          collection = "cardSets";
+          itemData = {
+            userId: userObjId,
+            title: courseData.title || course.title,
+            topic: courseData.topic || course.topic,
+            difficulty: courseData.difficulty || courseData.level || course.difficulty || course.level || "beginner",
+            level: courseData.level || courseData.difficulty || course.level || course.difficulty || "beginner",
+            cards: courseData.cards || [],
+            totalCards: courseData.totalCards || (Array.isArray(courseData.cards) ? courseData.cards.length : 0),
+            createdAt: new Date(),
+            lastAccessed: new Date(),
+            isGenerated: course.isGenerated !== false,
+          };
+        } else if (format === "questions" || format === "guide") {
+          // Save to guides collection
+          collection = "guides";
+          itemData = {
+            userId: userObjId,
+            title: courseData.title || course.title,
+            topic: courseData.topic || course.topic,
+            difficulty: courseData.difficulty || courseData.level || course.difficulty || course.level || "beginner",
+            level: courseData.level || courseData.difficulty || course.level || course.difficulty || "beginner",
+            questions: courseData.questions || [],
+            totalQuestions: courseData.totalQuestions || (Array.isArray(courseData.questions) ? courseData.questions.length : 0),
+            createdAt: new Date(),
+            lastAccessed: new Date(),
+            isGenerated: course.isGenerated !== false,
+          };
+        } else {
+          // Save to library collection (default for courses)
+          collection = "library";
+          itemData = {
+            userId: userObjId,
+            title: courseData.title || course.title,
+            topic: courseData.topic || course.topic,
+            originalTopic: courseData.originalTopic || course.originalTopic || courseData.topic || course.topic,
+            difficulty: courseData.difficulty || courseData.level || course.difficulty || course.level || "beginner",
+            level: courseData.level || courseData.difficulty || course.level || course.difficulty || "beginner",
+            format: format,
+            courseData: courseData,
+            modules: courseData.modules || [],
+            totalModules: courseData.totalModules || (Array.isArray(courseData.modules) ? courseData.modules.length : 0),
+            totalLessons: courseData.totalLessons || 0,
+            createdAt: new Date(),
+            lastAccessed: new Date(),
+            isGenerated: course.isGenerated !== false,
+          };
+        }
+
+        // Check if course already exists to avoid duplicates
+        const existingCourse = await db.collection(collection).findOne({
+          userId: userObjId,
+          topic: itemData.topic,
+          difficulty: itemData.difficulty,
+        });
+
+        if (existingCourse) {
+          // Update lastAccessed instead of creating duplicate
+          await db.collection(collection).updateOne(
+            { _id: existingCourse._id },
+            { $set: { lastAccessed: new Date() } }
+          );
+
+          return NextResponse.json({
+            success: true,
+            courseId: existingCourse._id.toString(),
+            message: "Course already exists in library",
+          });
+        }
+
+        // Insert new course
+        const result = await db.collection(collection).insertOne(itemData);
+
+        return NextResponse.json({
+          success: true,
+          courseId: result.insertedId.toString(),
+          message: "Course added to library successfully",
+        });
+      } catch (err) {
+        console.error("Error adding course to library:", err);
+        return NextResponse.json(
+          { error: "Failed to add course to library" },
+          { status: 500 }
+        );
+      }
+    }
+
     if (action === "delete") {
       const prefix = itemId.split("_")[0];
       const id = itemId.replace(/^(course|guide|cards)_/, "");
