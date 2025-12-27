@@ -1,7 +1,7 @@
 "use client";
 
 import dynamic from "next/dynamic";
-import NavbarOnlyLayout from "../components/NavbarOnlyLayout";
+import DashboardLayout from "../components/DashboardLayout";
 import { Suspense } from "react";
 
 const ProfileContent = dynamic(() => import("../components/ProfileContent"), {
@@ -11,9 +11,9 @@ const ProfileContent = dynamic(() => import("../components/ProfileContent"), {
 export default function ProfilePage() {
   return (
     <Suspense fallback={null}>
-      <NavbarOnlyLayout>
+      <DashboardLayout>
         <ProfileContent />
-      </NavbarOnlyLayout>
+      </DashboardLayout>
     </Suspense>
   );
 }

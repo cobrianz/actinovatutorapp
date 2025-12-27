@@ -256,34 +256,34 @@ const QuizInterface = ({ quizData, topic, onBack, existingQuizId }) => {
         )}
 
         <div className="mb-8">
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-6 text-center">
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-6">
             {quizData.title}
           </h1>
 
           <div className="grid grid-cols-2 gap-3 sm:gap-4">
             <div className="bg-white dark:bg-gray-800 rounded-2xl p-4 shadow-sm border border-gray-100 dark:border-gray-700 flex flex-col items-center justify-center">
-              <span className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">Questions</span>
+              <span className="text-xs font-semibold text-gray-400 tracking-wider mb-1">Questions</span>
               <div className="text-xl font-bold text-gray-900 dark:text-white">
                 {loadedQuestions.length}<span className="text-gray-400 text-sm font-normal">/{totalQuestions}</span>
               </div>
             </div>
 
             <div className="bg-white dark:bg-gray-800 rounded-2xl p-4 shadow-sm border border-gray-100 dark:border-gray-700 flex flex-col items-center justify-center">
-              <span className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">Points</span>
+              <span className="text-xs font-semibold text-gray-400 tracking-wider mb-1">Points</span>
               <div className="text-xl font-bold text-indigo-600 dark:text-indigo-400">
                 {loadedQuestions.reduce((acc, q) => acc + q.points, 0)}
               </div>
             </div>
 
             <div className="bg-white dark:bg-gray-800 rounded-2xl p-4 shadow-sm border border-gray-100 dark:border-gray-700 flex flex-col items-center justify-center">
-              <span className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">Answered</span>
+              <span className="text-xs font-semibold text-gray-400 tracking-wider mb-1">Answered</span>
               <div className="text-xl font-bold text-green-600 dark:text-green-400">
                 {Object.keys(answers).length}<span className="text-gray-400 text-sm font-normal">/{loadedQuestions.length}</span>
               </div>
             </div>
 
             <div className="bg-white dark:bg-gray-800 rounded-2xl p-4 shadow-sm border border-gray-100 dark:border-gray-700 flex flex-col items-center justify-center">
-              <span className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">Time Left</span>
+              <span className="text-xs font-semibold text-gray-400 tracking-wider mb-1">Time Left</span>
               <div
                 className={`text-xl font-bold font-mono ${timeRemaining < 300 ? "text-red-500 animate-pulse" : "text-gray-900 dark:text-white"}`}
               >
@@ -292,19 +292,19 @@ const QuizInterface = ({ quizData, topic, onBack, existingQuizId }) => {
             </div>
           </div>
 
-          <div className="w-full">
-            <div className="flex justify-between text-sm text-slate-600 dark:text-slate-400 mb-2">
-              <span>Progress (Page {currentPage})</span>
-              <span>
+          <div className="w-full my-10">
+            <div className="flex justify-between text-sm text-slate-600 dark:text-slate-400 mb-3">
+              <span className="font-bold">Progress (Page {currentPage}/{Math.ceil(totalQuestions / questionsPerPage)})</span>
+              <span className="font-bold">
                 {Math.round(
                   (Object.keys(answers).length / loadedQuestions.length) * 100
                 )}
                 %
               </span>
             </div>
-            <div className="w-full bg-slate-200 dark:bg-slate-700 rounded-full h-3">
+            <div className="w-full bg-slate-200 dark:bg-slate-700 rounded-full h-2">
               <div
-                className="bg-gradient-to-r from-blue-500 to-indigo-500 h-3 rounded-full transition-all duration-300"
+                className="bg-gradient-to-r from-blue-500 to-indigo-500 h-2 rounded-full transition-all duration-300"
                 style={{
                   width: `${(Object.keys(answers).length / loadedQuestions.length) * 100}%`,
                 }}
@@ -324,19 +324,16 @@ const QuizInterface = ({ quizData, topic, onBack, existingQuizId }) => {
                     className={`sm:p-4 bg-white dark:bg-gray-800/50 transition-opacity duration-500 ${questionsVisible ? "opacity-100" : "opacity-0"}`}
                   >
                     <div className="flex items-start space-x-4 mb-6">
-                      <div className="flex-shrink-0 w-10 h-10 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-xl flex items-center justify-center text-white font-bold text-lg">
-                        {globalIndex + 1}
+                      <div className="flex-shrink-0 w-fit flex items-center justify-center text-white font-bold">
+                        {globalIndex + 1}.
                       </div>
                       <div className="flex-1">
-                        <h3 className="text-base font-semibold text-slate-800 dark:text-slate-100 leading-relaxed mb-2 select-none">
+                        <h3 className="text-md font-normal text-slate-800 dark:text-slate-100 leading-relaxed mb-2 select-none">
                           {q.text}
                         </h3>
                         <div className="flex items-center space-x-2 text-sm text-slate-500 dark:text-slate-400">
                           <span className="px-3 py-1 bg-slate-100 dark:bg-slate-700 rounded-full font-medium">
                             {q.points} point{q.points !== 1 ? "s" : ""}
-                          </span>
-                          <span className="px-3 py-1 bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 rounded-full font-medium capitalize">
-                            {q.type.replace("-", " ")}
                           </span>
                         </div>
                       </div>
@@ -352,7 +349,7 @@ const QuizInterface = ({ quizData, topic, onBack, existingQuizId }) => {
                         {q.options.map((option, optIndex) => (
                           <div
                             key={option}
-                            className="flex items-center space-x-4 p-4 rounded-xl border-2 border-slate-200 dark:border-slate-600 hover:border-blue-300 dark:hover:border-blue-500 transition-all duration-200 group cursor-pointer"
+                            className="text-sm flex items-center space-x-2 p-2 rounded-sm border-1 border-slate-200 dark:border-slate-600 hover:border-blue-300 dark:hover:border-blue-500 transition-all duration-200 group cursor-pointer"
                           >
                             <RadioGroupItem
                               value={option}
@@ -361,9 +358,9 @@ const QuizInterface = ({ quizData, topic, onBack, existingQuizId }) => {
                             />
                             <Label
                               htmlFor={`${q._id}-${option}`}
-                              className="flex-1 cursor-pointer text-slate-700 dark:text-slate-300 text-xs italic leading-relaxed group-hover:text-slate-900 dark:group-hover:text-slate-100 select-none"
+                              className="flex-1 cursor-pointer text-slate-700 dark:text-slate-300 text-[14px] leading-relaxed group-hover:text-slate-900 dark:group-hover:text-slate-100 select-none px-2"
                             >
-                              <span className="font-medium mr-2 text-slate-500 dark:text-slate-400">
+                              <span className="font-bold mr-2 text-slate-500 dark:text-slate-400">
                                 {String.fromCharCode(65 + optIndex)}.
                               </span>
                               {option}
@@ -391,9 +388,9 @@ const QuizInterface = ({ quizData, topic, onBack, existingQuizId }) => {
                             />
                             <Label
                               htmlFor={`${q._id}-${option}`}
-                              className="flex-1 cursor-pointer text-slate-700 dark:text-slate-300 text-xs italic leading-relaxed group-hover:text-slate-900 dark:group-hover:text-slate-100 select-none"
+                              className="flex-1 cursor-pointer text-slate-700 dark:text-slate-300 text-[14px] leading-relaxed group-hover:text-slate-900 dark:group-hover:text-slate-100 select-none px-2"
                             >
-                              <span className="font-medium mr-2 text-slate-500 dark:text-slate-400">
+                              <span className="font-bold mr-2 text-slate-500 dark:text-slate-400">
                                 {String.fromCharCode(65 + optIndex)}.
                               </span>
                               {option}
@@ -422,9 +419,9 @@ const QuizInterface = ({ quizData, topic, onBack, existingQuizId }) => {
                             />
                             <Label
                               htmlFor={`${q._id}-${option}`}
-                              className="flex-1 cursor-pointer text-slate-700 dark:text-slate-300 text-xs italic leading-relaxed group-hover:text-slate-900 dark:group-hover:text-slate-100 select-none"
+                              className="flex-1 cursor-pointer text-slate-700 dark:text-slate-300 text-[14px] leading-relaxed group-hover:text-slate-900 dark:group-hover:text-slate-100 select-none px-2"
                             >
-                              <span className="font-medium mr-2 text-slate-500 dark:text-slate-400">
+                              <span className="font-bold mr-2 text-slate-500 dark:text-slate-400">
                                 {String.fromCharCode(65 + optIndex)}.
                               </span>
                               {option}
@@ -433,23 +430,28 @@ const QuizInterface = ({ quizData, topic, onBack, existingQuizId }) => {
                         ))}
                       </div>
                     )}
-                    {submitted && (
-                      <div className="mt-4 p-3 rounded-lg text-sm">
+                    {submitted && isReviewMode && (
+                      <div className="mt-4 px-2">
                         {JSON.stringify(answers[q._id]) ===
                           JSON.stringify(q.correctAnswer) ? (
-                          <div className="flex items-center text-green-600 dark:text-green-400">
-                            <CheckCircle className="w-5 h-5 mr-2" />
-                            Correct!
+                          <div className="flex items-center text-green-600 dark:text-green-400 space-x-2">
+                            <CheckCircle className="w-5 h-5" />
+                            <span className="font-bold">Correct!</span>
                           </div>
                         ) : (
-                          <div className="flex items-center text-red-600 dark:text-red-400">
-                            <XCircle className="w-5 h-5 mr-2" />
-                            Incorrect. Correct answer:{" "}
-                            <span className="select-none">
-                              {Array.isArray(q.correctAnswer)
-                                ? q.correctAnswer.join(", ")
-                                : q.correctAnswer}
-                            </span>
+                          <div className="flex items-start text-red-600 dark:text-red-400 space-x-2">
+                            <XCircle className="w-5 h-5 mt-0.5" />
+                            <div>
+                              <span className="font-bold">Incorrect.</span>
+                              <div className="text-gray-500 dark:text-gray-400 mt-1 text-xs">
+                                Correct answer:{" "}
+                                <span className="text-slate-700 dark:text-slate-300 font-medium">
+                                  {Array.isArray(q.correctAnswer)
+                                    ? q.correctAnswer.join(", ")
+                                    : q.correctAnswer}
+                                </span>
+                              </div>
+                            </div>
                           </div>
                         )}
                       </div>
@@ -467,16 +469,28 @@ const QuizInterface = ({ quizData, topic, onBack, existingQuizId }) => {
                   <span className="font-bold text-blue-500">{score}</span> /{" "}
                   {totalMarks}
                 </p>
-                <div className="flex gap-4 justify-center mt-6">
-                  <Button onClick={handleRetake} variant="outline">
+                <div className="flex flex-col sm:flex-row flex-wrap gap-4 justify-center mt-10">
+                  <Button
+                    onClick={handleRetake}
+                    variant="outline"
+                    className="flex-1 min-w-[140px] px-4 py-2 rounded-sm border-2 border-slate-200 font-bold hover:bg-slate-50 transition-all active:scale-95"
+                  >
                     Retake Test
                   </Button>
-                  <Button onClick={() => downloadQuizAsPDF(quizData)} variant="secondary" className="bg-indigo-600 hover:bg-indigo-700 text-white border-none transition-all shadow-md hover:shadow-lg">
-                    <Download className="w-4 h-4 mr-2" />
+                  <Button
+                    onClick={() => downloadQuizAsPDF(quizData)}
+                    variant="secondary"
+                    className="flex-1 min-w-[140px] px-4 py-2 rounded-sm bg-indigo-600 hover:bg-indigo-700 text-white border-none transition-all shadow-md hover:shadow-lg active:scale-95 flex items-center justify-center gap-2"
+                  >
+                    <Download className="w-4 h-4" />
                     Download Exam
                   </Button>
-                  <Button onClick={() => setIsReviewMode(!isReviewMode)}>
-                    <Eye className="w-4 h-4 mr-2" />
+                  <Button
+                    onClick={() => setIsReviewMode(!isReviewMode)}
+                    variant="default"
+                    className="flex-1 min-w-[140px] px-4 py-2 rounded-sm bg-slate-900 dark:bg-slate-800 text-white hover:bg-slate-800 dark:hover:bg-slate-700 transition-all active:scale-95 flex items-center justify-center gap-2"
+                  >
+                    {isReviewMode ? <XCircle className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                     {isReviewMode ? "Hide Review" : "Review Answers"}
                   </Button>
                 </div>
@@ -560,20 +574,19 @@ const QuizInterface = ({ quizData, topic, onBack, existingQuizId }) => {
                 )}
 
                 {/* Submit/Cancel Buttons */}
-                <div className="flex justify-center space-x-6">
-                  <Link href="/dashboard?tab=quizzes">
-                    <Button
-                      variant="outline"
-                      size="lg"
-                      className="px-10 py-4 text-lg border-2 border-slate-300 hover:border-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800 transition-all duration-200 rounded-xl font-medium"
-                    >
-                      Cancel
-                    </Button>
-                  </Link>
+                <div className="flex flex-col sm:flex-row justify-center items-center gap-4 sm:gap-6 mt-12 pb-8">
+                  <Button
+                    onClick={onBack || (() => window.history.back())}
+                    variant="outline"
+                    size="lg"
+                    className="w-full sm:w-auto px-12 py-2 text-lg border-2 border-slate-200 hover:border-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 transition-all duration-200 rounded-xl font-bold text-slate-600 active:scale-95"
+                  >
+                    Cancel Quiz
+                  </Button>
                   <Button
                     onClick={handleSubmit}
                     size="lg"
-                    className="px-10 py-4 text-lg bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white hover:shadow-xl transition-all duration-200 rounded-xl font-semibold"
+                    className="w-full sm:w-auto px-12 py-2 text-lg bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white hover:shadow-xl transition-all duration-200 rounded-xl font-bold active:scale-95 shadow-lg shadow-blue-500/20"
                   >
                     Submit Assessment
                   </Button>

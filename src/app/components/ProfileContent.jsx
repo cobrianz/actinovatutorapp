@@ -56,7 +56,7 @@ const defaultSettings = {
 export default function ProfileContent() {
   const router = useRouter();
   const { user, refreshToken, logout } = useAuth();
-  const { theme } = useTheme();
+  const { theme, setThemePreference } = useTheme();
   const [activeTab, setActiveTab] = useState("my-profile");
   const [loading, setLoading] = useState(true);
   const [updating, setUpdating] = useState(false);
@@ -520,6 +520,27 @@ export default function ProfileContent() {
                     <option value="intermediate">Intermediate</option>
                     <option value="adaptive">Adaptive</option>
                   </select>
+                </div>
+
+                <div className="space-y-2">
+                  <label className="block text-[10px] font-bold uppercase text-gray-500 mb-1.5 ml-1">App Appearance</label>
+                  <div className={`grid grid-cols-3 gap-2 p-1 rounded-2xl ${theme === 'dark' ? "bg-gray-800" : "bg-gray-100"}`}>
+                    {['light', 'dark', 'system'].map((t) => (
+                      <button
+                        key={t}
+                        onClick={() => {
+                          setSettings({ ...settings, theme: t });
+                          setThemePreference(t);
+                        }}
+                        className={`py-2 rounded-xl text-xs font-bold uppercase tracking-wider transition-all ${settings.theme === t
+                          ? "bg-white dark:bg-gray-700 text-indigo-600 dark:text-indigo-400 shadow-sm"
+                          : "text-gray-500 hover:text-gray-700 dark:hover:text-gray-300"
+                          }`}
+                      >
+                        {t}
+                      </button>
+                    ))}
+                  </div>
                 </div>
 
                 <div className={`p-4 rounded-2xl flex items-center justify-between ${theme === 'dark' ? "bg-gray-800" : "bg-gray-50"}`}>

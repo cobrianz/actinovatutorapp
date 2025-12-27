@@ -379,7 +379,7 @@ export default function Chat({ topic: propTopic, setHideNavs }) {
 
       {/* History View */}
       {view === "history" && (
-        <div className="flex-1 overflow-y-auto px-4 py-6 max-w-2xl mx-auto w-full space-y-4">
+        <div className={`flex-1 overflow-y-auto px-4 py-6 max-w-2xl mx-auto w-full space-y-4 ${theme === 'dark' ? 'bg-gray-950' : 'bg-gray-50'}`}>
           <h2 className="text-2xl font-black uppercase tracking-widest mb-6 px-2">Your Conversations</h2>
 
           {/* New Chat Button at Top */}
@@ -432,7 +432,9 @@ export default function Chat({ topic: propTopic, setHideNavs }) {
 
       {/* Main Chat Area - WhatsApp Style with Gradient */}
       {view === "chat" && (
-        <div className="flex-1 flex flex-col relative w-full h-full bg-gradient-to-br from-blue-50 to-purple-50 dark:from-blue-900/20 dark:to-purple-900/20">
+        <div className={`flex-1 flex flex-col relative w-full h-full ${theme === 'dark' ? 'bg-[#111b21]' : 'bg-[#e5ddd5]'}`}>
+          {/* WhatsApp style gradient overlay */}
+          <div className="absolute inset-0 bg-gradient-to-br from-blue-50/20 to-purple-50/20 dark:from-blue-900/10 dark:to-purple-900/10 pointer-events-none" />
 
           {/* Chat Background Pattern */}
           <div

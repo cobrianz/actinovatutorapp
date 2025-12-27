@@ -16,6 +16,8 @@ import {
   X,
   ChevronDown,
   ChevronUp,
+  Crown,
+  Zap,
 } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -917,33 +919,8 @@ export default function Explore({ setHideNavs }) {
         courses = validCourses;
       }
 
-      // If no valid courses in localStorage, check database (server reads auth from HttpOnly cookie)
-      if (courses.length === 0) {
-        try {
-          const response = await authenticatedFetch("/api/explore/persisted-courses");
-
-          if (response.ok) {
-            const dbData = await response.json();
-            const now = new Date();
-            const validDbCourses = (dbData.courses || []).filter((course) => {
-              const generatedAt = new Date(course.generatedAt);
-              const hoursDiff = (now - generatedAt) / (1000 * 60 * 60);
-              return hoursDiff < 24;
-            });
-
-            if (validDbCourses.length > 0) {
-              courses = validDbCourses;
-              // Save to localStorage for faster future access
-              localStorage.setItem(
-                "exploredCourses",
-                JSON.stringify(validDbCourses)
-              );
-            }
-          }
-        } catch (error) {
-          console.error("Error loading courses from database:", error);
-        }
-      }
+      // Note: Database persistence for explored courses has been removed per user request.
+      // We now rely purely on localStorage for suggestion persistence.
 
       if (courses.length > 0) {
         setGeneratedCourses(courses);
@@ -962,14 +939,9 @@ export default function Explore({ setHideNavs }) {
   };
 
   const saveCoursesToDatabase = async (courses) => {
-    try {
-      await authenticatedFetch("/api/explore/persisted-courses", {
-        method: "POST",
-        body: JSON.stringify({ courses }),
-      });
-    } catch (error) {
-      console.error("Error saving courses to database:", error);
-    }
+    // Persistence to database for groups of explored courses is disabled.
+    // Individual courses are added to library only when Generated.
+    return;
   };
 
   useEffect(() => {
@@ -1149,7 +1121,7 @@ export default function Explore({ setHideNavs }) {
         setGeneratedCourses((prev) => {
           const updated = [newGeneratedSet, ...prev];
           saveCoursesToStorage(updated);
-          saveCoursesToDatabase(updated);
+          // database persistence removed per request
           return updated;
         });
 
@@ -1389,12 +1361,10 @@ export default function Explore({ setHideNavs }) {
       <div id="generated-courses-section" className="mb-16">
         {exploringCategory && (
           <div className="mb-12">
-            <div className="flex items-center space-x-2 mb-6">
-              <BookOpen className="w-6 h-6 text-blue-500" />
-              <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100">
-                {exploringCategory} Courses
+            <div className="mb-6">
+              <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100">
+                {exploringCategory}
               </h2>
-              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-500"></div>
             </div>
 
             {/* Fading Cards Loader */}
@@ -1605,89 +1575,75 @@ export default function Explore({ setHideNavs }) {
             ) : (
               <div className="flex flex-col gap-4">
                 {filteredTrendingTopics.map((topic, index) => {
-                  const colors = [
-                    "from-blue-500/5 to-indigo-500/5 dark:from-blue-500/10 dark:to-indigo-500/10",
-                    "from-purple-500/5 to-fuchsia-500/5 dark:from-purple-500/10 dark:to-fuchsia-500/10",
-                    "from-emerald-500/5 to-teal-500/5 dark:from-emerald-500/10 dark:to-teal-500/10",
-                    "from-orange-500/5 to-amber-500/5 dark:from-orange-500/10 dark:to-amber-500/10"
-                  ];
-                  const cardBg = colors[index % colors.length];
-                  const accentGradients = [
-                    "from-blue-600 to-indigo-600",
-                    "from-purple-600 to-fuchsia-600",
-                    "from-emerald-600 to-teal-600",
-                    "from-orange-600 to-amber-600"
-                  ];
-                  const accent = accentGradients[index % accentGradients.length];
-
                   return (
                     <div
                       key={index}
-                      className={`bg-gradient-to-br ${cardBg} border border-gray-100 dark:border-gray-700/50 rounded-2xl p-6 hover:shadow-xl hover:shadow-gray-200/20 dark:hover:shadow-none transition-all relative group cursor-pointer border-l-4 ${index % 4 === 0 ? "border-l-blue-500" : index % 4 === 1 ? "border-l-purple-500" : index % 4 === 2 ? "border-l-emerald-500" : "border-l-orange-500"}`}
+                      className="bg-gradient-to-br from-indigo-500 to-purple-600 rounded-2xl p-6 text-white shadow-xl shadow-indigo-500/10 relative overflow-hidden group cursor-pointer transition-all hover:scale-[1.01]"
                       onClick={() => handleGenerateCourse(topic)}
                     >
-                      <div className="flex items-start flex-col gap-2 justify-between mb-3">
-                        <h3 className="text-lg font-black text-gray-900 dark:text-white flex-1">
+                      <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -translate-y-16 translate-x-16 blur-2xl group-hover:scale-110 transition-transform" />
+
+                      <div className="relative z-10 flex flex-col h-full">
+                        <div className="flex justify-between items-start mb-4">
+                          <div className="p-2 bg-white/20 rounded-xl">
+                            <Crown size={18} className="text-yellow-300" />
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <span className={`px-3 py-1 bg-white/20 rounded-full text-xs font-bold text-white`}>
+                              {topic.difficulty || "Beginner"}
+                            </span>
+                          </div>
+                        </div>
+
+                        <h3 className="text-xl font-black leading-tight mb-2 line-clamp-2">
                           {topic.title}
                         </h3>
-                        <div className="flex items-center space-x-2">
-                          <span
-                            className={`px-3 py-1 text-[10px] font-black  tracking-wider ${topic.difficulty === "beginner"
-                              ? "bg-emerald-100 text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-300"
-                              : topic.difficulty === "intermediate"
-                                ? "bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300"
-                                : "bg-rose-100 text-rose-800 dark:bg-rose-900/40 dark:text-rose-300"
-                              }`}
-                          >
-                            {topic.difficulty || "Beginner"}
-                          </span>
-                        </div>
-                      </div>
 
-                      <p className="text-sm text-gray-600 dark:text-gray-400 mb-4 font-medium leading-relaxed">
-                        {topic.description}
-                      </p>
+                        <p className="text-white/80 text-sm font-medium line-clamp-2 mb-4 leading-relaxed">
+                          {topic.description}
+                        </p>
 
-                      {topic.whyTrending && (
-                        <div className="mb-4 p-3 bg-white/60 dark:bg-gray-800/60 backdrop-blur-sm rounded-xl border border-gray-50 dark:border-gray-700/50">
-                          <p className="text-xs text-blue-700 dark:text-blue-300 font-bold flex flex-col items-start gap-1.5">
-                            <span className="px-4 py-1 bg-blue-100 dark:bg-blue-900/40 rounded-lg">🔥 Why Trending</span>
-                            {topic.whyTrending}
-                          </p>
-                        </div>
-                      )}
-
-                      <div className="flex items-center space-x-6 text-[11px] font-bold text-gray-500 dark:text-gray-400 mb-6">
-                        <div className="flex items-center space-x-1.5">
-                          <Clock className="w-4 h-4 text-gray-400" />
-                          <span>{topic.estimatedDuration || "6 weeks"}</span>
-                        </div>
-                        <div className="flex items-center space-x-1.5">
-                          <BookOpen className="w-4 h-4 text-gray-400" />
-                          <span>{topic.category || "General"}</span>
-                        </div>
-                      </div>
-
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleGenerateCourse(topic);
-                        }}
-                        disabled={generatingCourse === topic.title}
-                        className={`w-full bg-gradient-to-r ${accent} text-white py-3 px-4 rounded-xl hover:scale-[1.01] active:scale-95 transition-all text-xs font-black tracking-[0.2em] disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center space-x-2 shadow-lg shadow-gray-200/20`}
-                      >
-                        {generatingCourse === topic.title ? (
-                          <>
-                            <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-                            <span>Generating...</span>
-                          </>
-                        ) : (
-                          <>
-                            <Sparkles className="w-4 h-4" />
-                            <span>Generate Course</span>
-                          </>
+                        {topic.whyTrending && (
+                          <div className="mb-4 p-3 bg-white/10 backdrop-blur-md rounded-xl border border-white/10">
+                            <p className="text-xs text-white font-bold flex flex-col items-start gap-1.5">
+                              <span className="px-3 py-0.5 bg-white/20 rounded-lg text-[10px]">Trending Now</span>
+                              {topic.whyTrending}
+                            </p>
+                          </div>
                         )}
-                      </button>
+
+                        <div className="flex items-center space-x-6 text-xs font-bold text-white/70 mb-6">
+                          <div className="flex items-center space-x-1.5">
+                            <Clock className="w-4 h-4" />
+                            <span>{topic.estimatedDuration || "6 weeks"}</span>
+                          </div>
+                          <div className="flex items-center space-x-1.5">
+                            <BookOpen className="w-4 h-4" />
+                            <span>{topic.category || "General"}</span>
+                          </div>
+                        </div>
+
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleGenerateCourse(topic);
+                          }}
+                          disabled={generatingCourse === topic.title}
+                          className="w-full bg-white text-indigo-600 py-3 px-4 rounded-xl hover:bg-gray-50 active:scale-95 transition-all text-xs font-black tracking-widest disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center space-x-2 shadow-lg shadow-black/10"
+                        >
+                          {generatingCourse === topic.title ? (
+                            <>
+                              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-indigo-600"></div>
+                              <span>Generating...</span>
+                            </>
+                          ) : (
+                            <>
+                              <Sparkles className="w-4 h-4" />
+                              <span>Generate Course</span>
+                            </>
+                          )}
+                        </button>
+                      </div>
                     </div>
                   );
                 })}

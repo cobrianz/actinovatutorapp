@@ -6,13 +6,13 @@ import { toast } from "sonner";
 import { authenticatedFetch } from "../lib/apiConfig";
 import Flashcards from "./Flashcards";
 import {
-  Trash2,
   Plus,
   BookOpen,
   Sparkles,
   Bookmark,
   ArrowLeft,
   Eye,
+  Scroll,
 } from "lucide-react";
 
 export default function FlashcardsLibrary({ setActiveContent, setHideNavs }) {
@@ -29,8 +29,6 @@ export default function FlashcardsLibrary({ setActiveContent, setHideNavs }) {
   const [loadingFlashcards, setLoadingFlashcards] = useState(new Set());
   const [transitioning, setTransitioning] = useState(false);
   const [bookmarkedFlashcards, setBookmarkedFlashcards] = useState(new Set());
-  const [showDeleteModal, setShowDeleteModal] = useState(false);
-  const [flashcardToDelete, setFlashcardToDelete] = useState(null);
   const { user, refreshToken } = useAuth();
   const isPro =
     user &&
@@ -81,46 +79,6 @@ export default function FlashcardsLibrary({ setActiveContent, setHideNavs }) {
       toast.error("Error loading flashcards");
     } finally {
       setLoading(false);
-    }
-  };
-
-  const handleDeleteClick = (flashcard) => {
-    setFlashcardToDelete(flashcard);
-    setShowDeleteModal(true);
-  };
-
-  const confirmDelete = async (retryAfterRefresh = true) => {
-    if (!flashcardToDelete) return;
-
-    try {
-      const response = await authenticatedFetch(`/api/flashcards/${flashcardToDelete._id}`, {
-        method: "DELETE",
-      });
-
-      if (response.status === 401 && retryAfterRefresh) {
-        // Try to refresh token and retry
-        const refreshSuccess = await refreshToken();
-        if (refreshSuccess) {
-          return confirmDelete(false);
-        } else {
-          toast.error("Session expired. Please log in again.");
-          return;
-        }
-      }
-
-      if (response.ok) {
-        setFlashcards(
-          flashcards.filter((card) => card._id !== flashcardToDelete._id)
-        );
-        toast.success("Flashcard set deleted successfully");
-        setShowDeleteModal(false);
-        setFlashcardToDelete(null);
-      } else {
-        toast.error("Failed to delete flashcard set");
-      }
-    } catch (error) {
-      console.error("Error deleting flashcard set:", error);
-      toast.error("Error deleting flashcard set");
     }
   };
 
@@ -220,7 +178,7 @@ export default function FlashcardsLibrary({ setActiveContent, setHideNavs }) {
 
         <div className="py-12 bg-gradient-to-r from-blue-50/50 to-indigo-50/50 dark:from-blue-900/20 dark:to-indigo-900/20 rounded-2xl mb-12 border border-gray-200/50 dark:border-slate-700/50">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div className="grid grid-cols-1 gap-8 sm:grid-cols-2 lg:grid-cols-4">
+            <div className="grid grid-cols-2 gap-4 sm:grid-cols-2 lg:grid-cols-4">
               {[...Array(4)].map((_, index) => (
                 <div key={index} className="text-center">
                   <div className="h-8 bg-gray-300 dark:bg-gray-600 rounded w-16 mx-auto mb-2"></div>
@@ -302,13 +260,7 @@ export default function FlashcardsLibrary({ setActiveContent, setHideNavs }) {
             View and manage your generated flashcard sets
           </p>
         </div>
-        <button
-          onClick={() => setActiveContent("generate")}
-          className="w-full sm:w-auto bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 text-white px-4 py-2 rounded-lg flex items-center justify-center space-x-2 shadow-lg hover:shadow-xl transition-all duration-300 cursor-pointer"
-        >
-          <Plus className="w-5 h-5" />
-          <span>Create New</span>
-        </button>
+        {/* Create New Button Removed to avoid double FAB */}
       </div>
 
       {flashcards.length === 0 ? (
@@ -356,78 +308,25 @@ export default function FlashcardsLibrary({ setActiveContent, setHideNavs }) {
             return (
               <div className="py-8 sm:py-10 mb-12">
                 <div className="max-w-full mx-auto px-0 ">
-                  <div className="flex flex-wrap justify-between gap-6">
-                    {/* Tile: Total Sets */}
-                    <div className="relative overflow-hidden rounded-xl bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 flex-1 min-w-[240px]">
-                      <div className="relative p-5 flex items-center gap-4">
-                        <div className="w-12 h-12 rounded-lg bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-300 flex items-center justify-center font-bold">
-                          {totalSets}
+                  <div className="grid grid-cols-2 gap-4">
+                    {[
+                      { label: "Sets", value: totalSets, bg: "bg-blue-50/50 dark:bg-blue-900/10", border: "border-blue-100 dark:border-blue-800/50", text: "text-blue-600 dark:text-blue-400" },
+                      { label: "Total Cards", value: totalCards, bg: "bg-pink-50/50 dark:bg-pink-900/10", border: "border-pink-100 dark:border-pink-800/50", text: "text-pink-600 dark:text-pink-400" },
+                      { label: "Opened", value: openedCardsTotal, bg: "bg-emerald-50/50 dark:bg-emerald-900/10", border: "border-emerald-100 dark:border-emerald-800/50", text: "text-emerald-600 dark:text-emerald-400" },
+                      { label: "Bookmarks", value: bookmarkedCount, bg: "bg-yellow-50/50 dark:bg-yellow-900/10", border: "border-yellow-100 dark:border-yellow-800/50", text: "text-yellow-600 dark:text-yellow-400" }
+                    ].map((stat, i) => (
+                      <div
+                        key={i}
+                        className={`relative ${stat.bg} ${stat.border} border rounded-xl p-5 flex flex-col items-center justify-center text-center transition-all duration-500`}
+                      >
+                        <div className={`text-2xl font-black ${stat.text} leading-none mb-1.5`}>
+                          {stat.value}
                         </div>
-                        <div>
-                          <p className="text-sm text-gray-600 dark:text-gray-400">
-                            Total Sets
-                          </p>
-                          <p className="text-xs text-gray-500 dark:text-gray-500">
-                            Collections you've created
-                          </p>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Tile: Total Cards */}
-                    <div className="relative overflow-hidden rounded-xl bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 flex-1 min-w-[240px]">
-                      <div className="relative p-5 flex items-center gap-4">
-                        <div className="w-12 h-12 rounded-lg bg-pink-100 dark:bg-pink-900/30 text-pink-600 dark:text-pink-300 flex items-center justify-center font-bold">
-                          {totalCards}
-                        </div>
-                        <div>
-                          <p className="text-sm text-gray-600 dark:text-gray-400">
-                            Total Cards
-                          </p>
-                          <p className="text-xs text-gray-500 dark:text-gray-500">
-                            Across all sets
-                          </p>
+                        <div className="text-[10px] font-black text-gray-500 dark:text-gray-400">
+                          {stat.label}
                         </div>
                       </div>
-                    </div>
-
-                    {/* Tile: Opened Cards */}
-                    <div className="relative overflow-hidden rounded-xl bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 flex-1 min-w-[240px]">
-                      <div className="relative p-5 flex items-center gap-4">
-                        <div className="w-12 h-12 rounded-lg bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-300 flex items-center justify-center">
-                          <p className="text-2xl font-bold text-gray-900 dark:text-white">
-                            {openedCardsTotal}
-                          </p>
-                        </div>
-                        <div>
-                          <p className="text-sm text-gray-600 dark:text-gray-400">
-                            Opened Cards
-                          </p>
-                          <p className="text-xs text-gray-500 dark:text-gray-500">
-                            Across all sets (this device)
-                          </p>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Tile: Bookmarked Sets */}
-                    <div className="relative overflow-hidden rounded-xl bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 flex-1 min-w-[240px]">
-                      <div className="relative p-3 flex items-center gap-4">
-                        <div className="w-12 h-12 rounded-lg bg-yellow-100 dark:bg-yellow-900/30 text-yellow-600 dark:text-yellow-300 flex items-center justify-center">
-                          <p className="text-2xl font-bold text-gray-900 dark:text:white">
-                            {bookmarkedCount}
-                          </p>
-                        </div>
-                        <div>
-                          <p className="text-sm text-gray-600 dark:text-gray-400">
-                            Bookmarked
-                          </p>
-                          <p className="text-xs text-gray-500 dark:text-gray-500">
-                            Sets saved for quick access
-                          </p>
-                        </div>
-                      </div>
-                    </div>
+                    ))}
                   </div>
                 </div>
               </div>
@@ -453,12 +352,6 @@ export default function FlashcardsLibrary({ setActiveContent, setHideNavs }) {
                 "beginner"
               ).toLowerCase();
               const diffLabel = diff.charAt(0).toUpperCase() + diff.slice(1);
-              const diffClasses =
-                diff === "beginner"
-                  ? "bg-green-500/15 text-green-600 border-green-500/30 dark:bg-green-500/20 dark:text-green-300"
-                  : diff === "intermediate"
-                    ? "bg-yellow-500/15 text-yellow-600 border-yellow-500/30 dark:bg-yellow-500/20 dark:text-yellow-300"
-                    : "bg-red-500/15 text-red-600 border-red-500/30 dark:bg-red-500/20 dark:text-red-300";
 
               const total =
                 card.totalCards ??
@@ -466,100 +359,87 @@ export default function FlashcardsLibrary({ setActiveContent, setHideNavs }) {
 
               return (
                 <div key={card._id} className="h-full">
-                  <div className="relative flex h-full flex-col rounded-xl border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-800 transition-colors hover:border-blue-300 dark:hover:border-blue-500">
-                    <div className="p-5">
-                      <div className="flex items-start justify-between gap-3">
+                  <div className="relative flex h-full flex-col rounded-sm bg-gradient-to-br from-indigo-600 to-purple-700 text-white transition-transform hover:scale-[1.02]">
+                    <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -translate-y-16 translate-x-16 blur-2xl" />
+
+                    <div className="relative z-10 p-5 flex flex-col h-full">
+                      <div className="flex items-start justify-between gap-3 mb-4">
                         <div className="flex items-start gap-3 min-w-0">
-                          <div className="w-10 h-10 rounded-lg bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-300 flex items-center justify-center shrink-0">
-                            <Sparkles size={20} />
+                          <div className="flex items-center justify-center shrink-0">
+                            <Scroll size={24} className="text-white" />
                           </div>
                           <div className="min-w-0">
-                            <h3 className="text-lg font-semibold text-gray-900 dark:text-white line-clamp-2 text-balance">
+                            <h3 className="text-lg font-black leading-tight text-white line-clamp-2 text-balance">
                               {card.title}
                             </h3>
-                            <p className="mt-1 text-sm text-gray-600 dark:text-gray-400 line-clamp-1">
-                              {card.topic
-                                ? `Flashcards for ${card.topic}`
-                                : `Interactive flashcards to master key concepts.`}
+                            <p className="mt-1 text-xs font-medium text-white/70 line-clamp-1">
+                              {card.topic || "Personalized Course"}
                             </p>
                           </div>
                         </div>
-                        <div
-                          className={`inline-flex items-center px-3 py-1 rounded-full border text-xs font-semibold ${diffClasses}`}
-                        >
+                        <div className="inline-flex items-center px-3 py-1 rounded-full bg-white/20 border border-white/20 text-xs font-bold text-white">
                           {diffLabel}
                         </div>
                       </div>
 
-                      <div className="mt-4 flex items-center gap-3 text-sm text-gray-600 dark:text-gray-400">
-                        <span className="inline-flex items-center gap-1">
-                          <Sparkles
-                            size={14}
-                            className="text-gray-500 dark:text-gray-400"
-                          />
-                          <span className="font-medium">{total}</span>
-                          <span>cards</span>
-                        </span>
-                      </div>
-                    </div>
+                      <div className="mt-auto pt-4">
+                        <div className="flex items-center justify-between gap-3">
+                          <div className="flex items-center gap-2 text-xs font-bold text-white/80 bg-white/10 px-3 py-1.5 rounded-lg border border-white/10">
+                            <Scroll size={14} />
+                            <span>{total} cards</span>
+                          </div>
 
-                    <div className="mt-auto px-5 pb-5">
-                      <div className="flex items-center justify-between gap-2">
-                        <div className="flex items-center gap-2">
                           <button
-                            onClick={() => handleBookmark(card._id)}
-                            className={`p-2 rounded-lg border transition-colors ${bookmarkedFlashcards.has(card._id)
-                              ? "text-yellow-600 dark:text-yellow-300 border-yellow-300/40 bg-yellow-50 dark:bg-yellow-900/20"
-                              : "text-gray-600 dark:text-gray-300 border-gray-200 dark:border-slate-700 hover:bg-yellow-50/40 dark:hover:bg-yellow-900/10 hover:text-yellow-600"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleBookmark(card._id);
+                            }}
+                            className={`p-2 rounded-xl transition-all active:scale-95 border ${bookmarkedFlashcards.has(card._id)
+                              ? "bg-white text-indigo-600 border-white shadow-lg shadow-white/10"
+                              : "bg-white/10 text-white border-white/10 hover:bg-white/20"
                               }`}
-                            title={
-                              bookmarkedFlashcards.has(card._id)
-                                ? "Remove bookmark"
-                                : "Bookmark"
-                            }
+                            title={bookmarkedFlashcards.has(card._id) ? "Remove bookmark" : "Bookmark set"}
                           >
                             <Bookmark
                               size={18}
-                              className={
-                                bookmarkedFlashcards.has(card._id)
-                                  ? "fill-current"
-                                  : ""
-                              }
+                              className={bookmarkedFlashcards.has(card._id) ? "fill-current" : ""}
                             />
                           </button>
-
                         </div>
 
-
+                        <button
+                          onClick={async (e) => {
+                            e.stopPropagation();
+                            setTransitioning(true);
+                            setLoadingFlashcards((prev) =>
+                              new Set(prev).add(card._id)
+                            );
+                            setTimeout(() => {
+                              setSelectedFlashcard(card);
+                              setShowFlashcards(true);
+                              setLoadingFlashcards((prev) => {
+                                const newSet = new Set(prev);
+                                newSet.delete(card._id);
+                                return newSet;
+                              });
+                              setTransitioning(false);
+                            }, 300);
+                          }}
+                          disabled={loadingFlashcards.has(card._id)}
+                          className="w-full mt-4 py-3 px-4 rounded-xl bg-white text-indigo-900 hover:bg-white/90 active:scale-[0.98] font-black text-xs tracking-widest transition-all flex items-center justify-center gap-2"
+                        >
+                          {loadingFlashcards.has(card._id) ? (
+                            <div className="h-4 w-4 border-2 border-indigo-900/30 border-t-indigo-900 rounded-full animate-spin" />
+                          ) : (
+                            <Sparkles size={16} />
+                          )}
+                          <span>
+                            {loadingFlashcards.has(card._id)
+                              ? "Preparing..."
+                              : "Study Now"}
+                          </span>
+                        </button>
                       </div>
-
-                      <button
-                        onClick={async () => {
-                          setTransitioning(true);
-                          setLoadingFlashcards((prev) =>
-                            new Set(prev).add(card._id)
-                          );
-                          setTimeout(() => {
-                            setSelectedFlashcard(card);
-                            setShowFlashcards(true);
-                            setLoadingFlashcards((prev) => {
-                              const newSet = new Set(prev);
-                              newSet.delete(card._id);
-                              return newSet;
-                            });
-                            setTransitioning(false);
-                          }, 300);
-                        }}
-                        disabled={loadingFlashcards.has(card._id)}
-                        className="w-full mt-4 py-2.5 px-4 rounded-xl bg-blue-600 hover:bg-blue-700 dark:bg-blue-600/90 dark:hover:bg-blue-600 text-white font-semibold text-sm transition-colors flex items-center justify-center gap-2"
-                      >
-                        <Sparkles size={16} />
-                        <span>
-                          {loadingFlashcards.has(card._id)
-                            ? "Loading..."
-                            : "Study Flashcards"}
-                        </span>
-                      </button>
                     </div>
                   </div>
                 </div>
@@ -567,48 +447,9 @@ export default function FlashcardsLibrary({ setActiveContent, setHideNavs }) {
             })}
           </div>
         </>
-      )}
+      )
+      }
 
-      {/* Delete Confirmation Modal */}
-      {showDeleteModal && flashcardToDelete && (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <div className="bg-white dark:bg-slate-800 rounded-2xl w-full max-w-md shadow-2xl border border-gray-200 dark:border-slate-700">
-            <div className="p-6">
-              <div className="flex items-center justify-center w-12 h-12 bg-red-100 dark:bg-red-900/20 rounded-full mx-auto mb-4">
-                <Trash2 className="w-6 h-6 text-red-600 dark:text-red-400" />
-              </div>
-
-              <h3 className="text-xl font-bold text-gray-900 dark:text-white text-center mb-2">
-                Delete Flashcard Set
-              </h3>
-
-              <p className="text-gray-600 dark:text-gray-400 text-center mb-6">
-                Are you sure you want to delete{" "}
-                <strong>"{flashcardToDelete.title}"</strong>? This action cannot
-                be undone.
-              </p>
-
-              <div className="flex gap-3">
-                <button
-                  onClick={() => {
-                    setShowDeleteModal(false);
-                    setFlashcardToDelete(null);
-                  }}
-                  className="flex-1 px-4 py-2 border border-gray-300 dark:border-slate-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-slate-700 transition-colors"
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={confirmDelete}
-                  className="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
-                >
-                  Delete
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }

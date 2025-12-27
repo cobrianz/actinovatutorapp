@@ -161,8 +161,7 @@ const TestYourself = ({ setHideNavs }) => {
   return (
     <div className="p-4 sm:p-8 bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-white min-h-screen">
       <header className="mb-8">
-        <h1 className="text-4xl font-bold tracking-tight flex items-center">
-          <BrainCircuit className="w-8 h-8 mr-3 text-blue-500" />
+        <h1 className="text-2xl font-bold tracking-tight flex items-center">
           Test Your Knowledge
         </h1>
         <p className="text-lg text-gray-600 dark:text-gray-400 mt-2">
@@ -170,79 +169,25 @@ const TestYourself = ({ setHideNavs }) => {
         </p>
       </header>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-        <Card
-          className={`bg-blue-50 dark:bg-gray-800 border border-blue-200 dark:border-gray-700 shadow-none py-3 gap-3 transition-opacity duration-500 ${loaded ? "opacity-100" : "opacity-0"}`}
-        >
-          <CardHeader className="flex flex-row items-center justify-between pb-1">
-            <CardTitle className="text-sm font-medium text-blue-600 dark:text-gray-400">
-              Total Tests
-            </CardTitle>
-            <HelpCircle className="w-6 h-6 text-blue-500 dark:text-gray-500" />
-          </CardHeader>
-          <CardContent className="flex flex-row items-center justify-between">
-            <div className="text-2xl font-bold text-blue-600">
-              {loading ? "..." : quizzes.length}
+      <div className="grid grid-cols-2 gap-4 mb-8">
+        {[
+          { label: "Tests", value: quizzes.length, bg: "bg-blue-50/50 dark:bg-blue-900/10", border: "border-blue-100 dark:border-blue-800/50", text: "text-blue-600 dark:text-blue-400" },
+          { label: "Pending", value: quizzes.length, bg: "bg-yellow-50/50 dark:bg-yellow-900/10", border: "border-yellow-100 dark:border-yellow-800/50", text: "text-yellow-600 dark:text-yellow-400" },
+          { label: "Done", value: performanceStats?.completedTests || 0, bg: "bg-green-50/50 dark:bg-green-900/10", border: "border-green-100 dark:border-green-800/50", text: "text-green-600 dark:text-green-400" },
+          { label: "Avg Score", value: `${performanceStats?.averageScore || 0}%`, bg: "bg-purple-50/50 dark:bg-purple-900/10", border: "border-purple-100 dark:border-purple-800/50", text: "text-purple-600 dark:text-purple-400" }
+        ].map((stat, i) => (
+          <div
+            key={i}
+            className={`relative ${stat.bg} ${stat.border} border rounded-xl p-5 flex flex-col items-center justify-center text-center transition-all duration-500 ${loaded ? "opacity-100 translate-y-0" : "opacity-0 translate-y-4"}`}
+          >
+            <div className={`text-2xl font-black ${stat.text} leading-none mb-1.5`}>
+              {loading ? "..." : stat.value}
             </div>
-            <p className="text-xs text-gray-500 dark:text-gray-400">
-              Assignments & Quizzes
-            </p>
-          </CardContent>
-        </Card>
-        <Card
-          className={`bg-yellow-50 dark:bg-gray-800 border border-yellow-200 dark:border-gray-700 shadow-none py-3 gap-3 transition-opacity duration-500 ${loaded ? "opacity-100" : "opacity-0"}`}
-        >
-          <CardHeader className="flex flex-row items-center justify-between pb-1">
-            <CardTitle className="text-sm font-medium text-yellow-600 dark:text-gray-400">
-              Pending
-            </CardTitle>
-            <Clock className="w-6 h-6 text-yellow-500 dark:text-gray-500" />
-          </CardHeader>
-          <CardContent className="flex flex-row items-center justify-between">
-            <div className="text-2xl font-bold text-yellow-600">
-              {loading ? "..." : quizzes.length}
+            <div className="text-[10px] font-black text-gray-500 dark:text-gray-400">
+              {stat.label}
             </div>
-            <p className="text-xs text-gray-500 dark:text-gray-400">
-              Need completion
-            </p>
-          </CardContent>
-        </Card>
-        <Card
-          className={`bg-green-50 dark:bg-gray-800 border border-green-200 dark:border-gray-700 shadow-none py-3 gap-3 transition-opacity duration-500 ${loaded ? "opacity-100" : "opacity-0"}`}
-        >
-          <CardHeader className="flex flex-row items-center justify-between pb-1">
-            <CardTitle className="text-sm font-medium text-green-600 dark:text-gray-400">
-              Completed Tests
-            </CardTitle>
-            <CheckCircle className="w-6 h-6 text-green-500 dark:text-gray-500" />
-          </CardHeader>
-          <CardContent className="flex flex-row items-center justify-between">
-            <div className="text-2xl font-bold text-green-600">
-              {loading ? "..." : performanceStats?.completedTests || 0}
-            </div>
-            <p className="text-xs text-gray-500 dark:text-gray-400">
-              Out of {performanceStats?.totalTests || 0} tests
-            </p>
-          </CardContent>
-        </Card>
-        <Card
-          className={`bg-purple-50 dark:bg-gray-800 border border-purple-200 dark:border-gray-700 shadow-none py-3 gap-3 transition-opacity duration-500 ${loaded ? "opacity-100" : "opacity-0"}`}
-        >
-          <CardHeader className="flex flex-row items-center justify-between pb-1">
-            <CardTitle className="text-sm font-medium text-purple-600 dark:text-gray-400">
-              Average Score
-            </CardTitle>
-            <Award className="w-6 h-6 text-purple-500 dark:text-gray-500" />
-          </CardHeader>
-          <CardContent className="flex flex-row items-center justify-between">
-            <div className="text-2xl font-bold text-purple-600">
-              {loading ? "..." : `${performanceStats?.averageScore || 0}%`}
-            </div>
-            <p className="text-xs text-gray-500 dark:text-gray-400">
-              Across all completed tests
-            </p>
-          </CardContent>
-        </Card>
+          </div>
+        ))}
       </div>
 
       <div
@@ -382,13 +327,13 @@ const TestYourself = ({ setHideNavs }) => {
                           <Button
                             variant="default"
                             onClick={() => setSelectedQuiz(quiz)}
-                            className={`${quiz.difficulty === "easy"
-                              ? "bg-blue-500 hover:bg-blue-600 text-white"
-                              : quiz.difficulty === "medium"
-                                ? "bg-orange-500 hover:bg-orange-600 text-white"
-                                : quiz.difficulty === "hard"
-                                  ? "bg-purple-500 hover:bg-purple-600 text-white"
-                                  : "bg-gray-500 hover:bg-gray-600 text-white"
+                            className={`w-full px-6 py-4 rounded-sm font-bold text-sm transition-all duration-300 hover:scale-[1.03] active:scale-95 shadow-md hover:shadow-lg flex items-center gap-2 ${quiz.difficulty === "easy"
+                                ? "bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white shadow-blue-500/20"
+                                : quiz.difficulty === "medium"
+                                  ? "bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white shadow-orange-500/20"
+                                  : quiz.difficulty === "hard"
+                                    ? "bg-gradient-to-r from-purple-500 to-purple-600 hover:from-purple-600 hover:to-purple-700 text-white shadow-purple-500/20"
+                                    : "bg-gradient-to-r from-gray-500 to-gray-600 hover:from-gray-600 hover:to-gray-700 text-white shadow-gray-500/20"
                               }`}
                           >
                             {(() => {
@@ -396,7 +341,11 @@ const TestYourself = ({ setHideNavs }) => {
                               const isCompleted =
                                 typeof window !== "undefined" &&
                                 localStorage.getItem(completedKey);
-                              return isCompleted ? "Review Test" : "Take Test";
+                              return (
+                                <>
+                                  {isCompleted ? "Review Analysis" : "Take Assessment"}
+                                </>
+                              );
                             })()}
                           </Button>
                         </div>

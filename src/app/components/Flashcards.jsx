@@ -285,46 +285,49 @@ export default function Flashcards({ cardData }) {
   }
 
   return (
-    <section className="px-4 py-8 sm:px-6 lg:px-8 bg-white dark:bg-slate-900 min-h-screen">
+    <section className="px-4 py-6 sm:px-6 lg:px-8 bg-white dark:bg-slate-900 min-h-screen">
       <div className="mx-auto max-w-7xl">
         {/* Centered Title and Description */}
-        <div className="text-center mb-6">
-          <h2 className="text-4xl font-bold text-gray-900 dark:text-white mb-3 text-balance">
+        <div className="mb-6">
+          <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-3 text-balance">
             {cardData.title}
           </h2>
-          <p className="text-lg text-gray-600 dark:text-gray-300 text-balance max-w-3xl mx-auto">
+          <p className="text-sm text-gray-600 dark:text-gray-300 text-balance max-w-3xl mx-auto">
             Master key concepts with interactive flashcards. Click each card to
             reveal detailed answers with explanations, key points, and
             real-world examples.
           </p>
         </div>
 
-        {/* Cards Window */}
-        <div className="bg-slate-50/50 dark:bg-slate-900/50 backdrop-blur-xl border border-slate-200 dark:border-slate-800 rounded-3xl p-8 mb-8">
-          <div className="flex flex-wrap gap-3 mb-6 justify-center">
-            <button
-              onClick={resetAll}
-              className="px-6 py-2.5 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 text-sm font-bold hover:bg-slate-50 dark:hover:bg-slate-750 transition-all"
-            >
-              Reset All Progress
-            </button>
-            <div className="text-sm text-slate-600 dark:text-slate-400 flex items-center gap-2 px-6 py-2.5 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700">
-              <span className="font-bold text-blue-600 dark:text-blue-400">
-                {totalCards}
-              </span>{" "}
-              Concepts Found
-            </div>
+        {/* Stylized Controls */}
+        <div className="flex flex-wrap gap-4 mb-10 justify-center">
+          <button
+            onClick={resetAll}
+            className="px-4 py-2 rounded-xl bg-purple-50 dark:bg-purple-900/20 border border-purple-100 dark:border-purple-800/50 text-purple-600 dark:text-purple-400 text-[10px] font-black tracking-widest hover:bg-purple-100 dark:hover:bg-purple-900/40 transition-all flex items-center gap-2"
+          >
+            <X size={12} />
+            Reset Progress
+          </button>
+          <div className="px-4 py-2 rounded-xl bg-blue-50 dark:bg-blue-900/20 border border-blue-100 dark:border-blue-800/50 text-[10px] font-black tracking-widest text-blue-600 dark:text-blue-400 flex items-center gap-2">
+            <span className="opacity-70">
+              {totalCards}
+            </span>{" "}
+            Concepts Loaded
           </div>
+        </div>
 
-          {/* Question Grid */}
-          <div className="grid grid-cols-1 gap-6 sm:grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 mb-6">
-            {studyCards
-              .filter((card) => !activeFilter || card.category === activeFilter)
-              .map((card) => (
+        {/* Question Grid - Updated to 2-column */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-12 max-w-5xl mx-auto">
+          {studyCards
+            .filter((card) => !activeFilter || card.category === activeFilter)
+            .map((card) => (
+              <div
+                key={card.id}
+                onClick={() => toggleFlip(card.id)}
+                className="relative cursor-pointer transition-all duration-300 perspective"
+              >
                 <div
-                  key={card.id}
-                  onClick={() => toggleFlip(card.id)}
-                  className="relative h-96 cursor-pointer transition-transform duration-500 perspective"
+                  className="w-full transition-transform duration-500"
                   style={{
                     transformStyle: "preserve-3d",
                     transform: flipped[card.id]
@@ -332,115 +335,90 @@ export default function Flashcards({ cardData }) {
                       : "rotateY(0deg)",
                   }}
                 >
-                  {/* Front of card */}
+                  {/* Front of card - Dynamic Height */}
                   <div
-                    className={`absolute inset-0 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-6 sm:p-8 flex flex-col justify-between transition-all duration-300 hover:border-blue-500/50 h-full ${flipped[card.id] ? "hidden" : ""}`}
+                    className={`${flipped[card.id] ? "absolute invisible pointer-events-none" : "relative"} w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-sm p-8 sm:p-10 flex flex-col justify-between transition-all duration-300 hover:border-blue-500/50`}
                     style={{ backfaceVisibility: "hidden" }}
                   >
-                    {/* Header Section */}
-                    <div className="space-y-3 flex-shrink-0">
+                    <div className="space-y-6">
                       <div className="flex items-start justify-between">
                         <div className="text-2xl bg-gradient-to-tr from-blue-500 to-indigo-600 bg-clip-text text-transparent opacity-80">
                           ✦
                         </div>
                         <div
-                          className={`flex items-center gap-1 text-xs font-medium ${difficultyConfig[card.difficulty]?.color || "text-gray-300"}`}
+                          className={`flex items-center gap-1.5 text-[10px] font-black tracking-wider ${difficultyConfig[card.difficulty]?.color || "text-gray-300"}`}
                         >
                           {difficultyConfig[card.difficulty]?.icon || (
-                            <Zap size={14} />
+                            <Zap size={12} />
                           )}
                           {difficultyConfig[card.difficulty]?.label ||
                             card.difficulty}
                         </div>
                       </div>
 
-                      <div className="min-h-0 flex-1 overflow-hidden">
-                        <p className="text-xs text-gray-500 dark:text-gray-400 mb-2 uppercase tracking-widest font-semibold">
+                      <div className="space-y-2">
+                        <p className="text-[10px] text-gray-400 dark:text-gray-500 tracking-[0.2em] font-black">
                           {card.topic}
                         </p>
-                        <h3 className="text-lg sm:text-xl text-gray-900 dark:text-white leading-tight line-clamp-4 sm:line-clamp-6 overflow-hidden">
+                        <h3 className="text-xl sm:text-2xl text-gray-900 dark:text-white leading-tight font-bold">
                           {renderFormattedText(card.question)}
                         </h3>
                       </div>
                     </div>
 
-                    {/* Footer */}
-                    <div className="flex items-center justify-center gap-2 text-xs font-bold text-white bg-blue-600 rounded-xl px-4 py-3 flex-shrink-0 transition-all group-hover:bg-blue-700">
-                      <Zap size={14} className="fill-current" />
-                      <span>Flip to Master</span>
+                    <div className="mt-10 flex items-center justify-center gap-2 text-[10px] font-black tracking-widest text-blue-600 dark:text-blue-400">
+                      <Zap size={12} className="fill-current" />
+                      <span>Reveal Mastery</span>
                     </div>
                   </div>
 
-                  {/* Back of card */}
+                  {/* Back of card - Full Visibility, No Scroll */}
                   <div
-                    className={`absolute inset-0 bg-slate-50 dark:bg-slate-950 border border-blue-500/30 dark:border-blue-500/20 rounded-3xl p-6 sm:p-8 flex flex-col transition-all h-full ${!flipped[card.id] ? "hidden" : ""}`}
+                    className={`${!flipped[card.id] ? "absolute invisible pointer-events-none" : "relative"} w-full bg-slate-50 dark:bg-slate-950 border border-blue-500/20 dark:border-blue-500/10 rounded-sm p-8 sm:p-10 flex flex-col transition-all`}
                     style={{
                       backfaceVisibility: "hidden",
                       transform: "rotateY(180deg)",
                     }}
                   >
-                    {/* Answer Section */}
-                    <div
-                      className="flex-1 overflow-y-auto space-y-4 pr-2"
-                      style={{
-                        scrollbarWidth: "thin",
-                        scrollbarColor: "#cbd5e1 #f1f5f9",
-                      }}
-                    >
-                      <style jsx>{`
-                        div::-webkit-scrollbar {
-                          width: 4px;
-                        }
-                        div::-webkit-scrollbar-track {
-                          background: #f1f5f9;
-                          border-radius: 2px;
-                        }
-                        div::-webkit-scrollbar-thumb {
-                          background: #cbd5e1;
-                          border-radius: 2px;
-                        }
-                        div::-webkit-scrollbar-thumb:hover {
-                          background: #94a3b8;
-                        }
-                      `}</style>
-                      <div className="flex items-center gap-2 pb-3 border-b border-gray-200 dark:border-slate-600 flex-shrink-0">
+                    <div className="space-y-6">
+                      <div className="flex items-center gap-3 pb-4 border-b border-gray-200 dark:border-slate-800">
                         <Brain
                           size={18}
-                          className="text-cyan-500 dark:text-cyan-400 flex-shrink-0"
+                          className="text-blue-500"
                         />
-                        <span className="text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wide">
-                          Main Answer
+                        <span className="text-[10px] font-black text-gray-400 dark:text-gray-500 tracking-widest">
+                          Deep Analysis
                         </span>
                       </div>
 
-                      <div className="text-sm text-gray-900 dark:text-gray-100 leading-relaxed font-medium">
+                      <div className="text-base text-gray-900 dark:text-gray-100 leading-relaxed font-medium">
                         {renderFormattedText(card.answer)}
                       </div>
 
                       {card.explanation && (
-                        <div className="space-y-2 pt-3 border-t border-gray-200 dark:border-slate-600">
-                          <p className="text-xs font-semibold text-cyan-600 dark:text-cyan-400 uppercase tracking-wide">
-                            Why This Matters
+                        <div className="space-y-2 pt-6 border-t border-gray-200 dark:border-slate-800">
+                          <p className="text-[10px] font-black text-blue-600 dark:text-blue-400 tracking-widest">
+                            Contextual Logic
                           </p>
-                          <p className="text-xs text-gray-700 dark:text-gray-300 leading-relaxed">
+                          <p className="text-sm text-gray-600 dark:text-gray-400 leading-relaxed">
                             {card.explanation}
                           </p>
                         </div>
                       )}
 
                       {card.keyPoints && card.keyPoints.length > 0 && (
-                        <div className="space-y-2 pt-3 border-t border-gray-200 dark:border-slate-600">
-                          <p className="text-xs font-semibold text-cyan-600 dark:text-cyan-400 uppercase tracking-wide">
-                            Key Points
+                        <div className="space-y-3 pt-6 border-t border-gray-200 dark:border-slate-800">
+                          <p className="text-[10px] font-black text-blue-600 dark:text-blue-400 tracking-widest">
+                            Key Insights
                           </p>
-                          <ul className="space-y-1">
+                          <ul className="grid grid-cols-1 gap-3">
                             {card.keyPoints.map((point, idx) => (
                               <li
                                 key={idx}
-                                className="text-xs text-gray-700 dark:text-gray-300 flex gap-2"
+                                className="text-sm text-gray-600 dark:text-gray-400 flex gap-3 items-start"
                               >
-                                <span className="text-blue-500 dark:text-blue-400 flex-shrink-0">
-                                  •
+                                <span className="text-blue-500 shrink-0 mt-1">
+                                  ●
                                 </span>
                                 <span>{point}</span>
                               </li>
@@ -450,26 +428,27 @@ export default function Flashcards({ cardData }) {
                       )}
 
                       {card.example && (
-                        <div className="space-y-2 pt-3 border-t border-gray-200 dark:border-slate-600 bg-gray-50 dark:bg-slate-800 rounded-lg p-3">
-                          <p className="text-xs font-semibold text-cyan-600 dark:text-cyan-400 uppercase tracking-wide">
-                            Example
-                          </p>
-                          <p className="text-xs text-gray-700 dark:text-gray-300 leading-relaxed font-mono break-words">
-                            {card.example}
-                          </p>
+                        <div className="space-y-3 pt-6 border-t border-gray-200 dark:border-slate-800">
+                          <div className="bg-white dark:bg-slate-900 rounded-2xl p-5 border border-slate-200 dark:border-slate-800">
+                            <p className="text-[10px] font-black text-blue-600 dark:text-blue-400 tracking-widest mb-3">
+                              Practical Example
+                            </p>
+                            <p className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed font-mono">
+                              {card.example}
+                            </p>
+                          </div>
                         </div>
                       )}
                     </div>
 
-                    {/* Back footer */}
-                    <div className="flex items-center justify-center gap-2 text-xs text-gray-600 dark:text-gray-400 bg-gray-100 dark:bg-slate-800 rounded-lg px-3 py-2 mt-4 border border-gray-200 dark:border-slate-600 flex-shrink-0">
-                      <Zap size={14} />
-                      <span>Click to see question</span>
+                    <div className="mt-10 flex items-center justify-center gap-2 text-[10px] font-black tracking-widest text-gray-400 dark:text-gray-500">
+                      <Zap size={12} />
+                      <span>Return to Question</span>
                     </div>
                   </div>
                 </div>
-              ))}
-          </div>
+              </div>
+            ))}
         </div>
 
         {/* Generate More Section */}

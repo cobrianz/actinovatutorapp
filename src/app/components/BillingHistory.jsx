@@ -67,85 +67,104 @@ export default function BillingHistory({ billingHistory, theme }) {
                             <div className="text-[9px] font-bold text-emerald-500 uppercase tracking-widest mt-0.5">Success</div>
                         </div>
 
-                        {(isLoaded && LinkComponent && DocumentComponent) ? (
-                            <LinkComponent
-                                document={<DocumentComponent transaction={entry} />}
-                                fileName={`receipt-${entry.reference}.pdf`}
-                                className={`p-2 rounded-xl transition-all active:scale-95 ${theme === 'dark' ? "bg-gray-700 hover:bg-gray-600 text-white" : "bg-gray-100 hover:bg-gray-200 text-gray-600"}`}
-                            >
-                                {({ loading }) => (
-                                    loading ? (
-                                        <Loader2 size={18} className="animate-spin opacity-50" />
-                                    ) : (
-                                        <Download size={18} />
-                                    )
-                                )}
-                            </LinkComponent>
-                        ) : (
-                            <div className={`p-2 rounded-xl opacity-50 ${theme === 'dark' ? "bg-gray-700 text-white" : "bg-gray-100 text-gray-600"}`}>
-                                <Loader2 size={18} className="animate-spin" />
-                            </div>
-                        )}
-
                         {(isLoaded && DocumentComponent) && (
-                            <button
-                                onClick={async () => {
-                                    try {
-                                        // Capacitor check
-                                        const isCapacitor = typeof window !== 'undefined' && (window.Capacitor || window.location.protocol === 'capacitor:');
-                                        if (!isCapacitor) return; // LinkComponent handles web
+                            <div className="flex items-center gap-2">
+                                {/* Web Download Link (Hidden on Mobile) */}
+                                <div className="hidden md:block">
+                                    {LinkComponent && (
+                                        <LinkComponent
+                                            document={<DocumentComponent transaction={entry} />}
+                                            fileName={`receipt-${entry.reference}.pdf`}
+                                            className={`p-2 rounded-xl transition-all active:scale-95 flex items-center justify-center ${theme === 'dark' ? "bg-gray-700 hover:bg-gray-600 text-white" : "bg-gray-100 hover:bg-gray-200 text-gray-600"}`}
+                                        >
+                                            {({ loading }) => (
+                                                loading ? (
+                                                    <Loader2 size={18} className="animate-spin opacity-50" />
+                                                ) : (
+                                                    <Download size={18} />
+                                                )
+                                            )}
+                                        </LinkComponent>
+                                    )}
+                                </div>
 
-                                        const { pdf } = await import("@react-pdf/renderer");
-                                        const blob = await pdf(<DocumentComponent transaction={entry} />).toBlob();
-                                        const reader = new FileReader();
-                                        reader.readAsDataURL(blob);
-                                        reader.onloadend = async () => {
-                                            const base64data = reader.result.split(',')[1];
-                                            try {
-                                                const { Filesystem, Directory } = await import('@capacitor/filesystem');
-                                                const { Share } = await import('@capacitor/share');
-                                                const { LocalNotifications } = await import('@capacitor/local-notifications');
-                                                const fileName = `receipt-${entry.reference}.pdf`;
+                                {/* Mobile Save/Share Button (Shown on Mobile) */}
+                                <button
+                                    onClick={async () => {
+                                        try {
+                                            const { pdf } = await import("@react-pdf/renderer");
+                                            const blob = await pdf(<DocumentComponent transaction={entry} />).toBlob();
+                                            const reader = new FileReader();
+                                            reader.readAsDataURL(blob);
+                                            reader.onloadend = async () => {
+                                                const base64data = reader.result.split(',')[1];
+                                                try {
+                                                    const isNative = typeof window !== 'undefined' &&
+                                                        (window.Capacitor?.isNative || window.location.protocol === 'capacitor:');
 
-                                                const result = await Filesystem.writeFile({
-                                                    path: fileName,
-                                                    data: base64data,
-                                                    directory: Directory.Cache
-                                                });
+                                                    if (!isNative) {
+                                                        const url = window.URL.createObjectURL(blob);
+                                                        const link = document.createElement('a');
+                                                        link.href = url;
+                                                        link.download = `receipt-${entry.reference}.pdf`;
+                                                        link.click();
+                                                        window.URL.revokeObjectURL(url);
+                                                        return;
+                                                    }
 
-                                                // Schedule notification
-                                                await LocalNotifications.schedule({
-                                                    notifications: [{
-                                                        title: 'Receipt Downloaded',
-                                                        body: `Receipt for ${entry.plan} has been saved.`,
-                                                        id: Math.floor(Math.random() * 100000),
-                                                        schedule: { at: new Date(Date.now() + 100) },
-                                                        sound: null,
-                                                        attachments: null,
-                                                        actionTypeId: "",
-                                                        extra: null
-                                                    }]
-                                                });
+                                                    const { Filesystem, Directory } = await import('@capacitor/filesystem').catch(() => ({}));
+                                                    const { Share } = await import('@capacitor/share').catch(() => ({}));
+                                                    const { LocalNotifications } = await import('@capacitor/local-notifications').catch(() => ({}));
 
-                                                await Share.share({
-                                                    title: 'Receipt Download',
-                                                    text: `Receipt for ${entry.plan}`,
-                                                    url: result.uri,
-                                                    dialogTitle: 'Open Receipt'
-                                                });
-                                            } catch (err) {
-                                                console.error("Capacitor save error", err);
-                                            }
-                                        };
-                                    } catch (e) {
-                                        console.error("Download handling error", e);
-                                    }
-                                }}
-                                className={`md:hidden flex items-center p-2 rounded-xl bg-blue-600 text-white`}
-                                title="Save to Phone"
-                            >
-                                <Download size={18} />
-                            </button>
+                                                    const fileName = `receipt-${entry.reference}.pdf`;
+                                                    const result = await Filesystem.writeFile({
+                                                        path: fileName,
+                                                        data: base64data,
+                                                        directory: Directory.Cache
+                                                    });
+
+                                                    if (LocalNotifications) {
+                                                        await LocalNotifications.schedule({
+                                                            notifications: [{
+                                                                title: 'Receipt Downloaded',
+                                                                body: `Receipt for ${entry.plan} has been saved.`,
+                                                                id: Math.floor(Math.random() * 100000),
+                                                                schedule: { at: new Date(Date.now() + 100) },
+                                                                sound: null,
+                                                                attachments: null,
+                                                                actionTypeId: "",
+                                                                extra: null
+                                                            }]
+                                                        });
+                                                    }
+
+                                                    await Share.share({
+                                                        title: 'Receipt Download',
+                                                        text: `Receipt for ${entry.plan}`,
+                                                        url: result.uri,
+                                                        dialogTitle: 'Open Receipt'
+                                                    });
+                                                } catch (err) {
+                                                    console.error("Native save error", err);
+                                                    // Final fallback for any error
+                                                    const url = window.URL.createObjectURL(blob);
+                                                    const link = document.createElement('a');
+                                                    link.href = url;
+                                                    link.download = `receipt-${entry.reference}.pdf`;
+                                                    link.click();
+                                                    window.URL.revokeObjectURL(url);
+                                                }
+                                            };
+                                        } catch (e) {
+                                            console.error("Download handling error", e);
+                                        }
+                                    }}
+                                    className={`md:hidden flex items-center p-2 rounded-xl bg-indigo-600 text-white active:scale-95 transition-all`}
+                                    title="Download Receipt"
+                                >
+                                    <Download size={18} />
+                                </button>
+                            </div>
                         )}
                     </div>
                 </div>

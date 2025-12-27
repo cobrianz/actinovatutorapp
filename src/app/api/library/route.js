@@ -251,7 +251,7 @@ export async function POST(request) {
     return NextResponse.json({ error: "action required" }, { status: 400 });
   }
 
-  const actionsRequireItemId = new Set(["pin", "bookmark", "delete"]);
+  const actionsRequireItemId = new Set(["pin", "bookmark"]);
   if (actionsRequireItemId.has(action) && !itemId) {
     return NextResponse.json(
       { error: "itemId is required for this action" },
@@ -475,45 +475,7 @@ export async function POST(request) {
       }
     }
 
-    if (action === "delete") {
-      const prefix = itemId.split("_")[0];
-      const id = itemId.replace(/^(course|guide|cards)_/, "");
 
-      const collection = {
-        course: "library",
-        questions: "guides",
-        cards: "cardSets",
-      }[prefix];
-
-      if (!collection) {
-        return NextResponse.json(
-          { error: "Invalid item type" },
-          { status: 400 }
-        );
-      }
-
-      await db.collection(collection).deleteOne({
-        _id: new ObjectId(id),
-        userId: userObjId,
-      });
-
-      await db.collection("user_library").updateOne(
-        { userId: userObjId },
-        {
-          $pull: {
-            pinned: itemId,
-            bookmarks: itemId,
-            completedCourses: itemId,
-            inProgressCourses: itemId,
-          },
-        }
-      );
-
-      return NextResponse.json({
-        success: true,
-        message: "Deleted successfully",
-      });
-    }
 
     if (action === "saveConversation") {
       const { courseId, topic, difficulty, format, messages } = body;

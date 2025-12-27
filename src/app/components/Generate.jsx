@@ -4,8 +4,8 @@ import React, { useState } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import {
   Sparkles,
-  BookOpen,
   FileText,
+  Scroll,
   ChevronDown,
   Lightbulb,
   AlertTriangle,
@@ -20,7 +20,7 @@ import QuizInterface from "./QuizInterface";
 
 export default function Generate({ setActiveContent }) {
   const [topic, setTopic] = useState("");
-  const [localTopic, setLocalTopic] = useState("");
+
   const [format, setFormat] = useState("course");
   const [difficulty, setDifficulty] = useState("beginner");
   const [questionsCount, setQuestionsCount] = useState(10);
@@ -203,7 +203,6 @@ export default function Generate({ setActiveContent }) {
 
         // Reset form
         setTopic("");
-        setLocalTopic("");
       } catch (error) {
         console.error("Quiz generation failed:", error);
         toast.error(error.message || "Failed to generate quiz");
@@ -242,27 +241,23 @@ export default function Generate({ setActiveContent }) {
   }
 
   return (
-    <div>
+    <div className="space-y-6">
       {showLoader && (
-        <div data-actinova-loader-overlay="true" className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-xs">
+        <div data-actinova-loader-overlay="true" className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
           <ActinovaLoader text={format} />
         </div>
       )}
-      <div className="mb-10 text-center">
-        <h1 className="text-4xl font-bold text-gray-900 dark:text-gray-100 mb-3">
+      <div className="text-center">
+        <h1 className="text-4xl sm:text-5xl font-black bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 bg-clip-text text-transparent mb-4">
           {friendlyName
-            ? `Welcome back, ${friendlyName}`
-            : "Welcome to Actinova AI Tutor"}
+            ? `Welcome, ${friendlyName}`
+            : "Actinova AI Tutor"}
         </h1>
-        <p className="text-lg text-gray-600 dark:text-gray-400">
-          Ready to test your knowledge? Create comprehensive tests to challenge
-          yourself and track your progress.
-        </p>
       </div>
 
-      <div className="p-8 mb-10">
-        <div className="text-center mb-8">
-          <h2 className="text-2xl font-semibold text-gray-900 dark:text-gray-100 mb-2">
+      <div className="p-6 sm:p-8 shadow-sm">
+        <div className="mb-8">
+          <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-2">
             What can I help you learn today?
           </h2>
           <p className="text-gray-600 dark:text-gray-400">
@@ -277,85 +272,85 @@ export default function Generate({ setActiveContent }) {
 
         <div className="max-w-3xl mx-auto space-y-6">
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2 text-left px-1">
-              What can I help you learn?
-            </label>
-            <textarea
-              value={localTopic}
-              onChange={(e) => {
-                const value = e.target.value;
-                setLocalTopic(value);
-                setTopic(value);
-                // Auto-resize textarea
-                e.target.style.height = "auto";
-                e.target.style.height =
-                  Math.min(e.target.scrollHeight, 200) + "px";
-              }}
-              
-              className="w-full px-3 sm:px-4 py-3 sm:py-4 text-base sm:text-lg border border-blue-300 dark:border-gray-600 rounded-lg sm:rounded-xl bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-transparent transition-all duration-200 resize-none min-h-[100px] sm:min-h-[120px] max-h-[200px]"
-              onKeyDown={(e) => {
-                if (e.key === "Enter" && e.ctrlKey) {
-                  e.preventDefault();
-                  handleGenerate();
-                }
-              }}
-              autoFocus
-              rows={4}
-              maxLength={500}
-              dir="ltr"
-              style={{ direction: "ltr", unicodeBidi: "plaintext" }}
-            />
+            <div className="relative group p-[2px] rounded-xl sm:rounded-2xl bg-gradient-to-r from-blue-600 to-purple-600 shadow-sm focus-within:shadow-indigo-500/20 transition-all duration-300">
+              <textarea
+                value={topic}
+                onChange={(e) => {
+                  const value = e.target.value;
+                  setTopic(value);
+                  // Auto-resize textarea
+                  e.target.style.height = "auto";
+                  e.target.style.height =
+                    Math.min(e.target.scrollHeight, 200) + "px";
+                }}
+                placeholder="Ex: Advanced Quantum Physics concepts or Basic French for travelers"
+                className="w-full px-3 sm:px-4 py-3 sm:py-4 text-base sm:text-lg border-none rounded-lg sm:rounded-[14px] bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-0 transition-all duration-200 resize-none min-h-[100px] sm:min-h-[120px] max-h-[200px]"
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" && e.ctrlKey) {
+                    e.preventDefault();
+                    handleGenerate();
+                  }
+                }}
+                autoFocus
+                rows={4}
+                maxLength={500}
+                dir="ltr"
+                style={{ direction: "ltr", unicodeBidi: "plaintext" }}
+              />
+            </div>
             <div className="mt-2 flex justify-between items-center text-xs text-gray-500 dark:text-gray-400 px-1">
               <span className="flex items-center">
                 <Lightbulb className="w-4 h-4 mr-1" />
-                Tip: Press Ctrl + Enter to generate your course
+                Tip: You can describe your course.
               </span>
               <span
-                className={localTopic.length > 450 ? "text-orange-500" : ""}
+                className={topic.length > 450 ? "text-orange-500" : ""}
               >
-                {localTopic.length}/500
+                {topic.length}/500
               </span>
             </div>
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2 sm:mb-3 text-left px-1">
+            <label className="block text-[10px] font-black text-gray-500 dark:text-gray-400 mb-4 px-1">
               Choose the format
             </label>
             <div className="grid grid-cols-3 gap-3 sm:gap-4">
               <button
                 onClick={() => setFormat("course")}
-                className={`p-3 sm:p-4 rounded-lg border-2 transition-colors flex flex-col items-center justify-center ${format === "course"
-                  ? "border-blue-500 bg-blue-50 dark:bg-blue-900/20"
-                  : "border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600"
+                className={`p-4 rounded-xl border-2 transition-all flex flex-col items-center justify-center group h-full ${format === "course"
+                  ? "border-blue-600 bg-blue-600 shadow-lg shadow-blue-500/30 text-white"
+                  : "border-gray-100 dark:border-gray-700 hover:border-blue-200 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
                   }`}
               >
-                <BookOpen className="w-5 h-5 sm:w-6 sm:h-6 mb-1 sm:mb-2 text-gray-700 dark:text-gray-300" />
-                <span className="font-medium text-xs sm:text-sm">Course</span>
+                <div className="mb-2">
+                  <FileText className="w-8 h-8" strokeWidth={format === "course" ? 2.5 : 2} />
+                </div>
+                <span className="font-bold text-xs sm:text-sm">Course</span>
               </button>
               <button
                 onClick={() => setFormat("flashcards")}
-                className={`p-3 sm:p-4 rounded-lg border-2 transition-colors flex flex-col items-center justify-center ${format === "flashcards"
-                  ? "border-blue-500 bg-blue-50 dark:bg-blue-900/20"
-                  : "border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600"
+                className={`p-4 rounded-xl border-2 transition-all flex flex-col items-center justify-center group h-full ${format === "flashcards"
+                  ? "border-purple-600 bg-purple-600 shadow-lg shadow-purple-500/30 text-white"
+                  : "border-gray-100 dark:border-gray-700 hover:border-purple-200 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
                   }`}
               >
-                <FileText className="w-5 h-5 sm:w-6 sm:h-6 mb-1 sm:mb-2 text-gray-700 dark:text-gray-300" />
-                <span className="font-medium text-xs sm:text-sm">
-                  Flashcards
-                </span>
+                <div className="mb-2">
+                  <Scroll className="w-8 h-8" strokeWidth={format === "flashcards" ? 2.5 : 2} />
+                </div>
+                <span className="font-bold text-xs sm:text-sm">Flashcards</span>
               </button>
               <button
                 onClick={() => setFormat("quiz")}
-                className={`p-3 sm:p-4 rounded-lg border-2 transition-colors flex flex-col items-center justify-center ${format === "quiz"
-                  ? "border-blue-500 bg-blue-50 dark:bg-blue-900/20"
-                  : "border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600"
+                className={`p-4 rounded-xl border-2 transition-all flex flex-col items-center justify-center group h-full ${format === "quiz"
+                  ? "border-emerald-600 bg-emerald-600 shadow-lg shadow-emerald-500/30 text-white"
+                  : "border-gray-100 dark:border-gray-700 hover:border-emerald-200 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
                   }`}
               >
-                <HelpCircle className="w-5 h-5 sm:w-6 sm:h-6 mb-1 sm:mb-2 text-gray-700 dark:text-gray-300" />
-                <span className="font-medium text-xs sm:text-sm">
-                  Test Yourself
-                </span>
+                <div className="mb-2">
+                  <HelpCircle className="w-8 h-8" strokeWidth={format === "quiz" ? 2.5 : 2} />
+                </div>
+                <span className="font-bold text-xs sm:text-sm">Test Yourself</span>
               </button>
             </div>
           </div>
@@ -380,10 +375,10 @@ export default function Generate({ setActiveContent }) {
           )}
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2 text-left px-1">
+            <label className="block text-[10px] font-black text-gray-500 dark:text-gray-400 mb-4 px-1">
               Choose difficulty level
               {!isPremium && (
-                <span className="ml-2 text-xs text-orange-600 dark:text-orange-400">
+                <span className="ml-2 text-[10px] text-orange-600 dark:text-orange-400 normal-case tracking-normal">
                   (Free users: Beginner only)
                 </span>
               )}
@@ -436,7 +431,7 @@ export default function Generate({ setActiveContent }) {
             </div>
             {!isPremium &&
               difficulty !== "beginner" && (
-                <div className="mt-2 p-3 bg-orange-50 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-800 rounded-lg">
+                <div className="mt-2 p-3 bg-orange-50 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-800 rounded-xl">
                   <p className="text-sm text-orange-800 dark:text-orange-200 flex items-start">
                     <AlertTriangle className="w-4 h-4 mr-2 mt-0.5 flex-shrink-0" />
                     Intermediate and Advanced levels require a Pro subscription.
@@ -454,30 +449,30 @@ export default function Generate({ setActiveContent }) {
           <button
             onClick={handleGenerate}
             disabled={!topic.trim() || (!!user && !isPremium && atLimit)}
-            className="w-full bg-gradient-to-r from-blue-600 to-purple-600 text-white py-2.5 sm:py-3 px-4 rounded-lg font-medium text-sm sm:text-base hover:from-blue-700 hover:to-purple-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center space-x-2"
+            className="w-full bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 text-white py-4 px-6 rounded-xl font-black text-sm hover:brightness-110 active:scale-[0.98] transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-3 shadow-xl shadow-indigo-500/20"
           >
-            <Sparkles className="w-4 h-4 sm:w-5 sm:h-5" />
+            <Sparkles className="w-5 h-5 animate-pulse" />
             <span>
               {!isPremium && atLimit
-                ? "You hit free limits — upgrade to get more generations"
-                : "Generate"}
+                ? "Update to Pro for more"
+                : "Generate Now"}
             </span>
           </button>
         </div>
       </div>
 
       <div>
-        <h3 className="text-lg sm:text-xl font-semibold text-gray-900 dark:text-gray-100 mb-3 sm:mb-4 px-1">
+        <h3 className="text-[10px] font-black text-gray-500 dark:text-gray-400 mb-4 px-1">
           Popular Learning Tracks
         </h3>
-        <PopularTopics setTopic={setTopic} setLocalTopic={setLocalTopic} />
+        <PopularTopics setTopic={setTopic} />
       </div>
     </div>
   );
 }
 
 // Separate component for popular topics with API fetch
-function PopularTopics({ setTopic, setLocalTopic }) {
+function PopularTopics({ setTopic }) {
   const [topics, setTopics] = React.useState([]);
   const [loading, setLoading] = React.useState(true);
 
@@ -528,11 +523,10 @@ function PopularTopics({ setTopic, setLocalTopic }) {
           key={topicOption}
           onClick={() => {
             setTopic(topicOption);
-            setLocalTopic(topicOption);
           }}
-          className="p-3 sm:p-4 text-left bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg hover:border-gray-300 dark:hover:border-gray-600 hover:shadow-md transition-all"
+          className="p-4 text-left bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 hover:border-indigo-300 dark:hover:border-indigo-700 rounded-xl hover:shadow-lg hover:shadow-indigo-500/5 transition-all group active:scale-95"
         >
-          <span className="text-xs sm:text-sm font-medium text-gray-900 dark:text-gray-100 line-clamp-2">
+          <span className="text-xs sm:text-sm font-bold text-gray-700 dark:text-gray-200 line-clamp-2 group-hover:text-indigo-600 dark:group-hover:text-indigo-400">
             {topicOption}
           </span>
         </button>

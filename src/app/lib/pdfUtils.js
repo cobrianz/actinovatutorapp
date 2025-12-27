@@ -352,10 +352,13 @@ export const downloadCourseAsPDF = async (data, mode = "course") => {
     if (isCapacitor) {
         try {
             const pdfBase64 = pdf.output('datauristring').split(',')[1];
-            const { Filesystem, Directory } = await import('@capacitor/filesystem');
-            const { Share } = await import('@capacitor/share');
+            const { Filesystem, Directory } = await import('@capacitor/filesystem').catch(() => ({}));
+            const { Share } = await import('@capacitor/share').catch(() => ({}));
+            const { LocalNotifications } = await import('@capacitor/local-notifications').catch(() => ({}));
 
-            const { LocalNotifications } = await import('@capacitor/local-notifications');
+            if (!Filesystem || !Share || !LocalNotifications) {
+                throw new Error("Capacitor plugins not available");
+            }
 
             const result = await Filesystem.writeFile({
                 path: fileName,
@@ -501,10 +504,13 @@ export const downloadQuizAsPDF = async (data) => {
     if (isCapacitor) {
         try {
             const pdfBase64 = pdf.output('datauristring').split(',')[1];
-            const { Filesystem, Directory } = await import('@capacitor/filesystem');
-            const { Share } = await import('@capacitor/share');
+            const { Filesystem, Directory } = await import('@capacitor/filesystem').catch(() => ({}));
+            const { Share } = await import('@capacitor/share').catch(() => ({}));
+            const { LocalNotifications } = await import('@capacitor/local-notifications').catch(() => ({}));
 
-            const { LocalNotifications } = await import('@capacitor/local-notifications');
+            if (!Filesystem || !Share || !LocalNotifications) {
+                throw new Error("Capacitor plugins not available");
+            }
 
             const result = await Filesystem.writeFile({
                 path: fileName,

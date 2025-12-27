@@ -238,8 +238,7 @@ export default function Library({ setActiveContent, setHideNavs }) {
   const [currentPage, setCurrentPage] = useState(1);
   const [pagination, setPagination] = useState({});
   const [stats, setStats] = useState({});
-  const [deleteModalOpen, setDeleteModalOpen] = useState(false);
-  const [courseToDelete, setCourseToDelete] = useState(null);
+
   const [pinnedCourses, setPinnedCourses] = useState(new Set());
   const [generatingCourse, setGeneratingCourse] = useState(null);
 
@@ -352,7 +351,11 @@ export default function Library({ setActiveContent, setHideNavs }) {
   const fetchExploreData = async () => {
     try {
       setLoadingExplore(true);
-      const res = await authenticatedFetch("/api/premium-courses/trending");
+      const res = await authenticatedFetch("/api/premium-courses/trending", {
+        headers: {
+          "x-user-id": user?._id || user?.id || "",
+        }
+      });
 
       if (res.ok) {
         const data = await res.json();
@@ -450,55 +453,7 @@ export default function Library({ setActiveContent, setHideNavs }) {
     }
   };
 
-  const handleDelete = (courseId) => {
-    if (!isPremium) {
-      toast.error("Deleting courses is a Pro feature. Please upgrade to manage your library.");
-      return;
-    }
 
-    const course = courses.find((c) => c.id === courseId);
-    if (!course) return;
-
-    setCourseToDelete({
-      id: courseId,
-      title: course.title,
-    });
-    setDeleteModalOpen(true);
-  };
-
-  const confirmDelete = async (retryAfterRefresh = true) => {
-    if (!courseToDelete) return;
-
-    // Optimistic removal
-    setCourses((prev) => prev.filter((c) => c.id !== courseToDelete.id));
-
-    try {
-      const res = await authenticatedFetch("/api/library", {
-        method: "POST",
-        body: JSON.stringify({ action: "delete", itemId: courseToDelete.id }),
-      });
-
-      if (res.status === 401 && retryAfterRefresh) {
-        // Try to refresh token and retry
-        const refreshSuccess = await refreshToken();
-        if (refreshSuccess) {
-          return confirmDelete(false);
-        }
-      }
-
-      if (res.ok) {
-        toast.success("Course deleted from library");
-      } else {
-        throw new Error("Delete failed");
-      }
-    } catch (err) {
-      toast.error("Failed to delete course");
-      fetchLibraryData(); // Re-fetch to restore
-    } finally {
-      setDeleteModalOpen(false);
-      setCourseToDelete(null);
-    }
-  };
 
   const handleGenerateCourse = async (course) => {
     if (generatingCourse) return;
@@ -681,7 +636,7 @@ export default function Library({ setActiveContent, setHideNavs }) {
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: i * 0.1 }}
             key={i}
-            className="relative bg-white/60 dark:bg-gray-800/60 backdrop-blur-xl p-2.5 rounded-sm border border-gray-100 dark:border-gray-700/50 overflow-hidden"
+            className="relative bg-white/60 dark:bg-gray-800/60 p-2.5 rounded-xl border border-gray-100 dark:border-gray-700/50 overflow-hidden"
           >
             <div className={`absolute inset-0 bg-gradient-to-br ${stat.gradient} opacity-80`} />
             <div className="relative z-10 flex items-center gap-2">
@@ -765,7 +720,7 @@ export default function Library({ setActiveContent, setHideNavs }) {
                 <motion.div
                   key={course.id || idx}
                   whileHover={{ y: -4 }}
-                  className="flex-shrink-0 w-[280px] bg-gradient-to-br from-indigo-600 to-purple-700 rounded-3xl p-5 text-white shadow-xl shadow-indigo-500/10 relative overflow-hidden group cursor-pointer"
+                  className="flex-shrink-0 w-[280px] bg-gradient-to-br from-indigo-500 to-purple-600 rounded-xl p-5 text-white shadow-xl shadow-indigo-500/10 relative overflow-hidden group cursor-pointer"
                   onClick={() => handleGenerateCourse(course)}
                 >
                   <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -translate-y-16 translate-x-16 blur-2xl group-hover:scale-110 transition-transform" />
@@ -775,8 +730,9 @@ export default function Library({ setActiveContent, setHideNavs }) {
                         <Crown size={18} className="text-yellow-300" />
                       </div>
                       {course.badge && (
-                        <span className="px-2 py-1 bg-white/20 rounded-full text-[9px] font-black uppercase tracking-widest">{course.badge}</span>
+                        <span className="px-3 py-1 bg-white/20 rounded-full text-xs font-bold text-white">{course.badge}</span>
                       )}
+                       
                     </div>
                     <h4 className="font-black text-lg leading-tight mb-2 line-clamp-2">{course.title}</h4>
                     <p className="text-white/70 text-xs font-medium line-clamp-2 mb-4">{course.description}</p>
@@ -784,7 +740,7 @@ export default function Library({ setActiveContent, setHideNavs }) {
                       <div className="flex -space-x-2">
                         {[1, 2, 3].map(i => <div key={i} className="w-6 h-6 rounded-full bg-white/20 border-2 border-indigo-600 flex items-center justify-center text-[8px] font-bold">{i}</div>)}
                       </div>
-                      <span className="text-[10px] font-black uppercase tracking-widest opacity-80">Join 1k+ students</span>
+                      <span className="text-xs font-bold text-white/80">Join 1k+ students</span>
                     </div>
                   </div>
                 </motion.div>
@@ -807,21 +763,21 @@ export default function Library({ setActiveContent, setHideNavs }) {
                 <motion.div
                   key={idx}
                   whileHover={{ y: -4 }}
-                  className="flex-shrink-0 w-[260px] bg-white dark:bg-gray-800 rounded-3xl p-5 border border-gray-100 dark:border-gray-700/50 shadow-sm relative overflow-hidden group cursor-pointer"
+                  className="flex-shrink-0 w-[260px] bg-white dark:bg-gray-800 rounded-xl p-5 border border-gray-100 dark:border-gray-700/50 shadow-sm relative overflow-hidden group cursor-pointer"
                   onClick={() => handleGenerateCourse(course)}
                 >
                   <div className="flex items-center gap-3 mb-4">
                     <div className="w-10 h-10 rounded-2xl bg-gray-50 dark:bg-gray-700/50 flex items-center justify-center text-gray-400 group-hover:text-indigo-500 transition-colors">
-                      <Sparkles size={20} />
+                      <Scroll size={20} />
                     </div>
                     <div>
                       <h4 className="font-bold text-sm text-gray-900 dark:text-white line-clamp-1">{course.title}</h4>
-                      <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">{course.level || "Modern"}</p>
+                      <p className="text-xs font-bold text-gray-400">{course.level || "Modern"}</p>
                     </div>
                   </div>
                   <p className="text-gray-500 dark:text-gray-400 text-xs line-clamp-2 mb-4 h-8">{course.description}</p>
                   <div className="flex items-center justify-between border-t border-gray-50 dark:border-gray-700 pt-3">
-                    <span className="text-[10px] font-black text-indigo-600 uppercase tracking-widest">Discovery</span>
+                    <span className="text-xs font-bold text-indigo-600">Discovery</span>
                     <ChevronRight size={14} className="text-gray-300 group-hover:text-indigo-500 group-hover:translate-x-1 transition-all" />
                   </div>
                 </motion.div>
@@ -844,12 +800,12 @@ export default function Library({ setActiveContent, setHideNavs }) {
         {loading ? (
           <div className="grid grid-cols-2 md:grid-cols-3 gap-6">
             {[...Array(6)].map((_, i) => (
-              <div key={i} className="bg-white dark:bg-gray-800 border rounded-3xl p-6 animate-pulse h-40"></div>
+              <div key={i} className="bg-white dark:bg-gray-800 border rounded-xl p-6 animate-pulse h-40"></div>
             ))}
           </div>
         ) : courses.length === 0 ? (
           <motion.div
-            className="text-center py-20 bg-gray-50 dark:bg-gray-800/20 rounded-3xl border border-dashed border-gray-200 dark:border-gray-700"
+            className="text-center py-20 bg-gray-50 dark:bg-gray-800/20 rounded-xl border border-dashed border-gray-200 dark:border-gray-700"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
           >
@@ -881,15 +837,6 @@ export default function Library({ setActiveContent, setHideNavs }) {
             className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-4 sm:gap-6 pb-20"
           >
             {[...courses].sort((a, b) => (pinnedCourses.has(b.id) ? 1 : 0) - (pinnedCourses.has(a.id) ? 1 : 0)).map((course, idx) => {
-              const colors = [
-                "from-blue-500 to-indigo-600",
-                "from-purple-500 to-fuchsia-600",
-                "from-emerald-500 to-teal-600",
-                "from-orange-500 to-amber-600",
-                "from-rose-500 to-pink-600",
-                "from-sky-500 to-blue-600"
-              ];
-              const cardColor = colors[idx % colors.length];
 
               return (
                 <motion.div
@@ -904,16 +851,17 @@ export default function Library({ setActiveContent, setHideNavs }) {
                       `/learn/content?topic=${encodeURIComponent(course.topic)}&format=${course.format}&difficulty=${course.difficulty || "beginner"}&originalTopic=${encodeURIComponent(course.topic)}`
                     );
                   }}
-                  className={`w-full bg-gradient-to-br ${cardColor} rounded-2xl p-6 relative overflow-hidden group cursor-pointer transition-all hover:scale-[1.01] shadow-xl shadow-gray-200/20 dark:shadow-none`}
+                  className="w-full rounded-xl p-6 relative overflow-hidden group cursor-pointer transition-transform hover:scale-[1.02] shadow-sm border border-black/5"
+                  style={{ background: "linear-gradient(90deg, #853D61, #2D0A35)" }}
                 >
                   <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -translate-y-16 translate-x-16 blur-2xl" />
 
                   <div className="relative z-10 flex flex-col h-full">
                     <div className="flex justify-between items-start mb-6">
-                      <div className="p-3 bg-white/20 backdrop-blur-md rounded-2xl border border-white/20">
-                        {course.format === "questions" ? <Grid size={20} className="text-white" /> :
-                          course.format === "flashcards" ? <Zap size={20} className="text-white" /> :
-                            <BookOpen size={20} className="text-white" />}
+                      <div className="flex items-center justify-center">
+                        {course.format === "questions" ? <Grid size={24} className="text-white" /> :
+                          course.format === "flashcards" ? <Zap size={24} className="text-white" /> :
+                            <Scroll size={24} className="text-white" />}
                       </div>
                       <div className="flex items-center gap-2">
                         <button
@@ -926,17 +874,7 @@ export default function Library({ setActiveContent, setHideNavs }) {
                         >
                           <Download size={14} />
                         </button>
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setCourseToDelete(course);
-                            setDeleteModalOpen(true);
-                          }}
-                          className="p-2.5 rounded-full bg-white/10 text-white hover:bg-red-500 transition-all"
-                          title="Delete Course"
-                        >
-                          <Trash2 size={14} />
-                        </button>
+
                         <button
                           onClick={(e) => {
                             e.stopPropagation();
@@ -968,7 +906,10 @@ export default function Library({ setActiveContent, setHideNavs }) {
                         />
                       </div>
 
-                      <button className="w-full mt-2 py-4 bg-white text-gray-900 rounded-2xl font-black text-[10px] uppercase tracking-[0.2em] hover:translate-y-[-2px] transition-all active:scale-95 shadow-none">
+                      <button
+                        className="w-full mt-2 py-4 text-white rounded-2xl font-black text-xs hover:translate-y-[-2px] transition-all active:scale-95 shadow-lg shadow-purple-500/20 border border-black/30"
+                        style={{ background: "linear-gradient(90deg, #C621E5, #7D7CF9)" }}
+                      >
                         Continue Learning
                       </button>
                     </div>
@@ -1012,26 +953,9 @@ export default function Library({ setActiveContent, setHideNavs }) {
       </div >
 
       {/* Floating Generate New Button */}
-      <button
-        onClick={() => router.push("/dashboard?tab=generate")}
-        className="fixed bottom-6 right-6 w-14 h-14 bg-gradient-to-r from-blue-600 to-purple-600 rounded-full flex items-center justify-center text-white shadow-xl shadow-blue-500/30 hover:scale-110 transition-transform z-50 md:hidden"
-      >
-        <Sparkles size={24} />
-      </button>
 
-      <ConfirmModal
-        isOpen={deleteModalOpen}
-        onClose={() => {
-          setDeleteModalOpen(false);
-          setCourseToDelete(null);
-        }}
-        onConfirm={confirmDelete}
-        title="Remove Course"
-        message={`Are you sure you want to remove "${courseToDelete?.title}"? This will permanently delete your progress.`}
-        confirmText="Remove"
-        cancelText="Keep"
-        confirmColor="red"
-      />
+
+
     </div >
   );
 }

@@ -36,6 +36,8 @@ export default function Upgrade() {
   });
   const [plans, setPlans] = useState([]);
   const [isLoadingPlans, setIsLoadingPlans] = useState(true);
+  const [showPaymentModal, setShowPaymentModal] = useState(false);
+  const [pendingPlanId, setPendingPlanId] = useState(null);
 
   useEffect(() => {
     const fetchUsage = async () => {
@@ -115,6 +117,7 @@ export default function Upgrade() {
         if (typeof window !== 'undefined' && (window.Capacitor || window.location.protocol === 'capacitor:')) {
           await Browser.open({ url: data.sessionUrl });
         } else {
+          // Normal web redirect
           window.location.href = data.sessionUrl;
         }
       } else {
@@ -202,61 +205,7 @@ export default function Upgrade() {
           )}
         </motion.div>
 
-        {/* Payment Method Selection */}
-        <motion.div
-          className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-6 mb-8"
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5, delay: 0.25 }}
-        >
-          <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
-            Select Payment Method
-          </h3>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <button
-              onClick={() => setPaymentMethod("card")}
-              className={`flex items-center space-x-3 p-4 border-2 rounded-lg transition-all ${paymentMethod === "card"
-                ? "border-blue-500 bg-blue-50 dark:bg-blue-900/20"
-                : "border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600"
-                }`}
-            >
-              <CreditCard
-                className={`w-5 h-5 ${paymentMethod === "card" ? "text-blue-600 dark:text-blue-400" : "text-gray-600 dark:text-gray-400"}`}
-              />
-              <div className="text-left">
-                <div
-                  className={`font-medium ${paymentMethod === "card" ? "text-blue-900 dark:text-blue-100" : "text-gray-900 dark:text-white"}`}
-                >
-                  Credit/Debit Card
-                </div>
-                <div className="text-sm text-gray-600 dark:text-gray-400">
-                  Visa, Mastercard, etc.
-                </div>
-              </div>
-            </button>
-            <button
-              onClick={() => setPaymentMethod("mobile_money")}
-              className={`flex items-center space-x-3 p-4 border-2 rounded-lg transition-all ${paymentMethod === "mobile_money"
-                ? "border-blue-500 bg-blue-50 dark:bg-blue-900/20"
-                : "border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600"
-                }`}
-            >
-              <Smartphone
-                className={`w-5 h-5 ${paymentMethod === "mobile_money" ? "text-blue-600 dark:text-blue-400" : "text-gray-600 dark:text-gray-400"}`}
-              />
-              <div className="text-left">
-                <div
-                  className={`font-medium ${paymentMethod === "mobile_money" ? "text-blue-900 dark:text-blue-100" : "text-gray-900 dark:text-white"}`}
-                >
-                  Mobile Money
-                </div>
-                <div className="text-sm text-gray-600 dark:text-gray-400">
-                  M-Pesa, MTN, etc.
-                </div>
-              </div>
-            </button>
-          </div>
-        </motion.div>
+
 
         {/* Pricing Cards */}
         <motion.div
@@ -358,7 +307,12 @@ export default function Upgrade() {
                   </ul>
 
                   <motion.button
-                    onClick={() => !isCurrentPlan && !isDowngrade && handleUpgrade(plan.id)}
+                    onClick={() => {
+                      if (!isCurrentPlan && !isDowngrade) {
+                        setPendingPlanId(plan.id);
+                        setShowPaymentModal(true);
+                      }
+                    }}
                     disabled={isCurrentPlan || isDowngrade || isProcessing}
                     whileHover={{ scale: (isCurrentPlan || isDowngrade) ? 1 : 1.02 }}
                     whileTap={{ scale: (isCurrentPlan || isDowngrade) ? 1 : 0.98 }}
@@ -386,6 +340,92 @@ export default function Upgrade() {
         {/* Feature Comparison */}
 
       </div>
+
+      {/* Payment Method Modal */}
+      {showPaymentModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="bg-white dark:bg-gray-800 rounded-3xl shadow-2xl max-w-md w-full p-8 border border-gray-100 dark:border-gray-700"
+          >
+            <div className="flex justify-between items-center mb-6">
+              <h3 className="text-2xl font-bold text-gray-900 dark:text-white">
+                Choose Payment
+              </h3>
+              <button
+                onClick={() => setShowPaymentModal(false)}
+                className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full transition-colors"
+                disabled={isProcessing}
+              >
+                <X className="w-6 h-6 text-gray-500" />
+              </button>
+            </div>
+
+            <p className="text-gray-600 dark:text-gray-400 mb-8">
+              Select your preferred way to pay for the <span className="font-semibold text-blue-600 dark:text-blue-400">{pendingPlanId}</span> plan.
+            </p>
+
+            <div className="space-y-4 mb-8">
+              <button
+                onClick={() => setPaymentMethod("card")}
+                className={`w-full flex items-center space-x-4 p-5 border-2 rounded-2xl transition-all ${paymentMethod === "card"
+                  ? "border-blue-500 bg-blue-50 dark:bg-blue-900/20"
+                  : "border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600"
+                  }`}
+              >
+                <div className={`p-3 rounded-xl ${paymentMethod === "card" ? "bg-blue-600 text-white" : "bg-gray-100 dark:bg-gray-700 text-gray-500"}`}>
+                  <CreditCard className="w-6 h-6" />
+                </div>
+                <div className="text-left">
+                  <div className={`font-bold ${paymentMethod === "card" ? "text-blue-900 dark:text-blue-100" : "text-gray-900 dark:text-white"}`}>
+                    Credit/Debit Card
+                  </div>
+                  <div className="text-sm text-gray-500">Visa, Mastercard, Amex</div>
+                </div>
+              </button>
+
+              <button
+                onClick={() => setPaymentMethod("mobile_money")}
+                className={`w-full flex items-center space-x-4 p-5 border-2 rounded-2xl transition-all ${paymentMethod === "mobile_money"
+                  ? "border-blue-500 bg-blue-50 dark:bg-blue-900/20"
+                  : "border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600"
+                  }`}
+              >
+                <div className={`p-3 rounded-xl ${paymentMethod === "mobile_money" ? "bg-blue-600 text-white" : "bg-gray-100 dark:bg-gray-700 text-gray-500"}`}>
+                  <Smartphone className="w-6 h-6" />
+                </div>
+                <div className="text-left">
+                  <div className={`font-bold ${paymentMethod === "mobile_money" ? "text-blue-900 dark:text-blue-100" : "text-gray-900 dark:text-white"}`}>
+                    Mobile Money
+                  </div>
+                  <div className="text-sm text-gray-500">M-Pesa, MTN, Airtel</div>
+                </div>
+              </button>
+            </div>
+
+            <motion.button
+              onClick={() => handleUpgrade(pendingPlanId)}
+              disabled={isProcessing}
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+              className="w-full py-4 bg-gradient-to-r from-blue-600 to-purple-600 text-white font-bold rounded-2xl shadow-lg hover:from-blue-700 hover:to-purple-700 transition-all flex items-center justify-center space-x-2"
+            >
+              {isProcessing ? (
+                <>
+                  <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                  <span>Redirecting...</span>
+                </>
+              ) : (
+                <>
+                  <span>Proceed to Payment</span>
+                  <Check className="w-5 h-5" />
+                </>
+              )}
+            </motion.button>
+          </motion.div>
+        </div>
+      )}
     </div>
   );
 }
