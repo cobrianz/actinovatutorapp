@@ -1260,11 +1260,9 @@ export default function LearnContent() {
 
         // Persist generated course to library (no-op on server if already saved)
         try {
-          const libRes = await fetch("/api/library", {
+          const libRes = await authenticatedFetch("/api/library", {
             method: "POST",
-            credentials: "include",
             headers: {
-              "Content-Type": "application/json",
               "x-user-id": user?._id || user?.id || user?.idString || "",
             },
             body: JSON.stringify({
