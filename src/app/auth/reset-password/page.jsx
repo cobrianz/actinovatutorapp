@@ -172,27 +172,21 @@ function ResetPasswordForm() {
   // Show error only if token validation failed
   if (token && tokenValid === false) {
     return (
-      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8 pt-safe-top pb-safe-bottom">
-        <div className="max-w-md w-full space-y-8">
-          <div className="text-center">
-            <div className="mx-auto h-16 w-16 bg-red-100 dark:bg-red-900 rounded-full flex items-center justify-center">
-              <AlertCircle className="h-8 w-8 text-red-600 dark:text-red-400" />
-            </div>
-            <h2 className="mt-6 text-3xl font-bold text-gray-900 dark:text-white">
-              Invalid Reset Link
-            </h2>
-            <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">
-              This password reset link is invalid or has expired.
-            </p>
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center py-12 px-4 pt-safe-top pb-safe-bottom">
+        <div className="w-full max-w-md bg-white dark:bg-gray-800 p-8 rounded-2xl shadow-xl space-y-8 border border-gray-100 dark:border-gray-700 text-center text-center">
+          <div className="mx-auto h-16 w-16 bg-red-100 dark:bg-red-900 rounded-full flex items-center justify-center">
+            <AlertCircle className="h-8 w-8 text-red-600 dark:text-red-400" />
           </div>
-
-          <div className="bg-white dark:bg-gray-800 py-8 px-6 shadow-lg rounded-lg text-center">
-            <p className="text-gray-600 dark:text-gray-400 mb-4">
-              Please request a new password reset link.
-            </p>
+          <h2 className="mt-6 text-3xl font-bold text-gray-900 dark:text-white">
+            Invalid Reset Link
+          </h2>
+          <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">
+            This password reset link is invalid or has expired.
+          </p>
+          <div className="pt-4">
             <Link
               href="/auth/forgot-password"
-              className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-lg text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors"
+              className="w-full inline-flex items-center justify-center px-4 py-3 border border-transparent text-sm font-medium rounded-lg text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors"
             >
               Request New Reset Link
             </Link>
@@ -204,25 +198,22 @@ function ResetPasswordForm() {
 
   if (passwordReset) {
     return (
-      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8 pt-safe-top pb-safe-bottom">
-        <div className="max-w-md w-full space-y-8">
-          <div className="text-center">
-            <div className="mx-auto h-16 w-16 bg-green-100 dark:bg-green-900 rounded-full flex items-center justify-center">
-              <CheckCircle className="h-8 w-8 text-green-600 dark:text-green-400" />
-            </div>
-            <h2 className="mt-6 text-3xl font-bold text-gray-900 dark:text-white">
-              Password Reset Successfully!
-            </h2>
-            <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">
-              Your password has been updated. You can now sign in with your new
-              password.
-            </p>
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center py-12 px-4 pt-safe-top pb-safe-bottom">
+        <div className="w-full max-w-md bg-white dark:bg-gray-800 p-8 rounded-2xl shadow-xl space-y-8 border border-gray-100 dark:border-gray-700 text-center">
+          <div className="mx-auto h-16 w-16 bg-green-100 dark:bg-green-900 rounded-full flex items-center justify-center">
+            <CheckCircle className="h-8 w-8 text-green-600 dark:text-green-400" />
           </div>
-
-          <div className="bg-white dark:bg-gray-800 py-8 px-6 shadow-lg rounded-lg text-center">
+          <h2 className="mt-6 text-3xl font-bold text-gray-900 dark:text-white">
+            Password Reset Successfully!
+          </h2>
+          <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">
+            Your password has been updated. You can now sign in with your new
+            password.
+          </p>
+          <div className="pt-4">
             <Link
               href="/auth/login"
-              className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-lg text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors"
+              className="w-full inline-flex items-center justify-center px-4 py-3 border border-transparent text-sm font-medium rounded-lg text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors"
             >
               Sign In Now
             </Link>
@@ -233,8 +224,8 @@ function ResetPasswordForm() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8 pt-safe-top pb-safe-bottom">
-      <div className="max-w-md w-full space-y-8">
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center py-12 px-4 pt-safe-top pb-safe-bottom">
+      <div className="w-full max-w-md bg-white dark:bg-gray-800 p-8 rounded-2xl shadow-xl space-y-8 border border-gray-100 dark:border-gray-700">
         <div className="text-center">
           <div className="mx-auto h-16 w-16 bg-blue-100 dark:bg-blue-900 rounded-full flex items-center justify-center">
             <Lock className="h-8 w-8 text-blue-600 dark:text-blue-400" />
@@ -248,7 +239,7 @@ function ResetPasswordForm() {
         </div>
 
         <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
-          <div className="bg-white dark:bg-gray-800 py-8 px-6 shadow-lg rounded-lg">
+          <div className="space-y-6">
             <div className="space-y-6">
               <div>
                 <label

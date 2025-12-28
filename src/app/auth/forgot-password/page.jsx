@@ -144,8 +144,8 @@ export default function ForgotPasswordPage() {
   );
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center py-6 sm:py-12 px-4 sm:px-6 lg:px-8 pt-safe-top pb-safe-bottom">
-      <div className="max-w-md w-full space-y-8">
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center py-12 px-4 pt-safe-top pb-safe-bottom">
+      <div className="w-full max-w-md bg-white dark:bg-gray-800 p-8 rounded-2xl shadow-xl space-y-8 border border-gray-100 dark:border-gray-700">
         {renderStepIndicator()}
 
         <div className="text-center">
@@ -167,7 +167,7 @@ export default function ForgotPasswordPage() {
         </div>
 
         <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
-          <div className="bg-white dark:bg-gray-800 py-8 px-6 shadow-lg rounded-lg">
+          <div className="space-y-6">
             <div className="space-y-6">
               {step === 1 && (
                 <div>

@@ -118,8 +118,8 @@ export default function SignupPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center py-6 px-4 pt-safe-top pb-safe-bottom">
-      <div className="w-full max-w-[360px] max-h-[60vh] overflow-y-auto scrollbar-hide space-y-6">
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center py-12 px-4 pt-safe-top pb-safe-bottom">
+      <div className="w-full max-w-md bg-white dark:bg-gray-800 p-8 rounded-2xl shadow-xl space-y-8 border border-gray-100 dark:border-gray-700">
         {/* Header */}
         <div className="text-center">
           <Link href="/" className="inline-flex items-center space-x-3 mb-8">
