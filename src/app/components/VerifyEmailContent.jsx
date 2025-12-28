@@ -166,8 +166,8 @@ export default function VerifyEmailContent() {
     }
 
     return (
-        <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center py-6 sm:py-12 px-4 sm:px-6 lg:px-8 pt-safe-top pb-safe-bottom">
-            <div className="max-w-md w-full space-y-8">
+        <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center py-6 px-4 pt-safe-top pb-safe-bottom">
+            <div className="w-full max-w-[360px] max-h-[60vh] overflow-y-auto scrollbar-hide space-y-6">
                 {/* Header */}
                 <div className="text-center">
                     <Link href="/" className="inline-flex items-center space-x-3 mb-8">
@@ -177,7 +177,7 @@ export default function VerifyEmailContent() {
                         <span className="text-2xl font-bold text-gray-900 dark:text-white">
                             Actinova AI Tutor
                         </span>
-                    </Link>
+                    </Link >
 
                     <h2 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">
                         Verify Your Email
@@ -185,10 +185,10 @@ export default function VerifyEmailContent() {
                     <p className="text-gray-600 dark:text-gray-400">
                         Enter the verification code sent to your email address
                     </p>
-                </div>
+                </div >
 
                 {/* Form */}
-                <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
+                < form className="mt-8 space-y-6" onSubmit={handleSubmit} >
                     <div className="space-y-4">
                         <div>
                             <label
@@ -216,22 +216,24 @@ export default function VerifyEmailContent() {
                         </div>
                     </div>
 
-                    {verificationStatus === "error" && (
-                        <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-4">
-                            <div className="flex items-start space-x-3">
-                                <AlertCircle className="h-5 w-5 text-red-600 dark:text-red-400 mt-0.5 flex-shrink-0" />
-                                <div>
-                                    <h4 className="text-sm font-medium text-red-900 dark:text-red-100">
-                                        Verification Failed
-                                    </h4>
-                                    <p className="text-sm text-red-800 dark:text-red-200">
-                                        The code you entered is invalid or has expired. Please check
-                                        your email and try again.
-                                    </p>
+                    {
+                        verificationStatus === "error" && (
+                            <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-4">
+                                <div className="flex items-start space-x-3">
+                                    <AlertCircle className="h-5 w-5 text-red-600 dark:text-red-400 mt-0.5 flex-shrink-0" />
+                                    <div>
+                                        <h4 className="text-sm font-medium text-red-900 dark:text-red-100">
+                                            Verification Failed
+                                        </h4>
+                                        <p className="text-sm text-red-800 dark:text-red-200">
+                                            The code you entered is invalid or has expired. Please check
+                                            your email and try again.
+                                        </p>
+                                    </div>
                                 </div>
                             </div>
-                        </div>
-                    )}
+                        )
+                    }
 
                     <button
                         type="submit"
@@ -268,8 +270,8 @@ export default function VerifyEmailContent() {
                             </Link>
                         </div>
                     </div>
-                </form>
-            </div>
-        </div>
+                </form >
+            </div >
+        </div >
     );
 }
