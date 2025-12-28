@@ -79,8 +79,8 @@ const saveToMobileDevice = async (fileName, dataBase64, title) => {
         // Schedule notification
         await LocalNotifications.schedule({
             notifications: [{
-                title: 'Download Successful',
-                body: `${title} saved to ${saveDirectory}.`,
+                title: fileName,
+                body: 'Download complete',
                 id: Math.floor(Math.random() * 100000),
                 schedule: { at: new Date(Date.now() + 100) },
                 sound: null,
@@ -125,8 +125,7 @@ export const downloadCourseAsPDF = async (data, mode = "course") => {
     const addPageDecoration = (pageNum, totalPages) => {
         pdf.setDrawColor(...COLORS.divider);
         pdf.setLineWidth(0.2);
-        pdf.line(margin, 15, pageWidth - margin, 15);
-        pdf.line(margin, pageHeight - 15, pageWidth - margin, pageHeight - 15);
+        // Removed full width lines per user request
 
         pdf.setFont("helvetica", "normal");
         pdf.setFontSize(8);
@@ -255,7 +254,10 @@ export const downloadCourseAsPDF = async (data, mode = "course") => {
                 y += 5;
                 pdf.setDrawColor(...COLORS.divider);
                 pdf.setLineWidth(0.5);
-                pdf.line(margin, y, pageWidth - margin, y);
+                // Shortened line (centered 50% width)
+                const lineStart = pageWidth / 4;
+                const lineEnd = (pageWidth / 4) * 3;
+                pdf.line(lineStart, y, lineEnd, y);
                 y += 8;
                 isFirstLine = false;
                 return;
