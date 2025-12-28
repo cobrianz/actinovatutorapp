@@ -16,6 +16,96 @@ const COLORS = {
     divider: [229, 231, 235],
 };
 
+// Helper for mobile saving
+const saveToMobileDevice = async (fileName, dataBase64, title) => {
+    try {
+        const { Filesystem, Directory } = await import('@capacitor/filesystem').catch(() => ({}));
+        const { Share } = await import('@capacitor/share').catch(() => ({}));
+        const { LocalNotifications } = await import('@capacitor/local-notifications').catch(() => ({}));
+
+        if (!Filesystem || !Share || !LocalNotifications) {
+            throw new Error("Capacitor plugins not available");
+        }
+
+        // Request notification permissions
+        try {
+            await LocalNotifications.requestPermissions();
+        } catch (e) {
+            console.warn("Notification permissions denied", e);
+        }
+
+        let savedFile;
+        let saveDirectory;
+        let publicPath;
+
+        // Try to save to Download/Actinova folder in ExternalStorage (Public)
+        try {
+            // Create Actinova folder in Download
+            try {
+                await Filesystem.mkdir({
+                    path: 'Download/Actinova',
+                    directory: Directory.ExternalStorage,
+                    recursive: true
+                });
+            } catch (e) {
+                // Folder might exist or permission issue
+            }
+
+            savedFile = await Filesystem.writeFile({
+                path: `Download/Actinova/${fileName}`,
+                data: dataBase64,
+                directory: Directory.ExternalStorage,
+            });
+            saveDirectory = "Downloads/Actinova";
+        } catch (downloadErr) {
+            console.warn("ExternalStorage write failed, falling back to Documents", downloadErr);
+            // Fallback: Documents/Actinova
+            try {
+                await Filesystem.mkdir({
+                    path: 'Actinova',
+                    directory: Directory.Documents,
+                    recursive: true
+                });
+            } catch (e) { }
+
+            savedFile = await Filesystem.writeFile({
+                path: `Actinova/${fileName}`,
+                data: dataBase64,
+                directory: Directory.Documents,
+            });
+            saveDirectory = "Documents/Actinova";
+        }
+
+        // Schedule notification
+        await LocalNotifications.schedule({
+            notifications: [{
+                title: 'Download Successful',
+                body: `${title} saved to ${saveDirectory}.`,
+                id: Math.floor(Math.random() * 100000),
+                schedule: { at: new Date(Date.now() + 100) },
+                sound: null,
+                attachments: null,
+                actionTypeId: "",
+                extra: null
+            }]
+        });
+
+        await Share.share({
+            title: 'Actinova Download',
+            text: `Here is your file: ${title}`,
+            url: savedFile.uri,
+            dialogTitle: 'Open File',
+        });
+    } catch (error) {
+        console.error("Mobile save failed:", error);
+        // Fallback to browser download if everything fails
+        const link = document.createElement('a');
+        link.href = `data:application/pdf;base64,${dataBase64}`;
+        link.download = fileName;
+        link.click();
+    }
+};
+
 export const downloadCourseAsPDF = async (data, mode = "course") => {
     if (!data) throw new Error("No data provided");
 
@@ -350,53 +440,8 @@ export const downloadCourseAsPDF = async (data, mode = "course") => {
     const isCapacitor = typeof window !== 'undefined' && (window.Capacitor || window.location.protocol === 'capacitor:');
 
     if (isCapacitor) {
-        try {
-            const pdfBase64 = pdf.output('datauristring').split(',')[1];
-            const { Filesystem, Directory } = await import('@capacitor/filesystem').catch(() => ({}));
-            const { Share } = await import('@capacitor/share').catch(() => ({}));
-            const { LocalNotifications } = await import('@capacitor/local-notifications').catch(() => ({}));
-
-            if (!Filesystem || !Share || !LocalNotifications) {
-                throw new Error("Capacitor plugins not available");
-            }
-
-            // Request notification permissions
-            try {
-                await LocalNotifications.requestPermissions();
-            } catch (e) {
-                console.warn("Notification permissions denied", e);
-            }
-
-            const result = await Filesystem.writeFile({
-                path: fileName,
-                data: pdfBase64,
-                directory: Directory.Documents,
-            });
-
-            // Schedule notification
-            await LocalNotifications.schedule({
-                notifications: [{
-                    title: 'Download Complete',
-                    body: `${data.title} saved to Documents. Tap to view.`,
-                    id: Math.floor(Math.random() * 100000),
-                    schedule: { at: new Date(Date.now() + 100) },
-                    sound: null,
-                    attachments: null,
-                    actionTypeId: "",
-                    extra: null
-                }]
-            });
-
-            await Share.share({
-                title: 'Actinova PDF Download',
-                text: `Personalized material for ${data.title}`,
-                url: result.uri,
-                dialogTitle: 'Save or Open PDF',
-            });
-        } catch (error) {
-            console.error('Capacitor PDF error:', error);
-            pdf.save(fileName); // Fallback
-        }
+        const pdfBase64 = pdf.output('datauristring').split(',')[1];
+        await saveToMobileDevice(fileName, pdfBase64, data.title);
     } else {
         pdf.save(fileName);
     }
@@ -503,59 +548,14 @@ export const downloadQuizAsPDF = async (data) => {
         addBranding(i, totalPages);
     }
 
+    const fileName = `assessment_${data.title?.replace(/\s+/g, "_").toLowerCase() || "exam"}.pdf`;
+
     // Mobile/Capacitor Support
     const isCapacitor = typeof window !== 'undefined' && (window.Capacitor || window.location.protocol === 'capacitor:');
 
-    const fileName = `assessment_${data.title?.replace(/\s+/g, "_").toLowerCase() || "exam"}.pdf`;
-
     if (isCapacitor) {
-        try {
-            const pdfBase64 = pdf.output('datauristring').split(',')[1];
-            const { Filesystem, Directory } = await import('@capacitor/filesystem').catch(() => ({}));
-            const { Share } = await import('@capacitor/share').catch(() => ({}));
-            const { LocalNotifications } = await import('@capacitor/local-notifications').catch(() => ({}));
-
-            if (!Filesystem || !Share || !LocalNotifications) {
-                throw new Error("Capacitor plugins not available");
-            }
-
-            // Request notification permissions
-            try {
-                await LocalNotifications.requestPermissions();
-            } catch (e) {
-                console.warn("Notification permissions denied", e);
-            }
-
-            const result = await Filesystem.writeFile({
-                path: fileName,
-                data: pdfBase64,
-                directory: Directory.Documents,
-            });
-
-            // Schedule notification
-            await LocalNotifications.schedule({
-                notifications: [{
-                    title: 'Download Complete',
-                    body: `Assessment for ${data.title} saved to Documents.`,
-                    id: Math.floor(Math.random() * 100000),
-                    schedule: { at: new Date(Date.now() + 100) },
-                    sound: null,
-                    attachments: null,
-                    actionTypeId: "",
-                    extra: null
-                }]
-            });
-
-            await Share.share({
-                title: 'Actinova Assessment Download',
-                text: `Assessment paper for ${data.title}`,
-                url: result.uri,
-                dialogTitle: 'Save or Open PDF',
-            });
-        } catch (error) {
-            console.error('Capacitor PDF error:', error);
-            pdf.save(fileName); // Fallback
-        }
+        const pdfBase64 = pdf.output('datauristring').split(',')[1];
+        await saveToMobileDevice(fileName, pdfBase64, data.title);
     } else {
         pdf.save(fileName);
     }
@@ -653,52 +653,8 @@ export const downloadReceiptAsPDF = async (data) => {
     const isCapacitor = typeof window !== 'undefined' && (window.Capacitor || window.location.protocol === 'capacitor:');
 
     if (isCapacitor) {
-        try {
-            const pdfBase64 = pdf.output('datauristring').split(',')[1];
-            const { Filesystem, Directory } = await import('@capacitor/filesystem').catch(() => ({}));
-            const { Share } = await import('@capacitor/share').catch(() => ({}));
-            const { LocalNotifications } = await import('@capacitor/local-notifications').catch(() => ({}));
-
-            if (!Filesystem || !Share || !LocalNotifications) {
-                throw new Error("Capacitor plugins not available");
-            }
-
-            // Request notification permissions
-            try {
-                await LocalNotifications.requestPermissions();
-            } catch (e) {
-                console.warn("Notification permissions denied", e);
-            }
-
-            const result = await Filesystem.writeFile({
-                path: fileName,
-                data: pdfBase64,
-                directory: Directory.Documents,
-            });
-
-            await LocalNotifications.schedule({
-                notifications: [{
-                    title: 'Receipt Downloaded',
-                    body: `Receipt for ${data.plan || "Subscription"} saved to Documents.`,
-                    id: Math.floor(Math.random() * 100000),
-                    schedule: { at: new Date(Date.now() + 100) },
-                    sound: null,
-                    attachments: null,
-                    actionTypeId: "",
-                    extra: null
-                }]
-            });
-
-            await Share.share({
-                title: 'Actinova Receipt',
-                text: `Receipt for ${data.plan || "Subscription"}`,
-                url: result.uri,
-                dialogTitle: 'Save or Open Receipt',
-            });
-        } catch (error) {
-            console.error('Capacitor PDF error:', error);
-            pdf.save(fileName);
-        }
+        const pdfBase64 = pdf.output('datauristring').split(',')[1];
+        await saveToMobileDevice(fileName, pdfBase64, `Receipt ${data.reference}`);
     } else {
         pdf.save(fileName);
     }
