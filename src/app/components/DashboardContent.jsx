@@ -32,6 +32,7 @@ export default function DashboardContent() {
     const [trendingCourses, setTrendingCourses] = useState([]);
     const [loadingCourses, setLoadingCourses] = useState(true);
     const [loadingTrending, setLoadingTrending] = useState(true);
+    const [pinnedCount, setPinnedCount] = useState(0);
 
     // Quick Actions Configuration
     const quickActions = [
@@ -103,6 +104,7 @@ export default function DashboardContent() {
                         isPinned: item.pinned || false
                     }));
                     setCourses(mappedCourses);
+                    setPinnedCount(data.stats?.pinned || 0);
                 }
             } catch (error) {
                 console.error("Failed to fetch library courses", error);
@@ -130,6 +132,12 @@ export default function DashboardContent() {
         setPinningId(courseId);
         const willBePinned = !isCurrentPinned;
 
+        if (willBePinned && pinnedCount >= 3) {
+            toast.error("You can only pin up to 3 courses. Unpin one first.");
+            setPinningId(null);
+            return;
+        }
+
         try {
             const res = await authenticatedFetch("/api/library", {
                 method: "POST",
@@ -143,6 +151,7 @@ export default function DashboardContent() {
                     c.id === courseId ? { ...c, isPinned: willBePinned } : c
                 )
             );
+            setPinnedCount(prev => willBePinned ? prev + 1 : prev - 1);
             toast.success(willBePinned ? "Course pinned" : "Course unpinned");
         } catch (err) {
             console.error("Pin error:", err);

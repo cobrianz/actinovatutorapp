@@ -3,6 +3,7 @@
 import { useParams, useSearchParams } from "next/navigation";
 import { useState, useEffect, useLayoutEffect, useRef } from "react";
 import Link from "next/link";
+import { motion } from "framer-motion";
 import {
   BookOpen,
   Play,
