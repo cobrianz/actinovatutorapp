@@ -388,7 +388,7 @@ export default function DashboardContent() {
                         <button onClick={() => router.push('/generate')} className="mt-2 text-blue-600 text-sm font-bold">Start your first course</button>
                     </div>
                 ) : (
-                    <div className="space-y-6">
+                    <div className="space-y-6 pb-32">
                         {courses.slice(0, 5).map((course, idx) => (
                             <motion.div
                                 key={course.id || idx}

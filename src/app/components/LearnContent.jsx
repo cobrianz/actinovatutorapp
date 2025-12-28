@@ -79,6 +79,8 @@ export default function LearnContent() {
   const chatContainerRef = useRef(null);
   const [showLimitModal, setShowLimitModal] = useState(false);
   const [limitModalData, setLimitModalData] = useState(null);
+  const [isBottomBarVisible, setIsBottomBarVisible] = useState(true);
+  const bottomBarTimerRef = useRef(null);
 
 
   const [currentNotes, setCurrentNotes] = useState(null);
@@ -204,6 +206,35 @@ export default function LearnContent() {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [courseData?._id]);
+
+  // Activity tracking for bottom bar
+  useEffect(() => {
+    const handleActivity = () => {
+      setIsBottomBarVisible(true);
+      if (bottomBarTimerRef.current) clearTimeout(bottomBarTimerRef.current);
+      bottomBarTimerRef.current = setTimeout(() => {
+        setIsBottomBarVisible(false);
+      }, 3000); // 3 seconds
+    };
+
+    // Initial timer
+    bottomBarTimerRef.current = setTimeout(() => {
+      setIsBottomBarVisible(false);
+    }, 3000);
+
+    window.addEventListener("mousemove", handleActivity);
+    window.addEventListener("touchstart", handleActivity);
+    window.addEventListener("keydown", handleActivity);
+    window.addEventListener("scroll", handleActivity, true);
+
+    return () => {
+      if (bottomBarTimerRef.current) clearTimeout(bottomBarTimerRef.current);
+      window.removeEventListener("mousemove", handleActivity);
+      window.removeEventListener("touchstart", handleActivity);
+      window.removeEventListener("keydown", handleActivity);
+      window.removeEventListener("scroll", handleActivity, true);
+    };
+  }, []);
 
   // Auto-scroll chat to bottom when messages change
   useEffect(() => {
@@ -1288,43 +1319,45 @@ export default function LearnContent() {
           }, 1000);
         }
 
-        // Persist generated course to library (no-op on server if already saved)
-        try {
-          const libRes = await authenticatedFetch("/api/library", {
-            method: "POST",
-            headers: {
-              "x-user-id": user?._id || user?.id || user?.idString || "",
-            },
-            body: JSON.stringify({
-              action: "add",
-              course: {
-                isGenerated: true,
-                courseData: courseDataToSet,
-                title: courseDataToSet.title,
-                topic: courseDataToSet.topic || actualTopic,
-                level: courseDataToSet.level || difficulty,
-                format,
+        // Persist generated course to library if it's new
+        if (!data.isExisting) {
+          try {
+            const libRes = await authenticatedFetch("/api/library", {
+              method: "POST",
+              headers: {
+                "x-user-id": user?._id || user?.id || user?.idString || "",
               },
-            }),
-          });
-
-          if (!libRes.ok) {
-            const errorText = await libRes.text();
-            console.warn("Failed to store course in library:", {
-              status: libRes.status,
-              statusText: libRes.statusText,
-              response: errorText
+              body: JSON.stringify({
+                action: "add",
+                course: {
+                  isGenerated: true,
+                  courseData: courseDataToSet,
+                  title: courseDataToSet.title,
+                  topic: courseDataToSet.topic || actualTopic,
+                  level: courseDataToSet.level || difficulty,
+                  format,
+                },
+              }),
             });
-          } else {
-            try {
-              const libData = await libRes.json();
-              console.log("Course saved to library:", libData);
-            } catch (jsonErr) {
-              console.warn("Library response was not JSON:", await libRes.text());
+
+            if (!libRes.ok) {
+              const errorText = await libRes.text();
+              console.warn("Failed to store course in library:", {
+                status: libRes.status,
+                statusText: libRes.statusText,
+                response: errorText
+              });
+            } else {
+              try {
+                const libData = await libRes.json();
+                console.log("Course saved to library:", libData);
+              } catch (jsonErr) {
+                console.warn("Library response was not JSON");
+              }
             }
+          } catch (libErr) {
+            console.warn("Error storing course in library:", libErr);
           }
-        } catch (libErr) {
-          console.warn("Error storing course in library:", libErr);
         }
 
         // Refresh user profile/usage so sidebar & upgrade reflect new quotas
@@ -1810,7 +1843,7 @@ export default function LearnContent() {
                         toast.error(
                           "Notes PDF export is a Pro feature. Please upgrade."
                         );
-                        router.push("/dashboard?tab=upgrade");
+                        // Redirect removed per user request: "he should remain on the lesson"
                         return;
                       }
                       handleDownloadNotes();
@@ -1979,7 +2012,12 @@ export default function LearnContent() {
       </div>
 
       {/* Bottom Bar - Redesigned to match Dashboard */}
-      <div className="fixed bottom-0 left-0 right-0 bg-white/80 dark:bg-gray-900/80 backdrop-blur-lg border-t border-gray-200 dark:border-gray-800 pb-safe-bottom z-50">
+      <motion.div
+        initial={{ y: 0 }}
+        animate={{ y: isBottomBarVisible ? 0 : 100 }}
+        transition={{ duration: 0.3, ease: "easeInOut" }}
+        className="fixed bottom-0 left-0 right-0 bg-white/80 dark:bg-gray-900/80 backdrop-blur-lg border-t border-gray-200 dark:border-gray-800 pb-safe-bottom z-50"
+      >
         <div className="flex justify-around items-center h-14 px-2">
 
           {/* 1. Modules (Left) */}
@@ -2027,8 +2065,8 @@ export default function LearnContent() {
             onClick={() => {
               const isPro = user && ((user.subscription?.plan === "pro" && user.subscription?.status === "active") || user.isPremium);
               if (!isPro) {
-                toast.error("Pro feature.");
-                router.push("/dashboard?tab=upgrade");
+                toast.error("Pro feature. Please upgrade to download.");
+                // Redirect removed per user request
                 return;
               }
               if (!currentLesson?.content) return;
@@ -2050,7 +2088,7 @@ export default function LearnContent() {
             <span className="text-[10px] font-medium">Tools</span>
           </button>
         </div>
-      </div>
+      </motion.div>
 
       {/* Notes Download Modal removed for instant download */}
 
