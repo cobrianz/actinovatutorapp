@@ -90,10 +90,74 @@ export default function BillingHistory({ billingHistory, theme }) {
 
                                 {/* Mobile Save/Share Button (Shown on Mobile) */}
                                 <button
-                                    onClick={() => {
-                                        import("@/lib/pdfUtils").then(({ downloadReceiptAsPDF }) => {
-                                            downloadReceiptAsPDF(entry);
-                                        }).catch(err => console.error("Failed to load PDF utils", err));
+                                    onClick={async () => {
+                                        try {
+                                            const { pdf } = await import("@react-pdf/renderer");
+                                            const blob = await pdf(<DocumentComponent transaction={entry} />).toBlob();
+                                            const reader = new FileReader();
+                                            reader.readAsDataURL(blob);
+                                            reader.onloadend = async () => {
+                                                const base64data = reader.result.split(',')[1];
+                                                try {
+                                                    const isNative = typeof window !== 'undefined' &&
+                                                        (window.Capacitor?.isNative || window.location.protocol === 'capacitor:');
+
+                                                    if (!isNative) {
+                                                        const url = window.URL.createObjectURL(blob);
+                                                        const link = document.createElement('a');
+                                                        link.href = url;
+                                                        link.download = `receipt-${entry.reference}.pdf`;
+                                                        link.click();
+                                                        window.URL.revokeObjectURL(url);
+                                                        return;
+                                                    }
+
+                                                    const { Filesystem, Directory } = await import('@capacitor/filesystem').catch(() => ({}));
+                                                    const { Share } = await import('@capacitor/share').catch(() => ({}));
+                                                    const { LocalNotifications } = await import('@capacitor/local-notifications').catch(() => ({}));
+
+                                                    const fileName = `receipt-${entry.reference}.pdf`;
+                                                    const result = await Filesystem.writeFile({
+                                                        path: fileName,
+                                                        data: base64data,
+                                                        directory: Directory.Cache
+                                                    });
+
+                                                    if (LocalNotifications) {
+                                                        await LocalNotifications.schedule({
+                                                            notifications: [{
+                                                                title: 'Receipt Downloaded',
+                                                                body: `Receipt for ${entry.plan} has been saved.`,
+                                                                id: Math.floor(Math.random() * 100000),
+                                                                schedule: { at: new Date(Date.now() + 100) },
+                                                                sound: null,
+                                                                attachments: null,
+                                                                actionTypeId: "",
+                                                                extra: null
+                                                            }]
+                                                        });
+                                                    }
+
+                                                    await Share.share({
+                                                        title: 'Receipt Download',
+                                                        text: `Receipt for ${entry.plan}`,
+                                                        url: result.uri,
+                                                        dialogTitle: 'Open Receipt'
+                                                    });
+                                                } catch (err) {
+                                                    console.error("Native save error", err);
+                                                    // Final fallback for any error
+                                                    const url = window.URL.createObjectURL(blob);
+                                                    const link = document.createElement('a');
+                                                    link.href = url;
+                                                    link.download = `receipt-${entry.reference}.pdf`;
+                                                    link.click();
+                                                    window.URL.revokeObjectURL(url);
+                                                }
+                                            };
+                                        } catch (e) {
+                                            console.error("Download handling error", e);
+                                        }
                                     }}
                                     className={`md:hidden flex items-center p-2 rounded-xl bg-indigo-600 text-white active:scale-95 transition-all`}
                                     title="Download Receipt"

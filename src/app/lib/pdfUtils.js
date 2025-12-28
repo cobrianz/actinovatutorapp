@@ -16,99 +16,6 @@ const COLORS = {
     divider: [229, 231, 235],
 };
 
-// Helper for mobile saving
-const saveToMobileDevice = async (fileName, dataBase64, title) => {
-    try {
-        const { Filesystem, Directory } = await import('@capacitor/filesystem').catch(() => ({}));
-        const { Share } = await import('@capacitor/share').catch(() => ({}));
-        const { LocalNotifications } = await import('@capacitor/local-notifications').catch(() => ({}));
-
-        if (!Filesystem || !Share || !LocalNotifications) {
-            throw new Error("Capacitor plugins not available");
-        }
-
-        // Request notification permissions
-        try {
-            await LocalNotifications.requestPermissions();
-        } catch (e) {
-            console.warn("Notification permissions denied", e);
-        }
-
-        let savedFile;
-        let saveDirectory;
-        let publicPath;
-
-        // Try to save to Download/Actinova folder in ExternalStorage (Public)
-        try {
-            // Create Actinova folder in Download
-            try {
-                await Filesystem.mkdir({
-                    path: 'Download/Actinova',
-                    directory: Directory.ExternalStorage,
-                    recursive: true
-                });
-            } catch (e) {
-                // Folder might exist or permission issue
-            }
-
-            savedFile = await Filesystem.writeFile({
-                path: `Download/Actinova/${fileName}`,
-                data: dataBase64,
-                directory: Directory.ExternalStorage,
-            });
-            saveDirectory = "Downloads/Actinova";
-        } catch (downloadErr) {
-            console.warn("ExternalStorage write failed, falling back to Documents", downloadErr);
-            // Fallback: Documents/Actinova
-            try {
-                await Filesystem.mkdir({
-                    path: 'Actinova',
-                    directory: Directory.Documents,
-                    recursive: true
-                });
-            } catch (e) { }
-
-            savedFile = await Filesystem.writeFile({
-                path: `Actinova/${fileName}`,
-                data: dataBase64,
-                directory: Directory.Documents,
-            });
-            saveDirectory = "Documents/Actinova";
-        }
-
-        // Schedule notification
-        await LocalNotifications.schedule({
-            notifications: [{
-                title: fileName,
-                body: 'Download complete',
-                id: Math.floor(Math.random() * 100000),
-                schedule: { at: new Date(Date.now() + 100) },
-                sound: null,
-                attachments: null,
-                actionTypeId: "",
-                extra: null
-            }]
-        });
-
-        await Share.share({
-            title: 'Actinova Download',
-            text: `Here is your file: ${title}`,
-            url: savedFile.uri,
-            dialogTitle: 'Open File',
-        });
-    } catch (error) {
-        console.error("Mobile save failed:", error);
-        import("sonner").then(({ toast }) => {
-            toast.error("Download failed on mobile device. Trying browser fallback.");
-        });
-        // Fallback to browser download if everything fails
-        const link = document.createElement('a');
-        link.href = `data:application/pdf;base64,${dataBase64}`;
-        link.download = fileName;
-        link.click();
-    }
-};
-
 export const downloadCourseAsPDF = async (data, mode = "course") => {
     if (!data) throw new Error("No data provided");
 
@@ -128,7 +35,8 @@ export const downloadCourseAsPDF = async (data, mode = "course") => {
     const addPageDecoration = (pageNum, totalPages) => {
         pdf.setDrawColor(...COLORS.divider);
         pdf.setLineWidth(0.2);
-        // Removed full width lines per user request
+        pdf.line(margin, 15, pageWidth - margin, 15);
+        pdf.line(margin, pageHeight - 15, pageWidth - margin, pageHeight - 15);
 
         pdf.setFont("helvetica", "normal");
         pdf.setFontSize(8);
@@ -175,7 +83,9 @@ export const downloadCourseAsPDF = async (data, mode = "course") => {
     const titleHeight = titleLines.length * 12;
     const boxHeight = 40 + titleHeight + 20;
 
-    // Removed roundedRect (box) per user request
+    pdf.setDrawColor(...COLORS.primary);
+    pdf.setLineWidth(0.5);
+    pdf.roundedRect(margin - 5, y - 15, contentWidth + 10, boxHeight, 2, 2, "D");
 
     pdf.setTextColor(...COLORS.primary);
     pdf.setFontSize(14);
@@ -252,7 +162,11 @@ export const downloadCourseAsPDF = async (data, mode = "course") => {
 
             if (["---", "***", "___"].includes(trimmed)) {
                 checkNewPage(10);
-                y += 15; // Just add spacing, no line
+                y += 5;
+                pdf.setDrawColor(...COLORS.divider);
+                pdf.setLineWidth(0.5);
+                pdf.line(margin, y, pageWidth - margin, y);
+                y += 8;
                 isFirstLine = false;
                 return;
             }
@@ -308,7 +222,15 @@ export const downloadCourseAsPDF = async (data, mode = "course") => {
 
             // Markdown Headers - left aligned
             if (trimmed.startsWith("# ")) {
-                // ...
+                const text = trimmed.substring(2).replace(/[\*_]/g, '').trim();
+                if (!hasSkippedTitle && titleToSkip && text.toLowerCase().includes(titleToSkip.toLowerCase())) {
+                    hasSkippedTitle = true;
+                    return;
+                }
+                y += 5;
+                pdf.setFont("helvetica", "bold");
+                pdf.setFontSize(26);
+                pdf.setTextColor(...COLORS.primary);
                 const hLines = pdf.splitTextToSize(text, contentWidth);
                 pdf.text(hLines, margin, y);
                 y += hLines.length * 12 + 8;
@@ -321,7 +243,10 @@ export const downloadCourseAsPDF = async (data, mode = "course") => {
                 const hLines = pdf.splitTextToSize(text, contentWidth);
                 pdf.text(hLines, margin, y);
                 y += hLines.length * 10;
-                // Removed underline
+                const lastW = pdf.getTextWidth(hLines[hLines.length - 1]);
+                pdf.setDrawColor(...COLORS.primary);
+                pdf.setLineWidth(0.8);
+                pdf.line(margin, y - 2, margin + lastW, y - 2);
                 y += 5;
             } else if (trimmed.startsWith("### ")) {
                 y += 4;
@@ -425,8 +350,53 @@ export const downloadCourseAsPDF = async (data, mode = "course") => {
     const isCapacitor = typeof window !== 'undefined' && (window.Capacitor || window.location.protocol === 'capacitor:');
 
     if (isCapacitor) {
-        const pdfBase64 = pdf.output('datauristring').split(',')[1];
-        await saveToMobileDevice(fileName, pdfBase64, data.title);
+        try {
+            const pdfBase64 = pdf.output('datauristring').split(',')[1];
+            const { Filesystem, Directory } = await import('@capacitor/filesystem').catch(() => ({}));
+            const { Share } = await import('@capacitor/share').catch(() => ({}));
+            const { LocalNotifications } = await import('@capacitor/local-notifications').catch(() => ({}));
+
+            if (!Filesystem || !Share || !LocalNotifications) {
+                throw new Error("Capacitor plugins not available");
+            }
+
+            // Request notification permissions
+            try {
+                await LocalNotifications.requestPermissions();
+            } catch (e) {
+                console.warn("Notification permissions denied", e);
+            }
+
+            const result = await Filesystem.writeFile({
+                path: fileName,
+                data: pdfBase64,
+                directory: Directory.Documents,
+            });
+
+            // Schedule notification
+            await LocalNotifications.schedule({
+                notifications: [{
+                    title: 'Download Complete',
+                    body: `${data.title} saved to Documents. Tap to view.`,
+                    id: Math.floor(Math.random() * 100000),
+                    schedule: { at: new Date(Date.now() + 100) },
+                    sound: null,
+                    attachments: null,
+                    actionTypeId: "",
+                    extra: null
+                }]
+            });
+
+            await Share.share({
+                title: 'Actinova PDF Download',
+                text: `Personalized material for ${data.title}`,
+                url: result.uri,
+                dialogTitle: 'Save or Open PDF',
+            });
+        } catch (error) {
+            console.error('Capacitor PDF error:', error);
+            pdf.save(fileName); // Fallback
+        }
     } else {
         pdf.save(fileName);
     }
@@ -446,7 +416,7 @@ export const downloadQuizAsPDF = async (data) => {
     const addBranding = (pageNum, total) => {
         pdf.setDrawColor(...COLORS.divider);
         pdf.setLineWidth(0.2);
-        // Removed header line
+        pdf.line(margin, 15, pageWidth - margin, 15);
         pdf.setFontSize(8);
         pdf.setTextColor(...COLORS.textLight);
         pdf.text(`Actinova AI Tutor - Assessment: ${data.title}`, margin, 12);
@@ -466,7 +436,7 @@ export const downloadQuizAsPDF = async (data) => {
     y += 20;
     pdf.setDrawColor(...COLORS.primary);
     pdf.setLineWidth(1);
-    // Removed subject underline
+    pdf.line(margin, y, pageWidth - margin, y);
     y += 15;
 
     data.questions.forEach((q, i) => {
@@ -495,7 +465,8 @@ export const downloadQuizAsPDF = async (data) => {
                 y += 8;
             });
         } else {
-            // Removed divider line per user request
+            pdf.setDrawColor(...COLORS.divider);
+            pdf.line(margin + 5, y + 5, pageWidth - margin - 5, y + 5);
             y += 15;
         }
         y += 10;
@@ -532,14 +503,59 @@ export const downloadQuizAsPDF = async (data) => {
         addBranding(i, totalPages);
     }
 
-    const fileName = `assessment_${data.title?.replace(/\s+/g, "_").toLowerCase() || "exam"}.pdf`;
-
     // Mobile/Capacitor Support
     const isCapacitor = typeof window !== 'undefined' && (window.Capacitor || window.location.protocol === 'capacitor:');
 
+    const fileName = `assessment_${data.title?.replace(/\s+/g, "_").toLowerCase() || "exam"}.pdf`;
+
     if (isCapacitor) {
-        const pdfBase64 = pdf.output('datauristring').split(',')[1];
-        await saveToMobileDevice(fileName, pdfBase64, data.title);
+        try {
+            const pdfBase64 = pdf.output('datauristring').split(',')[1];
+            const { Filesystem, Directory } = await import('@capacitor/filesystem').catch(() => ({}));
+            const { Share } = await import('@capacitor/share').catch(() => ({}));
+            const { LocalNotifications } = await import('@capacitor/local-notifications').catch(() => ({}));
+
+            if (!Filesystem || !Share || !LocalNotifications) {
+                throw new Error("Capacitor plugins not available");
+            }
+
+            // Request notification permissions
+            try {
+                await LocalNotifications.requestPermissions();
+            } catch (e) {
+                console.warn("Notification permissions denied", e);
+            }
+
+            const result = await Filesystem.writeFile({
+                path: fileName,
+                data: pdfBase64,
+                directory: Directory.Documents,
+            });
+
+            // Schedule notification
+            await LocalNotifications.schedule({
+                notifications: [{
+                    title: 'Download Complete',
+                    body: `Assessment for ${data.title} saved to Documents.`,
+                    id: Math.floor(Math.random() * 100000),
+                    schedule: { at: new Date(Date.now() + 100) },
+                    sound: null,
+                    attachments: null,
+                    actionTypeId: "",
+                    extra: null
+                }]
+            });
+
+            await Share.share({
+                title: 'Actinova Assessment Download',
+                text: `Assessment paper for ${data.title}`,
+                url: result.uri,
+                dialogTitle: 'Save or Open PDF',
+            });
+        } catch (error) {
+            console.error('Capacitor PDF error:', error);
+            pdf.save(fileName); // Fallback
+        }
     } else {
         pdf.save(fileName);
     }
@@ -585,7 +601,7 @@ export const downloadReceiptAsPDF = async (data) => {
     // Transaction Details
     pdf.setDrawColor(...COLORS.divider);
     pdf.setLineWidth(0.5);
-    // Removed line
+    pdf.line(margin, y, pageWidth - margin, y);
     y += 15;
 
     const addRow = (label, value, isBold = false) => {
@@ -637,8 +653,52 @@ export const downloadReceiptAsPDF = async (data) => {
     const isCapacitor = typeof window !== 'undefined' && (window.Capacitor || window.location.protocol === 'capacitor:');
 
     if (isCapacitor) {
-        const pdfBase64 = pdf.output('datauristring').split(',')[1];
-        await saveToMobileDevice(fileName, pdfBase64, `Receipt ${data.reference}`);
+        try {
+            const pdfBase64 = pdf.output('datauristring').split(',')[1];
+            const { Filesystem, Directory } = await import('@capacitor/filesystem').catch(() => ({}));
+            const { Share } = await import('@capacitor/share').catch(() => ({}));
+            const { LocalNotifications } = await import('@capacitor/local-notifications').catch(() => ({}));
+
+            if (!Filesystem || !Share || !LocalNotifications) {
+                throw new Error("Capacitor plugins not available");
+            }
+
+            // Request notification permissions
+            try {
+                await LocalNotifications.requestPermissions();
+            } catch (e) {
+                console.warn("Notification permissions denied", e);
+            }
+
+            const result = await Filesystem.writeFile({
+                path: fileName,
+                data: pdfBase64,
+                directory: Directory.Documents,
+            });
+
+            await LocalNotifications.schedule({
+                notifications: [{
+                    title: 'Receipt Downloaded',
+                    body: `Receipt for ${data.plan || "Subscription"} saved to Documents.`,
+                    id: Math.floor(Math.random() * 100000),
+                    schedule: { at: new Date(Date.now() + 100) },
+                    sound: null,
+                    attachments: null,
+                    actionTypeId: "",
+                    extra: null
+                }]
+            });
+
+            await Share.share({
+                title: 'Actinova Receipt',
+                text: `Receipt for ${data.plan || "Subscription"}`,
+                url: result.uri,
+                dialogTitle: 'Save or Open Receipt',
+            });
+        } catch (error) {
+            console.error('Capacitor PDF error:', error);
+            pdf.save(fileName);
+        }
     } else {
         pdf.save(fileName);
     }
