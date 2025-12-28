@@ -908,8 +908,17 @@ export default function LearnContent() {
         // Fix background: bg-white for light, dark:bg-gray-900 (dark) instead of dark:bg-gray-100 (light gray)
         const bgClasses = "bg-white dark:bg-gray-900";
 
+        // Pre-process code to quote labels containing problematic characters which cause parse errors
+        const processedCode = trimmedCode.replace(/\[([\s\S]*?)\]/g, (m, label) => {
+          if (/[()",]/.test(label)) {
+            // Double-quote and escape internal quotes by doubling them (Mermaid syntax)
+            return `["${label.trim().replace(/"/g, '""')}"]`;
+          }
+          return m;
+        });
+
         // Use cached SVG if available to prevent flashing
-        const cached = mermaidCacheRef.current[trimmedCode];
+        const cached = mermaidCacheRef.current[processedCode];
         if (cached) {
           // Return div without 'mermaid' class so it doesn't get re-processed, but with same styles
           return `<div class="${commonClasses} ${bgClasses}">${cached}</div>`;
@@ -917,7 +926,7 @@ export default function LearnContent() {
 
         // Wrap in a div with 'mermaid' class that mermaid.js will process
         // Store code in data attribute for caching references
-        return `<div class="mermaid ${commonClasses} ${bgClasses}" data-code="${encodeURIComponent(trimmedCode)}">${trimmedCode}</div>`;
+        return `<div class="mermaid ${commonClasses} ${bgClasses}" data-code="${encodeURIComponent(processedCode)}">${processedCode}</div>`;
       }
 
       const placeholder = `___CODEBLOCK_${codeBlocks.length}___`;
