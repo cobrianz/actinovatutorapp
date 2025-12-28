@@ -340,71 +340,23 @@ IMPORTANT: Be exhaustive—elaborate on every sub-topic with nuance and depth. A
     ],
     temperature: 0.65,
     max_tokens: isPremium ? 4096 : 3500,
-    stream: true,
   });
 
-  let fullContent = "";
+  const content = completion.choices[0]?.message?.content || "";
 
-  const stream = new ReadableStream({
-    async start(controller) {
-      const encoder = new TextEncoder();
-
-      try {
-        for await (const chunk of completion) {
-          const delta = chunk.choices[0]?.delta?.content || "";
-          if (delta) {
-            fullContent += delta;
-
-            // Send incremental content to frontend
-            const data = `data: ${JSON.stringify({
-              content: delta,
-              done: false
-            })}\n\n`;
-            controller.enqueue(encoder.encode(data));
-          }
-        }
-
-        // Final chunk with full content
-        const doneData = `data: ${JSON.stringify({
-          content: "",
-          done: true,
-          fullContent
-        })}\n\n`;
-        controller.enqueue(encoder.encode(doneData));
-
-        // === Save to DB only after full content is received ===
-        if (courseId && ObjectId.isValid(courseId)) {
-          const updatePath = `modules.${moduleId - 1}.lessons.${lessonIndex}.content`;
-          await db.collection("library").updateOne(
-            { _id: new ObjectId(courseId) },
-            {
-              $set: {
-                [updatePath]: fullContent,
-                lastGenerated: new Date(),
-              },
-            }
-          ).catch(err => console.error("DB save failed:", err));
-        }
-
-        controller.close();
-      } catch (error) {
-        console.error("Streaming error:", error);
-        const errorData = `data: ${JSON.stringify({
-          error: "Generation failed",
-          done: true
-        })}\n\n`;
-        controller.enqueue(encoder.encode(errorData));
-        controller.close();
+  // Save to DB
+  if (courseId && ObjectId.isValid(courseId)) {
+    const updatePath = `modules.${moduleId - 1}.lessons.${lessonIndex}.content`;
+    await db.collection("library").updateOne(
+      { _id: new ObjectId(courseId) },
+      {
+        $set: {
+          [updatePath]: content,
+          lastGenerated: new Date(),
+        },
       }
-    },
-  });
+    ).catch(err => console.error("DB save failed:", err));
+  }
 
-  return new Response(stream, {
-    status: 200,
-    headers: {
-      "Content-Type": "text/event-stream",
-      "Cache-Control": "no-cache",
-      "Connection": "keep-alive",
-    },
-  });
+  return NextResponse.json({ content });
 }

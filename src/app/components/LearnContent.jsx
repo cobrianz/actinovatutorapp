@@ -608,99 +608,40 @@ export default function LearnContent() {
         throw new Error("Failed to generate lesson content");
       }
 
-      // Check if response is streaming (SSE) or regular JSON
-      const contentType = response.headers.get("content-type");
+      // Revert to regular JSON response (streaming removed)
+      const data = await response.json();
 
-      if (contentType?.includes("text/event-stream")) {
-        // Handle streaming response
-        const reader = response.body.getReader();
-        const decoder = new TextDecoder();
-        let fullContent = "";
-
-        while (true) {
-          const { done, value } = await reader.read();
-          if (done) break;
-
-          const chunk = decoder.decode(value, { stream: true });
-          const lines = chunk.split("\n");
-
-          for (const line of lines) {
-            if (line.startsWith("data: ")) {
-              try {
-                const data = JSON.parse(line.slice(6));
-
-                if (data.content) {
-                  fullContent += data.content;
-
-                  // Update UI in real-time
-                  setCourseData((prevData) => {
-                    const newData = { ...prevData };
-                    if (newData.modules && newData.modules[moduleId - 1]) {
-                      if (newData.modules[moduleId - 1].lessons[lessonIndex]) {
-                        newData.modules[moduleId - 1].lessons[lessonIndex].content = fullContent;
-                      }
-                    }
-                    return newData;
-                  });
-                }
-
-                if (data.done) {
-                  // Streaming complete
-                  break;
-                }
-              } catch (e) {
-                // Skip invalid JSON
-              }
-            }
+      // Update course data with the new content
+      setCourseData((prevData) => {
+        const newData = { ...prevData };
+        if (newData.modules && newData.modules[moduleId - 1]) {
+          if (newData.modules[moduleId - 1].lessons[lessonIndex]) {
+            newData.modules[moduleId - 1].lessons[lessonIndex].content =
+              data.content;
           }
         }
+        return newData;
+      });
 
-        // Save to local storage
-        const localStorageKey = `lesson_${actualTopic}_${difficulty}_${moduleId}_${lessonIndex}`;
-        try {
-          localStorage.setItem(localStorageKey, fullContent);
-          if (typeof window !== "undefined") {
-            window.dispatchEvent(new Event("usageUpdated"));
-          }
-        } catch (storageError) {
-          // Silent fail
+      // Save to local storage for faster future access
+      const localStorageKey = `lesson_${actualTopic}_${difficulty}_${moduleId}_${lessonIndex}`;
+      try {
+        localStorage.setItem(localStorageKey, data.content);
+        if (typeof window !== "undefined") {
+          window.dispatchEvent(new Event("usageUpdated"));
         }
-
-        setTypingContent(fullContent);
-      } else {
-        // Fallback to regular JSON response (for cached content)
-        const data = await response.json();
-
-        // Update course data with the new content
-        setCourseData((prevData) => {
-          const newData = { ...prevData };
-          if (newData.modules && newData.modules[moduleId - 1]) {
-            if (newData.modules[moduleId - 1].lessons[lessonIndex]) {
-              newData.modules[moduleId - 1].lessons[lessonIndex].content =
-                data.content;
-            }
-          }
-          return newData;
-        });
-
-        // Save to local storage for faster future access
-        const localStorageKey = `lesson_${actualTopic}_${difficulty}_${moduleId}_${lessonIndex}`;
-        try {
-          localStorage.setItem(localStorageKey, data.content);
-          if (typeof window !== "undefined") {
-            window.dispatchEvent(new Event("usageUpdated"));
-          }
-        } catch (storageError) {
-          // Silent fail for localStorage
-        }
-
-        setTypingContent(data.content);
+      } catch (storageError) {
+        // Silent fail for localStorage
       }
+
+      setTypingContent(data.content);
+
     } catch (error) {
       if (error.name === 'AbortError') {
         console.log("Fetch aborted");
         return;
       }
+      console.error(error);
       toast.error("Failed to load lesson content");
       // Set a fallback message
       setCourseData((prevData) => {
@@ -1480,9 +1421,11 @@ export default function LearnContent() {
             if (courseData.modules) {
               courseData.modules.forEach((module) => {
                 if (module.lessons) {
-                  module.lessons.forEach((lesson) => {
-                    if (lesson.completed && lesson.id) {
-                      completedLessonsFromDB.add(lesson.id);
+                  module.lessons.forEach((lesson, lIdx) => {
+                    // Fallback ID if lesson.id is missing, matching the toggleLessonCompletion logic
+                    const lId = lesson.id || `${module.id}-${lIdx}`;
+                    if (lesson.completed) {
+                      completedLessonsFromDB.add(lId);
                     }
                   });
                 }

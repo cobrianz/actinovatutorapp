@@ -1,4 +1,5 @@
 import jsPDF from "jspdf";
+import mermaid from "mermaid";
 
 /**
  * Enhanced PDF Generation Utility for Actinova AI Tutor
@@ -87,6 +88,51 @@ export const downloadCourseAsPDF = async (data, mode = "course") => {
     const margin = 20;
     const contentWidth = pageWidth - (margin * 2);
     let y = 25;
+
+    // Helper to render Mermaid to PNG
+    const renderMermaidToPng = async (code) => {
+        try {
+            const id = `mermaid-pdf-${Date.now()}-${Math.floor(Math.random() * 10000)}`;
+            // Ensure mermaid is initialized
+            mermaid.initialize({ startOnLoad: false, theme: 'default' });
+            const { svg } = await mermaid.render(id, code);
+
+            return new Promise((resolve, reject) => {
+                const img = new Image();
+                const svgBlob = new Blob([svg], { type: 'image/svg+xml;charset=utf-8' });
+                const url = URL.createObjectURL(svgBlob);
+
+                img.onload = () => {
+                    const canvas = document.createElement('canvas');
+                    // 3x scale for crisp PDF headers/text
+                    const scale = 3;
+                    canvas.width = img.width * scale;
+                    canvas.height = img.height * scale;
+                    const ctx = canvas.getContext('2d');
+                    // White background
+                    ctx.fillStyle = "#ffffff";
+                    ctx.fillRect(0, 0, canvas.width, canvas.height);
+                    ctx.scale(scale, scale);
+                    ctx.drawImage(img, 0, 0);
+                    URL.revokeObjectURL(url);
+                    resolve({
+                        dataUrl: canvas.toDataURL('image/png'),
+                        width: img.width, // unscaled dimensions for PDF layout
+                        height: img.height
+                    });
+                };
+                img.onerror = (e) => {
+                    console.error("Image load error", e);
+                    URL.revokeObjectURL(url);
+                    resolve(null); // Fallback to raw code
+                };
+                img.src = url;
+            });
+        } catch (e) {
+            console.error("Mermaid render error:", e);
+            return null;
+        }
+    };
 
     // Header & Footer
     const addPageDecoration = (pageNum, totalPages) => {
@@ -190,12 +236,13 @@ export const downloadCourseAsPDF = async (data, mode = "course") => {
         });
     };
 
-    const processContent = (content, titleToSkip = null) => {
+    const processContent = async (content, titleToSkip = null) => {
         if (!content) return;
         const lines = content.split('\n');
         let isInCodeBlock = false;
         let isFirstLine = true;
         let tableBuffer = [];
+        let mermaidBuffer = [];
 
         const flushTable = () => {
             if (tableBuffer.length === 0) return;
@@ -249,7 +296,8 @@ export const downloadCourseAsPDF = async (data, mode = "course") => {
             tableBuffer = [];
         };
 
-        lines.forEach((line) => {
+        // Use Loop for Async processing
+        for (const line of lines) {
             const trimmed = line.trim();
 
             if (trimmed.startsWith("```")) {
@@ -257,8 +305,47 @@ export const downloadCourseAsPDF = async (data, mode = "course") => {
 
                 // Check if it's a mermaid block
                 const lang = trimmed.substring(3).trim();
+
                 if (lang === 'mermaid') {
                     isInCodeBlock = 'mermaid';
+                    mermaidBuffer = []; // Start capturing mermaid code
+                } else if (isInCodeBlock === 'mermaid') {
+                    // END of mermaid block
+                    isInCodeBlock = false;
+                    const code = mermaidBuffer.join('\n');
+
+                    if (code.trim()) {
+                        // Render Diagram
+                        const image = await renderMermaidToPng(code);
+                        if (image) {
+                            // Calculate dimensions to fit
+                            const maxWidth = contentWidth - 10;
+                            // const maxHeight = ...
+                            let imgW = image.width * 0.264583; // px to mm approx (96dpi) 
+                            // Actually jsPDF deals in mm. PNG width is pixels. 
+                            // We need to scale it to fit PAGE
+                            // Assume 1px = 0.26mm is standard web logic but we can just normalize to width
+                            const ratio = image.height / image.width;
+                            let displayW = Math.min(maxWidth, imgW); // Don't upscale small images too much
+
+                            // If it's huge, cap it
+                            if (displayW < maxWidth * 0.5 && imgW > 100) displayW = maxWidth * 0.7; // Ensure visibility
+
+                            // Auto-fit to width if it's wide
+                            if (imgW > maxWidth) displayW = maxWidth;
+
+                            let displayH = displayW * ratio;
+
+                            checkNewPage(displayH + 10);
+                            y += 5;
+                            try {
+                                pdf.addImage(image.dataUrl, 'PNG', (pageWidth - displayW) / 2, y, displayW, displayH);
+                                y += displayH + 5;
+                            } catch (err) {
+                                console.error("PDF AddImage failed", err);
+                            }
+                        }
+                    }
                 } else if (isInCodeBlock) {
                     isInCodeBlock = false;
                 } else {
@@ -267,12 +354,12 @@ export const downloadCourseAsPDF = async (data, mode = "course") => {
 
                 y += 2;
                 isFirstLine = false;
-                return;
+                continue;
             }
 
             if (isInCodeBlock === 'mermaid') {
-                // Skip mermaid content lines - we'll show a placeholder instead
-                return;
+                mermaidBuffer.push(line);
+                continue;
             }
 
             if (isInCodeBlock) {
@@ -284,13 +371,13 @@ export const downloadCourseAsPDF = async (data, mode = "course") => {
                 y += 6;
                 pdf.setFont("helvetica", "normal");
                 isFirstLine = false;
-                return;
+                continue;
             }
 
             // Table Detection
             if (trimmed.startsWith('|') && trimmed.endsWith('|')) {
                 tableBuffer.push(trimmed);
-                return;
+                continue;
             } else {
                 flushTable();
             }
@@ -302,20 +389,20 @@ export const downloadCourseAsPDF = async (data, mode = "course") => {
                 pdf.text(line, margin, y);
                 y += 6;
                 pdf.setFont("helvetica", "normal");
-                return;
+                continue;
             }
 
             if (["---", "***", "___"].includes(trimmed)) {
                 checkNewPage(5);
                 y += 4;
                 isFirstLine = false;
-                return;
+                continue;
             }
 
             if (!trimmed) {
                 y += 5;
                 isFirstLine = false;
-                return;
+                continue;
             }
 
             checkNewPage(12);
@@ -323,7 +410,7 @@ export const downloadCourseAsPDF = async (data, mode = "course") => {
             // Skip module title
             if (trimmed.match(/^#? ?Module:.*/i)) {
                 isFirstLine = false;
-                return;
+                continue;
             }
 
             // Handle Lesson: line
@@ -339,7 +426,7 @@ export const downloadCourseAsPDF = async (data, mode = "course") => {
                 y += lines2.length * 10;
                 y += 2;
                 isFirstLine = false;
-                return;
+                continue;
             }
 
             // Handle first line as H1 if applicable
@@ -352,7 +439,7 @@ export const downloadCourseAsPDF = async (data, mode = "course") => {
                 pdf.text(headerLines, margin, y);
                 y += headerLines.length * 12 + 4;
                 isFirstLine = false;
-                return;
+                continue;
             }
 
             isFirstLine = false;
@@ -361,7 +448,7 @@ export const downloadCourseAsPDF = async (data, mode = "course") => {
             if (trimmed.startsWith("# ")) {
                 const text = trimmed.substring(2).replace(/[\*_]/g, '').trim();
                 // Skip if matches title we are skipping
-                if (titleToSkip && text.toLowerCase().includes(titleToSkip.toLowerCase())) return;
+                if (titleToSkip && text.toLowerCase().includes(titleToSkip.toLowerCase())) continue;
 
                 y += 2;
                 pdf.setFont("helvetica", "bold");
@@ -424,7 +511,7 @@ export const downloadCourseAsPDF = async (data, mode = "course") => {
             } else {
                 renderMarkdownLine(trimmed, margin);
             }
-        });
+        }
 
         flushTable(); // Ensure last table is flushed
     };
@@ -448,27 +535,34 @@ export const downloadCourseAsPDF = async (data, mode = "course") => {
             y += 8;
         });
 
-        modules.forEach((mod, idx) => {
+        // Use Loop for Async processing
+        for (let idx = 0; idx < modules.length; idx++) {
+            const mod = modules[idx];
             pdf.addPage();
             y = 30;
 
             // Module title box removed per plan
             y += 5;
 
-            mod.lessons?.forEach((lesson, lIdx) => {
-                checkNewPage(20);
-                pdf.setFont("helvetica", "bold");
-                pdf.setFontSize(16);
-                pdf.setTextColor(...COLORS.text);
-                pdf.text(`${idx + 1}.${lIdx + 1} ${lesson.title || lesson}`, margin, y);
-                y += 12;
+            if (mod.lessons) {
+                for (let lIdx = 0; lIdx < mod.lessons.length; lIdx++) {
+                    const lesson = mod.lessons[lIdx];
+                    checkNewPage(20);
+                    pdf.setFont("helvetica", "bold");
+                    pdf.setFontSize(16);
+                    pdf.setTextColor(...COLORS.text);
+                    pdf.text(`${idx + 1}.${lIdx + 1} ${lesson.title || lesson}`, margin, y);
+                    y += 12;
 
-                if (lesson.content) processContent(lesson.content, lesson.title || lesson);
-                y += 10;
-            });
-        });
+                    if (lesson.content) {
+                        await processContent(lesson.content, lesson.title || lesson);
+                    }
+                    y += 10;
+                }
+            }
+        }
     } else {
-        processContent(data.content, data.title);
+        await processContent(data.content, data.title);
     }
 
     // Final decorations
