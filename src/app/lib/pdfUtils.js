@@ -215,15 +215,26 @@ export const downloadCourseAsPDF = async (data, mode = "course") => {
 
         // Strip ALL markdown before processing
         let cleanedText = text
-            .replace(/\[([^\]]+)\]\([^\)]+\)/g, '$1') // Strip markdown links, keep text
-            .replace(/https?:\/\/[^\s\)]+/g, '')     // Remove raw URLs
-            .replace(/\*\*\*([^*]+)\*\*\*/g, '$1')  // Bold+Italic
-            .replace(/\*\*([^*]+)\*\*/g, '$1')      // Bold
-            .replace(/\*([^*]+)\*/g, '$1')          // Italic
-            .replace(/__([^_]+)__/g, '$1')          // Bold underscore
-            .replace(/_([^_]+)_/g, '$1')            // Italic underscore
-            .replace(/~~([^~]+)~~/g, '$1')          // Strikethrough
-            .replace(/`([^`]+)`/g, '$1')            // Inline code
+            // Remove images: ![alt](url) -> alt
+            .replace(/!\[([^\]]*)\]\([^\)]+\)/g, '$1')
+            // Remove links: [text](url) -> text
+            .replace(/\[([^\]]+)\]\([^\)]+\)/g, '$1')
+            // Remove raw URLs
+            .replace(/https?:\/\/[^\s\)]+/g, '')
+            // Bold/Italic/Code (handle nesting loosely by running multiple passes or simple greedy)
+            .replace(/(\*\*|__)(.*?)\1/g, '$2') // Bold
+            .replace(/(\*|_)(.*?)\1/g, '$2')    // Italic
+            .replace(/~~(.*?)~~/g, '$1')        // Strikethrough
+            .replace(/`([^`]+)`/g, '$1')        // Inline code
+            // Remove header markers if any remain (though processed in loop)
+            .replace(/^#+\s+/, '')
+            // Remove blockquote markers
+            .replace(/^>\s+/, '')
+            // Remove horizontal rule markers
+            .replace(/^[-*_]{3,}\s*$/, '')
+            // Remove list markers (handled in loop but good for safety)
+            .replace(/^[-*•]\s+/, '')
+            .replace(/^\d+\.\s+/, '')
             .trim();
 
         const maxWidth = contentWidth - (xPos - margin);
