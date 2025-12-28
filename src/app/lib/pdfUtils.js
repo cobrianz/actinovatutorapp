@@ -161,12 +161,8 @@ export const downloadCourseAsPDF = async (data, mode = "course") => {
             }
 
             if (["---", "***", "___"].includes(trimmed)) {
-                checkNewPage(10);
-                y += 5;
-                pdf.setDrawColor(...COLORS.divider);
-                pdf.setLineWidth(0.5);
-                pdf.line(margin, y, pageWidth - margin, y);
-                y += 8;
+                checkNewPage(5);
+                y += 4; // Reduced spacing, no line
                 isFirstLine = false;
                 return;
             }
@@ -187,7 +183,7 @@ export const downloadCourseAsPDF = async (data, mode = "course") => {
 
             // Handle Lesson: line
             if (trimmed.startsWith('## LESSON: ') || trimmed.startsWith('LESSON: ') || trimmed.startsWith('Lesson: ')) {
-                y += 5;
+                y += 2; // Reduced top margin
                 pdf.setFont("helvetica", "bold");
                 pdf.setFontSize(20);
                 pdf.setTextColor(...COLORS.primary);
@@ -196,24 +192,21 @@ export const downloadCourseAsPDF = async (data, mode = "course") => {
                 const lines2 = pdf.splitTextToSize(headerText, contentWidth);
                 pdf.text(lines2, margin, y);
                 y += lines2.length * 10;
-                const lastW = pdf.getTextWidth(lines2[lines2.length - 1]);
-                pdf.setDrawColor(...COLORS.primary);
-                pdf.setLineWidth(0.8);
-                pdf.line(margin, y - 2, margin + lastW, y - 2);
-                y += 5;
+                // Line removed
+                y += 2; // Reduced bottom margin
                 isFirstLine = false;
                 return;
             }
 
             // Handle first line as H1 if applicable
             if (isFirstLine && !trimmed.startsWith('#') && !trimmed.startsWith('##') && !trimmed.startsWith('###') && !trimmed.startsWith('> ') && !trimmed.match(/^[-*•]\s/) && !trimmed.match(/^\d+\.\s/)) {
-                y += 5;
+                y += 2; // Reduced top margin
                 pdf.setFont("helvetica", "bold");
                 pdf.setFontSize(26);
                 pdf.setTextColor(...COLORS.primary);
                 const headerLines = pdf.splitTextToSize(trimmed, contentWidth - 10);
                 pdf.text(headerLines, margin, y);
-                y += headerLines.length * 12 + 8;
+                y += headerLines.length * 12 + 4; // Reduced bottom margin
                 isFirstLine = false;
                 return;
             }
@@ -227,15 +220,15 @@ export const downloadCourseAsPDF = async (data, mode = "course") => {
                     hasSkippedTitle = true;
                     return;
                 }
-                y += 5;
+                y += 2; // Reduced top
                 pdf.setFont("helvetica", "bold");
                 pdf.setFontSize(26);
                 pdf.setTextColor(...COLORS.primary);
                 const hLines = pdf.splitTextToSize(text, contentWidth);
                 pdf.text(hLines, margin, y);
-                y += hLines.length * 12 + 8;
+                y += hLines.length * 12 + 4; // Reduced bottom
             } else if (trimmed.startsWith("## ")) {
-                y += 5;
+                y += 2; // Reduced top
                 pdf.setFont("helvetica", "bold");
                 pdf.setFontSize(20);
                 pdf.setTextColor(...COLORS.primary);
@@ -243,29 +236,26 @@ export const downloadCourseAsPDF = async (data, mode = "course") => {
                 const hLines = pdf.splitTextToSize(text, contentWidth);
                 pdf.text(hLines, margin, y);
                 y += hLines.length * 10;
-                const lastW = pdf.getTextWidth(hLines[hLines.length - 1]);
-                pdf.setDrawColor(...COLORS.primary);
-                pdf.setLineWidth(0.8);
-                pdf.line(margin, y - 2, margin + lastW, y - 2);
-                y += 5;
+                // Line removed
+                y += 2; // Reduced bottom
             } else if (trimmed.startsWith("### ")) {
-                y += 4;
+                y += 2; // Reduced top
                 pdf.setFont("helvetica", "bold");
                 pdf.setFontSize(16);
                 pdf.setTextColor(...COLORS.text);
                 const text = trimmed.substring(4).replace(/[\*_]/g, '').trim();
                 const hLines = pdf.splitTextToSize(text, contentWidth);
                 pdf.text(hLines, margin, y);
-                y += hLines.length * 9 + 4;
+                y += hLines.length * 9 + 2; // Reduced bottom
             } else if (trimmed.startsWith("#### ")) {
-                y += 3;
+                y += 2; // Reduced top
                 pdf.setFont("helvetica", "bold");
                 pdf.setFontSize(14);
                 pdf.setTextColor(...COLORS.text);
                 const text = trimmed.substring(5).replace(/[\*_]/g, '').trim();
                 const hLines = pdf.splitTextToSize(text, contentWidth);
                 pdf.text(hLines, margin, y);
-                y += hLines.length * 8 + 3;
+                y += hLines.length * 8 + 2; // Reduced bottom
             } else if (trimmed.startsWith("> ")) {
                 const quote = trimmed.substring(2).trim();
                 pdf.setFont("helvetica", "italic");
