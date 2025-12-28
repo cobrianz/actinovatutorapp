@@ -98,6 +98,9 @@ const saveToMobileDevice = async (fileName, dataBase64, title) => {
         });
     } catch (error) {
         console.error("Mobile save failed:", error);
+        import("sonner").then(({ toast }) => {
+            toast.error("Download failed on mobile device. Trying browser fallback.");
+        });
         // Fallback to browser download if everything fails
         const link = document.createElement('a');
         link.href = `data:application/pdf;base64,${dataBase64}`;
@@ -172,9 +175,7 @@ export const downloadCourseAsPDF = async (data, mode = "course") => {
     const titleHeight = titleLines.length * 12;
     const boxHeight = 40 + titleHeight + 20;
 
-    pdf.setDrawColor(...COLORS.primary);
-    pdf.setLineWidth(0.5);
-    pdf.roundedRect(margin - 5, y - 15, contentWidth + 10, boxHeight, 2, 2, "D");
+    // Removed roundedRect (box) per user request
 
     pdf.setTextColor(...COLORS.primary);
     pdf.setFontSize(14);
@@ -251,14 +252,7 @@ export const downloadCourseAsPDF = async (data, mode = "course") => {
 
             if (["---", "***", "___"].includes(trimmed)) {
                 checkNewPage(10);
-                y += 5;
-                pdf.setDrawColor(...COLORS.divider);
-                pdf.setLineWidth(0.5);
-                // Shortened line (centered 50% width)
-                const lineStart = pageWidth / 4;
-                const lineEnd = (pageWidth / 4) * 3;
-                pdf.line(lineStart, y, lineEnd, y);
-                y += 8;
+                y += 15; // Just add spacing, no line
                 isFirstLine = false;
                 return;
             }
@@ -314,15 +308,7 @@ export const downloadCourseAsPDF = async (data, mode = "course") => {
 
             // Markdown Headers - left aligned
             if (trimmed.startsWith("# ")) {
-                const text = trimmed.substring(2).replace(/[\*_]/g, '').trim();
-                if (!hasSkippedTitle && titleToSkip && text.toLowerCase().includes(titleToSkip.toLowerCase())) {
-                    hasSkippedTitle = true;
-                    return;
-                }
-                y += 5;
-                pdf.setFont("helvetica", "bold");
-                pdf.setFontSize(26);
-                pdf.setTextColor(...COLORS.primary);
+                // ...
                 const hLines = pdf.splitTextToSize(text, contentWidth);
                 pdf.text(hLines, margin, y);
                 y += hLines.length * 12 + 8;
@@ -335,10 +321,7 @@ export const downloadCourseAsPDF = async (data, mode = "course") => {
                 const hLines = pdf.splitTextToSize(text, contentWidth);
                 pdf.text(hLines, margin, y);
                 y += hLines.length * 10;
-                const lastW = pdf.getTextWidth(hLines[hLines.length - 1]);
-                pdf.setDrawColor(...COLORS.primary);
-                pdf.setLineWidth(0.8);
-                pdf.line(margin, y - 2, margin + lastW, y - 2);
+                // Removed underline
                 y += 5;
             } else if (trimmed.startsWith("### ")) {
                 y += 4;
@@ -463,7 +446,7 @@ export const downloadQuizAsPDF = async (data) => {
     const addBranding = (pageNum, total) => {
         pdf.setDrawColor(...COLORS.divider);
         pdf.setLineWidth(0.2);
-        pdf.line(margin, 15, pageWidth - margin, 15);
+        // Removed header line
         pdf.setFontSize(8);
         pdf.setTextColor(...COLORS.textLight);
         pdf.text(`Actinova AI Tutor - Assessment: ${data.title}`, margin, 12);
@@ -483,7 +466,7 @@ export const downloadQuizAsPDF = async (data) => {
     y += 20;
     pdf.setDrawColor(...COLORS.primary);
     pdf.setLineWidth(1);
-    pdf.line(margin, y, pageWidth - margin, y);
+    // Removed subject underline
     y += 15;
 
     data.questions.forEach((q, i) => {
@@ -512,8 +495,7 @@ export const downloadQuizAsPDF = async (data) => {
                 y += 8;
             });
         } else {
-            pdf.setDrawColor(...COLORS.divider);
-            pdf.line(margin + 5, y + 5, pageWidth - margin - 5, y + 5);
+            // Removed divider line per user request
             y += 15;
         }
         y += 10;
@@ -603,7 +585,7 @@ export const downloadReceiptAsPDF = async (data) => {
     // Transaction Details
     pdf.setDrawColor(...COLORS.divider);
     pdf.setLineWidth(0.5);
-    pdf.line(margin, y, pageWidth - margin, y);
+    // Removed line
     y += 15;
 
     const addRow = (label, value, isBold = false) => {
