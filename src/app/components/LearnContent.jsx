@@ -1736,7 +1736,10 @@ export default function LearnContent() {
             ref={contentRef}
             className="flex-1 overflow-y-auto hide-scrollbar bg-white dark:bg-gray-800"
           >
-            <div className={`mx-auto p-4 sm:p-6 lg:p-8 pb-40 pb-safe-bottom transition-all duration-300 ${isRightPanelOpen && isSidebarOpen ? "max-w-4xl" : "max-w-5xl"}`}>
+            <div
+              style={{ paddingBottom: isBottomBarVisible ? "calc(10rem + env(safe-area-inset-bottom))" : "calc(2rem + env(safe-area-inset-bottom))" }}
+              className={`mx-auto p-4 sm:p-6 lg:p-8 transition-all duration-300 ${isRightPanelOpen && isSidebarOpen ? "max-w-4xl" : "max-w-5xl"}`}
+            >
               {lessonContentLoading ? (
                 <div className="text-center py-12">
                   <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
@@ -1777,6 +1780,7 @@ export default function LearnContent() {
 
         {/* Right Panel - Notes & AI Tutor */}
         <div
+          style={{ paddingBottom: isBottomBarVisible ? "calc(4rem + env(safe-area-inset-bottom))" : "env(safe-area-inset-bottom)" }}
           className={`${isRightPanelOpen ? "translate-x-0" : "translate-x-full"
             } w-full lg:w-80 xl:w-96 bg-white dark:bg-gray-800 border-l border-gray-200 dark:border-gray-700 flex flex-col absolute z-40 transition-transform duration-300 max-w-[100vw] md:max-w-[400px] right-0 h-full shadow-xl`}
         >
@@ -2023,7 +2027,10 @@ export default function LearnContent() {
 
           {/* 1. Modules (Left) */}
           <button
-            onClick={() => setIsSidebarOpen(!isSidebarOpen)}
+            onClick={() => {
+              setIsSidebarOpen(!isSidebarOpen);
+              if (!isSidebarOpen) setIsRightPanelOpen(false);
+            }}
             className={`flex flex-col items-center justify-center w-full h-full space-y-1 ${isSidebarOpen ? "text-blue-600 dark:text-blue-400" : "text-gray-500 dark:text-gray-400"}`}
           >
             <Menu size={22} strokeWidth={2} />
@@ -2082,7 +2089,10 @@ export default function LearnContent() {
 
           {/* 5. Tools (Right) */}
           <button
-            onClick={() => setIsRightPanelOpen(!isRightPanelOpen)}
+            onClick={() => {
+              setIsRightPanelOpen(!isRightPanelOpen);
+              if (!isRightPanelOpen) setIsSidebarOpen(false);
+            }}
             className={`flex flex-col items-center justify-center w-full h-full space-y-1 ${isRightPanelOpen ? "text-blue-600 dark:text-blue-400" : "text-gray-500 dark:text-gray-400"}`}
           >
             <MessageCircle size={22} strokeWidth={2} />

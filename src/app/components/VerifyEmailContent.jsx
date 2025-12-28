@@ -166,7 +166,7 @@ export default function VerifyEmailContent() {
     }
 
     return (
-        <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8 pt-safe-top pb-safe-bottom">
+        <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center py-6 sm:py-12 px-4 sm:px-6 lg:px-8 pt-safe-top pb-safe-bottom">
             <div className="max-w-md w-full space-y-8">
                 {/* Header */}
                 <div className="text-center">
