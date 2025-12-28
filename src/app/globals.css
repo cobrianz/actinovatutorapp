@@ -117,10 +117,12 @@
     @apply border-border outline-ring/50;
     direction: ltr !important;
   }
+
   body {
     @apply bg-background text-foreground;
     direction: ltr !important;
   }
+
   input,
   textarea,
   select {
@@ -130,13 +132,41 @@
 }
 
 @layer utilities {
-  .hide-scrollbar, .scrollbar-hide, .no-scrollbar {
+  .pb-safe-bottom {
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+
+  .pt-safe-top {
+    padding-top: env(safe-area-inset-top);
+  }
+
+  .mb-safe-bottom {
+    margin-bottom: env(safe-area-inset-bottom);
+  }
+
+  .mt-safe-top {
+    margin-top: env(safe-area-inset-top);
+  }
+
+  .bottom-safe-offset {
+    bottom: env(safe-area-inset-bottom);
+  }
+
+  .top-safe-offset {
+    top: env(safe-area-inset-top);
+  }
+
+  .hide-scrollbar,
+  .scrollbar-hide,
+  .no-scrollbar {
     scrollbar-width: none;
+
     &::-webkit-scrollbar {
       display: none;
       width: 0;
       height: 0;
     }
+
     -ms-overflow-style: none;
     overflow: -moz-scrollbars-none;
   }

@@ -39,9 +39,9 @@ export default function OnboardingSlider() {
     };
 
     return (
-        <div className="fixed inset-0 z-40 bg-white dark:bg-gray-950 flex flex-col items-center justify-between p-8">
+        <div className="fixed inset-0 z-40 bg-white dark:bg-gray-950 flex flex-col items-center justify-between p-8 pt-safe-top pb-safe-bottom">
             {/* Top Transitioning Dots */}
-            <div className="w-full flex justify-center gap-2 mt-12">
+            <div className="w-full flex justify-center gap-2 mt-4">
                 {onboardingScreens.map((_, index) => (
                     <div
                         key={index}
@@ -70,7 +70,7 @@ export default function OnboardingSlider() {
             </div>
 
             {/* Bottom Buttons */}
-            <div className="w-full flex flex-col gap-4 mb-12">
+            <div className="w-full flex flex-col gap-4 mb-4">
                 <button
                     onClick={handleNext}
                     className="w-full py-4 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white rounded-2xl font-bold text-lg shadow-xl shadow-blue-500/20 dark:shadow-none transition-all active:scale-95"

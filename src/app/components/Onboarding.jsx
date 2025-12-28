@@ -755,7 +755,7 @@ export default function Onboarding({ onComplete }) {
   const IconComponent = currentStepData.icon;
 
   return (
-    <div className="relative flex items-center justify-center min-h-screen p-4 overflow-hidden">
+    <div className="relative flex items-center justify-center min-h-screen p-4 overflow-hidden pt-safe-top pb-safe-bottom">
       {/* Decorative dots - Big */}
       <div className="absolute top-10 left-10 w-16 h-16 bg-blue-500/10 dark:bg-blue-400/10 rounded-full blur-xl"></div>
       <div className="absolute top-32 right-20 w-20 h-20 bg-purple-500/10 dark:bg-purple-400/10 rounded-full blur-xl"></div>

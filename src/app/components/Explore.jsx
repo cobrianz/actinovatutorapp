@@ -1220,7 +1220,7 @@ export default function Explore({ setHideNavs }) {
   };
 
   return (
-    <div className="max-w-6xl mx-auto px-6 py-8">
+    <div className="max-w-6xl mx-auto px-6 py-8 pb-32 pb-safe-bottom">
       {/* Header */}
       <div className="mb-12">
         <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100 mb-4">

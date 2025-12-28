@@ -91,6 +91,45 @@ export async function POST(request) {
         monthlyUsage = updatedUser?.monthlyUsage || 0;
       }
 
+      // ─── DUPLICATE CHECK (Pre-Limit) ───
+      if (!existingCardSetId) {
+        const existingDuplicate = await db.collection("cardSets").findOne({
+          userId: new ObjectId(userId),
+          topic: topic.trim().toLowerCase(),
+          difficulty,
+        });
+
+        if (existingDuplicate) {
+          console.log(`Returning existing card set for ${topic} (${difficulty})`);
+          return NextResponse.json({
+            success: true,
+            cardSetId: existingDuplicate._id.toString(),
+            title: existingDuplicate.title,
+            totalCards: existingDuplicate.totalCards,
+            difficulty,
+            isPremium,
+            canExportToAnki: true,
+            monthly: {
+              used: monthlyUsage, // Do not increment usage for existing
+              limit: isPremium
+                ? LIMITS.premium.monthlyGenerations
+                : LIMITS.free.monthlyGenerations,
+              resetsOn: usageResetDate.toLocaleDateString(),
+            },
+            features: [
+              "Spaced Repetition (SM-2)",
+              "Review History",
+              "Anki Export",
+              "Shareable Link",
+              "Bookmark & Progress",
+              "Auto-reset Monthly Limits",
+            ],
+            duplicate: true,
+            existing: true,
+          });
+        }
+      }
+
       const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
       const flashcardCount = await db.collection("cardSets").countDocuments({
         userId: new ObjectId(userId),
@@ -250,45 +289,9 @@ No markdown. Only JSON. Perfect for spaced repetition.`,
         lastAccessed: new Date(),
       };
     } else {
-      // Create new card set
+      // DUPLICATE CHECK moved to top for efficiency
       cardSetId = new ObjectId();
 
-      // Check for ANY existing duplicates for this user/topic/difficulty to prevent waste
-      const existingDuplicate = await db.collection("cardSets").findOne({
-        userId: userId ? new ObjectId(userId) : null,
-        topic: topic.trim().toLowerCase(),
-        difficulty,
-      });
-
-      if (existingDuplicate) {
-        console.log(`Returning existing card set for ${topic} (${difficulty})`);
-        return NextResponse.json({
-          success: true,
-          cardSetId: existingDuplicate._id.toString(),
-          title: existingDuplicate.title,
-          totalCards: existingDuplicate.totalCards,
-          difficulty,
-          isPremium,
-          canExportToAnki: true,
-          monthly: {
-            used: monthlyUsage, // Do not increment usage for existing
-            limit: isPremium
-              ? LIMITS.premium.monthlyGenerations
-              : LIMITS.free.monthlyGenerations,
-            resetsOn: usageResetDate.toLocaleDateString(),
-          },
-          features: [
-            "Spaced Repetition (SM-2)",
-            "Review History",
-            "Anki Export",
-            "Shareable Link",
-            "Bookmark & Progress",
-            "Auto-reset Monthly Limits",
-          ],
-          duplicate: true,
-          existing: true,
-        });
-      }
 
       cardSet = {
         _id: cardSetId,

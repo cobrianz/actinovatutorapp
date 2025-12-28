@@ -732,7 +732,7 @@ export default function Library({ setActiveContent, setHideNavs }) {
                       {course.badge && (
                         <span className="px-3 py-1 bg-white/20 rounded-full text-xs font-bold text-white">{course.badge}</span>
                       )}
-                       
+
                     </div>
                     <h4 className="font-black text-lg leading-tight mb-2 line-clamp-2">{course.title}</h4>
                     <p className="text-white/70 text-xs font-medium line-clamp-2 mb-4">{course.description}</p>
@@ -834,7 +834,7 @@ export default function Library({ setActiveContent, setHideNavs }) {
               hidden: { opacity: 0 },
               visible: { opacity: 1, transition: { staggerChildren: 0.1 } },
             }}
-            className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-4 sm:gap-6 pb-20"
+            className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-4 sm:gap-6 pb-32 pb-safe-bottom"
           >
             {[...courses].sort((a, b) => (pinnedCourses.has(b.id) ? 1 : 0) - (pinnedCourses.has(a.id) ? 1 : 0)).map((course, idx) => {
 
@@ -848,7 +848,7 @@ export default function Library({ setActiveContent, setHideNavs }) {
                       .trim()
                       .replace(/\s+/g, "-");
                     router.push(
-                      `/learn/content?topic=${encodeURIComponent(course.topic)}&format=${course.format}&difficulty=${course.difficulty || "beginner"}&originalTopic=${encodeURIComponent(course.topic)}`
+                      `/learn/content?topic=${encodeURIComponent(course.topic || course.title)}&format=${course.format}&difficulty=${course.difficulty || "beginner"}&originalTopic=${encodeURIComponent(course.topic || course.title)}&id=${course.id || course._id}`
                     );
                   }}
                   className="w-full rounded-xl p-6 relative overflow-hidden group cursor-pointer transition-transform hover:scale-[1.02] shadow-sm border border-black/5"

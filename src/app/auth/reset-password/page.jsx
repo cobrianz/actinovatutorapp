@@ -172,7 +172,7 @@ function ResetPasswordForm() {
   // Show error only if token validation failed
   if (token && tokenValid === false) {
     return (
-      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8 pt-safe-top pb-safe-bottom">
         <div className="max-w-md w-full space-y-8">
           <div className="text-center">
             <div className="mx-auto h-16 w-16 bg-red-100 dark:bg-red-900 rounded-full flex items-center justify-center">
@@ -204,7 +204,7 @@ function ResetPasswordForm() {
 
   if (passwordReset) {
     return (
-      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8 pt-safe-top pb-safe-bottom">
         <div className="max-w-md w-full space-y-8">
           <div className="text-center">
             <div className="mx-auto h-16 w-16 bg-green-100 dark:bg-green-900 rounded-full flex items-center justify-center">
@@ -233,7 +233,7 @@ function ResetPasswordForm() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8 pt-safe-top pb-safe-bottom">
       <div className="max-w-md w-full space-y-8">
         <div className="text-center">
           <div className="mx-auto h-16 w-16 bg-blue-100 dark:bg-blue-900 rounded-full flex items-center justify-center">
@@ -269,7 +269,7 @@ function ResetPasswordForm() {
                     required
                     value={formData.password}
                     onChange={handleChange}
-                    className="block w-full pl-10 pr-10 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
+                    className="block w-full pl-10 pr-10 py-3 text-base border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
                     placeholder="Enter your new password"
                   />
                   <button
@@ -305,7 +305,7 @@ function ResetPasswordForm() {
                     required
                     value={formData.confirmPassword}
                     onChange={handleChange}
-                    className="block w-full pl-10 pr-10 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
+                    className="block w-full pl-10 pr-10 py-3 text-base border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
                     placeholder="Confirm your new password"
                   />
                   <button

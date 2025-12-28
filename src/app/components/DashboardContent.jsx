@@ -266,7 +266,7 @@ export default function DashboardContent() {
     }, [user]);
 
     return (
-        <div className="px-5 py-6 space-y-8 pb-32">
+        <div className="px-5 py-6 space-y-8 pb-32 pb-safe-bottom">
 
             {/* 1. Banner with Exact Count */}
             <div className="bg-gradient-to-r from-blue-600 to-purple-600 rounded-xl p-6 text-white shadow-xl shadow-blue-500/20 relative overflow-hidden">
@@ -398,7 +398,7 @@ export default function DashboardContent() {
                                 whileHover={{ y: -4 }}
                                 onClick={() => {
                                     router.push(
-                                        `/learn/content?topic=${encodeURIComponent(course.topic)}&format=${course.format}&difficulty=${course.difficulty || "beginner"}&originalTopic=${encodeURIComponent(course.topic)}`
+                                        `/learn/content?topic=${encodeURIComponent(course.topic)}&format=${course.format}&difficulty=${course.difficulty || "beginner"}&originalTopic=${encodeURIComponent(course.topic)}&id=${course.id || course._id}`
                                     );
                                 }}
                                 className="group relative bg-white dark:bg-gray-800/50 backdrop-blur-sm border border-gray-200 dark:border-gray-700/50 rounded-xl overflow-hidden hover:border-gray-300 dark:hover:border-gray-600/70 transition-all duration-300 shadow-sm cursor-pointer"

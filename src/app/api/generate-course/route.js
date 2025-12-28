@@ -53,12 +53,13 @@ async function generateCourseHandler(request) {
       );
 
     const { db } = await connectToDatabase();
+    const normalizedTopic = topic.trim().toLowerCase();
 
-    // ─── USER & MONTHLY LIMITS (auto-reset) ───
-    let monthlyUsage = 0;
-    let resetDate = new Date();
+    // ─── USER & PLAN INFO (needed for duplicate check and limits) ───
     let user = null;
     let limits = getUserPlanLimits(null); // Default to free limits
+    let monthlyUsage = 0;
+    let resetDate = new Date();
 
     if (userId) {
       user = await db
@@ -66,12 +67,10 @@ async function generateCourseHandler(request) {
         .findOne({ _id: new ObjectId(userId) });
 
       // Determine user's plan
-      const isEnterprise = user?.subscription?.plan === "enterprise" && user?.subscription?.status === "active";
       isPremium =
         user?.isPremium ||
         ((user?.subscription?.plan === "pro" || user?.subscription?.plan === "enterprise") && user?.subscription?.status === "active");
 
-      const planName = getUserPlanName(user);
       limits = getUserPlanLimits(user);
 
       const now = new Date();
@@ -83,75 +82,15 @@ async function generateCourseHandler(request) {
       if (shouldReset) {
         monthlyUsage = 0;
         resetDate = new Date(now.getFullYear(), now.getMonth() + 1, 1);
-        await db
-          .collection("users")
-          .updateOne(
-            { _id: new ObjectId(userId) },
-            { $set: { monthlyUsage: 0, usageResetDate: resetDate } }
-          );
+        // Don't update DB yet, only if a new generation occurs
       } else {
         monthlyUsage = user?.monthlyUsage || 0;
         resetDate = resetOn;
       }
-
-      // Check global monthly generation limit
-      const monthlyLimit = limits.monthlyGenerations;
-      if (monthlyLimit !== -1 && monthlyUsage >= monthlyLimit) {
-        return NextResponse.json(
-          {
-            error: `Monthly generation limit reached (${monthlyLimit}). ${isEnterprise ? "Contact support." : "Upgrade for more!"}`,
-            used: monthlyUsage,
-            limit: monthlyLimit,
-            remaining: 0,
-            plan: planName,
-            isPremium,
-            isEnterprise,
-            resetsOn: resetDate.toLocaleDateString(),
-            upgrade: !isPremium && !isEnterprise,
-          },
-          { status: 429 }
-        );
-      }
-
-      const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
-
-      // Check specific course limit
-      if (format === "course") {
-        const courseCount = await db.collection("library").countDocuments({
-          userId: new ObjectId(userId),
-          format: "course",
-          createdAt: { $gte: startOfMonth }
-        });
-
-        const limitCheck = checkLimit(user, "courses", courseCount);
-
-        if (!limitCheck.allowed) {
-          return NextResponse.json(
-            {
-              error: `Monthly course limit reached (${limitCheck.limit}). ${isEnterprise ? "Contact support." : "Upgrade for more!"}`,
-              used: courseCount,
-              limit: limitCheck.limit,
-              remaining: limitCheck.remaining,
-              plan: planName,
-              isPremium,
-              isEnterprise,
-              resetsOn: resetDate.toLocaleDateString(),
-              upgrade: !isPremium && !isEnterprise,
-            },
-            { status: 429 }
-          );
-        }
-      }
     }
 
-    if (format === "quiz") {
-      return generateQuiz(topic, difficulty, questions, userId, db, monthlyUsage, resetDate, isPremium);
-    }
-
-    const normalizedTopic = topic.trim().toLowerCase();
-
-    // Enhanced Check: Find existing course with fuzzy matching logic
-    // 1. Fetch all user's course topics to check in code (more flexible than Mongo regex for complex cases)
+    // ─── DUPLICATE & SEMANTIC CHECK (Pre-Limit) ───
+    // 1. Fetch all user's course topics
     const userCourses = await db.collection("library")
       .find({
         userId: userId ? new ObjectId(userId) : null,
@@ -172,54 +111,67 @@ async function generateCourseHandler(request) {
 
     const targetNormalized = normalizeForMatch(topic);
 
-    // Find a match
+    // Find a match using fuzzy logic
     let existingCourse = userCourses.find(c => {
-      // 1. Check strict difficulty match first (unless upgrading)
       if (c.difficulty && c.difficulty !== difficulty) return false;
-
-      // 2. Check normalized topic similarity
       const cTopic = normalizeForMatch(c.topic || c.title || "");
       const cOriginal = normalizeForMatch(c.originalTopic || "");
-
-      // Direct inclusion check
       if (cTopic === targetNormalized || cOriginal === targetNormalized) return true;
-      if (cTopic.includes(targetNormalized) || targetNormalized.includes(cTopic)) return true; // "web dev" vs "full stack web dev"
-
-      // Token overlap check (for mixed order words like "web dev complete" vs "complete web dev")
+      if (cTopic.includes(targetNormalized) || targetNormalized.includes(cTopic)) return true;
       const targetTokens = new Set(targetNormalized.split(" ").filter(t => t.length > 2));
       const cTokens = new Set(cTopic.split(" ").filter(t => t.length > 2));
-
       if (targetTokens.size === 0 || cTokens.size === 0) return false;
-
       let matchCount = 0;
       targetTokens.forEach(t => { if (cTokens.has(t)) matchCount++; });
-
       const overlapRatio = matchCount / Math.min(targetTokens.size, cTokens.size);
-      return overlapRatio >= 0.75; // 75% token overlap required
+      return overlapRatio >= 0.75;
     });
 
-    // If match found in lightweight list, fetch full document
-    if (existingCourse) {
-      existingCourse = await db.collection("library").findOne({ _id: existingCourse._id });
+    // 2. If no fuzzy match, try AI-based semantic check (only if user has many courses)
+    if (!existingCourse && userCourses.length > 0 && userId) {
+      try {
+        const titles = userCourses.map(c => c.title || c.topic).join(", ");
+        const semanticCheck = await openai.chat.completions.create({
+          model: "gpt-4o-mini",
+          messages: [{
+            role: "user",
+            content: `Is the topic "${topic}" semantically the same as any of these existing course titles: [${titles}]? 
+            Return the title of the matching course if it's logically the same (e.g., "JS fundamentals" matches "JavaScript for Beginners"). 
+            Return "NONE" if it's truly a different topic.
+            Return ONLY the title or "NONE".`
+          }],
+          max_tokens: 20,
+          temperature: 0,
+        });
+
+        const match = semanticCheck.choices[0].message.content.trim();
+        if (match !== "NONE") {
+          existingCourse = userCourses.find(c => (c.title === match || c.topic === match));
+        }
+      } catch (e) {
+        console.error("Semantic check failed:", e);
+      }
     }
 
     if (existingCourse) {
-      // Scenario 1: Course exists, user is premium, but course is NOT premium. Upgrade it.
-      if (isPremium && !existingCourse.isPremium) {
-        // Regenerate as a premium course and update
-        // Regenerate as a premium course and update
-        // Since isPremium is true, 'limits' (fetched at top) contains premium limits
-        const { modules, lessonsPerModule, totalLessons } = limits;
+      // Fetch full document
+      const fullExisting = await db.collection("library").findOne({ _id: existingCourse._id });
+      if (fullExisting) {
+        // Scenario 1: Course exists, user is premium, but course is NOT premium. Upgrade it.
+        if (isPremium && !fullExisting.isPremium) {
+          // Regenerate as a premium course and update
+          // Since isPremium is true, 'limits' (fetched at top) contains premium limits
+          const { modules, lessonsPerModule, totalLessons } = limits;
 
-        const completion = await openai.chat.completions.create({
-          model: "gpt-4o-mini",
-          temperature: 0.7,
-          max_tokens: 8000,
-          response_format: { type: "json_object" },
-          messages: [
-            {
-              role: "system",
-              content: `Generate a complete course outline for "${topic}" at ${difficulty} level.
+          const completion = await openai.chat.completions.create({
+            model: "gpt-4o-mini",
+            temperature: 0.7,
+            max_tokens: 8000,
+            response_format: { type: "json_object" },
+            messages: [
+              {
+                role: "system",
+                content: `Generate a complete course outline for "${topic}" at ${difficulty} level.
 
 IMPORTANT: This course can be in ANY field - Technology, Business, Health, Creative Arts, Humanities, Science, Lifestyle, Professional Skills, Trades, Education, etc. 
 Create comprehensive, engaging content appropriate for the topic's field.
@@ -251,107 +203,192 @@ Return ONLY valid JSON with this exact structure:
   ]
 }
 Exactly ${modules} modules, exactly ${lessonsPerModule} lessons each. No content in lessons. Only titles.`,
-            },
-            {
-              role: "user",
-              content: `Create a ${difficulty} level course on "${topic}" with ${modules} modules and ${totalLessons} lessons total.`,
-            },
-          ],
-        });
-
-        let course;
-        try {
-          course = JSON.parse(completion.choices[0].message.content.trim());
-        } catch (e) {
-          console.warn("AI JSON failed, using fallback for upgrade");
-          course = fallbackCourse(topic, difficulty, modules, lessonsPerModule);
-        }
-
-        if (
-          !course.modules ||
-          course.modules.length !== modules ||
-          course.modules.some(
-            (m) => !m.lessons || m.lessons.length !== lessonsPerModule
-          )
-        ) {
-          course = fallbackCourse(topic, difficulty, modules, lessonsPerModule);
-        }
-
-        const updatedCourseDoc = {
-          title: course.title,
-          totalModules: course.totalModules,
-          totalLessons: course.totalLessons,
-          modules: course.modules.map((m, i) => ({
-            ...m,
-            id: i + 1,
-            lessons: m.lessons.map((l, j) => ({
-              ...l,
-              id: `${i + 1}-${j + 1}`,
-              content: "",
-              completed: false,
-              srs: {
-                interval: 1,
-                repetitions: 0,
-                ease: 2.5,
-                dueDate: new Date().toISOString(),
               },
-            })),
-          })),
-          isPremium: true, // Mark as premium
-          lastAccessed: new Date(),
-        };
+              {
+                role: "user",
+                content: `Create a ${difficulty} level course on "${topic}" with ${modules} modules and ${totalLessons} lessons total.`,
+              },
+            ],
+          });
 
-        await db
-          .collection("library")
-          .updateOne({ _id: existingCourse._id }, { $set: updatedCourseDoc });
-
-        const finalCourse = { ...existingCourse, ...updatedCourseDoc };
-
-        // Increment usage for upgrade
-        if (userId) {
+          let course;
           try {
-            await db.collection("users").updateOne(
-              { _id: new ObjectId(userId) },
-              { $inc: { monthlyUsage: 1 } }
-            );
-            monthlyUsage++; // Update local variable for response
+            course = JSON.parse(completion.choices[0].message.content.trim());
           } catch (e) {
-            console.error("Failed to increment monthly usage for upgrade", e);
+            console.warn("AI JSON failed, using fallback for upgrade");
+            course = fallbackCourse(topic, difficulty, modules, lessonsPerModule);
           }
+
+          if (
+            !course.modules ||
+            course.modules.length !== modules ||
+            course.modules.some(
+              (m) => !m.lessons || m.lessons.length !== lessonsPerModule
+            )
+          ) {
+            course = fallbackCourse(topic, difficulty, modules, lessonsPerModule);
+          }
+
+          const updatedCourseDoc = {
+            title: course.title,
+            totalModules: course.totalModules,
+            totalLessons: course.totalLessons,
+            modules: course.modules.map((m, i) => ({
+              ...m,
+              id: i + 1,
+              lessons: m.lessons.map((l, j) => ({
+                ...l,
+                id: `${i + 1}-${j + 1}`,
+                content: "",
+                completed: false,
+                srs: {
+                  interval: 1,
+                  repetitions: 0,
+                  ease: 2.5,
+                  dueDate: new Date().toISOString(),
+                },
+              })),
+            })),
+            isPremium: true, // Mark as premium
+            lastAccessed: new Date(),
+          };
+
+          await db
+            .collection("library")
+            .updateOne({ _id: fullExisting._id }, { $set: updatedCourseDoc });
+
+          const finalCourse = { ...fullExisting, ...updatedCourseDoc };
+
+          // Increment usage for upgrade
+          if (userId) {
+            try {
+              await db.collection("users").updateOne(
+                { _id: new ObjectId(userId) },
+                { $inc: { monthlyUsage: 1 } }
+              );
+              monthlyUsage++; // Update local variable for response
+            } catch (e) {
+              console.error("Failed to increment monthly usage for upgrade", e);
+            }
+          }
+
+          return NextResponse.json({
+            success: true,
+            courseId: finalCourse._id.toString(),
+            content: {
+              title: finalCourse.title,
+              level: difficulty,
+              totalModules: finalCourse.totalModules,
+              totalLessons: finalCourse.totalLessons,
+              modules: finalCourse.modules,
+            },
+            isExisting: true,
+            wasUpgraded: true,
+            message: "Course upgraded to premium version!",
+          });
         }
 
+        // Scenario 2: Course exists, no upgrade needed. Return existing course.
         return NextResponse.json({
           success: true,
-          courseId: finalCourse._id.toString(),
+          courseId: fullExisting._id.toString(),
           content: {
-            title: finalCourse.title,
-            level: difficulty,
-            totalModules: finalCourse.totalModules,
-            totalLessons: finalCourse.totalLessons,
-            modules: finalCourse.modules,
+            title: fullExisting.title,
+            level: fullExisting.level || difficulty,
+            totalModules: fullExisting.totalModules,
+            totalLessons: fullExisting.totalLessons,
+            modules: fullExisting.modules,
           },
           isExisting: true,
-          wasUpgraded: true,
-          message: "Course upgraded to premium version!",
+          message: "Course already exists. Loaded from library.",
         });
       }
-
-      // Scenario 2: Course exists, no upgrade needed. Return existing course.
-      return NextResponse.json({
-        success: true,
-        courseId: existingCourse._id.toString(),
-        content: {
-          title: existingCourse.title,
-          level: difficulty,
-          totalModules: existingCourse.totalModules,
-          totalLessons: existingCourse.totalLessons,
-          modules: existingCourse.modules,
-        },
-        isExisting: true,
-        wasUpgraded: false,
-        message: "Course already exists. Loaded from library.",
-      });
     }
+
+    // ─── MONTHLY LIMITS (Only for NEW generation) ───
+    const isEnterprise = user?.subscription?.plan === "enterprise" && user?.subscription?.status === "active";
+    const planName = getUserPlanName(user);
+
+    if (userId) {
+      // Check global monthly generation limit
+      const monthlyLimit = limits.monthlyGenerations;
+      if (monthlyLimit !== -1 && monthlyUsage >= monthlyLimit) {
+        return NextResponse.json(
+          {
+            error: `Monthly generation limit reached (${monthlyLimit}). ${isEnterprise ? "Contact support." : "Upgrade for more!"}`,
+            used: monthlyUsage,
+            limit: monthlyLimit,
+            remaining: 0,
+            plan: planName,
+            isPremium,
+            isEnterprise,
+            resetsOn: resetDate.toLocaleDateString(),
+            upgrade: !isPremium && !isEnterprise,
+          },
+          { status: 429 }
+        );
+      }
+
+      const startOfMonth = new Date(new Date().getFullYear(), new Date().getMonth(), 1);
+
+      // Check specific course limit
+      if (format === "course") {
+        const courseCount = await db.collection("library").countDocuments({
+          userId: new ObjectId(userId),
+          format: "course",
+          createdAt: { $gte: startOfMonth }
+        });
+
+        const limitCheck = checkLimit(user, "courses", courseCount);
+
+        if (!limitCheck.allowed) {
+          return NextResponse.json(
+            {
+              error: `Monthly course limit reached (${limitCheck.limit}). ${isEnterprise ? "Contact support." : "Upgrade for more!"}`,
+              used: courseCount,
+              limit: limitCheck.limit,
+              remaining: limitCheck.remaining,
+              plan: planName,
+              isPremium,
+              isEnterprise,
+              resetsOn: resetDate.toLocaleDateString(),
+              upgrade: !isPremium && !isEnterprise,
+            },
+            { status: 429 }
+          );
+        }
+      } else if (format === "quiz") {
+        const quizCount = await db.collection("library").countDocuments({
+          userId: new ObjectId(userId),
+          format: "quiz",
+          createdAt: { $gte: startOfMonth }
+        });
+
+        const limitCheck = checkLimit(user, "quizzes", quizCount);
+
+        if (!limitCheck.allowed) {
+          return NextResponse.json(
+            {
+              error: `Monthly quiz limit reached (${limitCheck.limit}). ${isEnterprise ? "Contact support." : "Upgrade for more!"}`,
+              used: quizCount,
+              limit: limitCheck.limit,
+              remaining: limitCheck.remaining,
+              plan: planName,
+              isPremium,
+              isEnterprise,
+              resetsOn: resetDate.toLocaleDateString(),
+              upgrade: !isPremium && !isEnterprise,
+            },
+            { status: 429 }
+          );
+        }
+      }
+    }
+
+    if (format === "quiz") {
+      return generateQuiz(topic, difficulty, questions, userId, db, monthlyUsage, resetDate, isPremium);
+    }
+
 
     // ─── GENERATE NEW COURSE ───
     // User and limits are already fetched at the top of the function

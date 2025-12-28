@@ -1,0 +1,1 @@
+"use strict";(self.webpackChunk_N_E=self.webpackChunk_N_E||[]).push([[2209],{2209:(r,s,t)=>{t.r(s),t.d(s,{default:()=>u});var e=t(95155),o=t(66609);function u(){return(0,e.jsx)(o.Toaster,{position:"top-right",richColors:!0})}}}]);

@@ -48,6 +48,7 @@ export default function LearnContent() {
   const existingQuizId = searchParams.get("existing");
   // Use original topic if provided, otherwise use the URL topic
   const actualTopic = originalTopic ? decodeURIComponent(originalTopic) : topic;
+  const courseIdParam = searchParams.get("id") || searchParams.get("courseId");
   const [activeView, setActiveView] = useState("outline");
   const [completedLessons, setCompletedLessons] = useState(new Set());
   const [expandedModules, setExpandedModules] = useState(new Set([1]));
@@ -928,8 +929,31 @@ export default function LearnContent() {
       cleanupLocalStorage();
 
       // First, try to get from library (saves tokens!)
+      if (courseIdParam) {
+        try {
+          const res = await authenticatedFetch(`/api/library?id=${courseIdParam}`, {
+            headers: { "x-user-id": user?._id || user?.id || "" },
+          });
+          if (res.ok) {
+            const data = await res.json();
+            const existingCourse = data.item;
+            if (existingCourse) {
+              const courseData = existingCourse.courseData || existingCourse;
+              if ((courseData.modules && courseData.modules.length > 0) || (courseData.topics && courseData.topics.length > 0)) {
+                console.log("✅ Found exact course in library by ID");
+                if (isMounted) {
+                  setCourseData({ ...courseData, _id: existingCourse._id });
+                  setIsLoading(false);
+                  return;
+                }
+              }
+            }
+          }
+        } catch (e) { console.error("ID fetch failed, falling back to topic search", e); }
+      }
+
+      // Search specifically for this topic to avoid pagination issues
       try {
-        // Search specifically for this topic to avoid pagination issues
         const libraryResponse = await authenticatedFetch(`/api/library?search=${encodeURIComponent(actualTopic)}&limit=50`, {
           headers: {
             "x-user-id": user?._id || user?.id || user?.idString || "",
@@ -1491,8 +1515,7 @@ export default function LearnContent() {
 
   return (
     <div
-      className="h-screen flex flex-col bg-gray-50 dark:bg-gray-900 overflow-hidden"
-      style={{ paddingTop: 'env(safe-area-inset-top)' }}
+      className="h-screen flex flex-col bg-gray-50 dark:bg-gray-900 overflow-hidden pt-safe-top"
       onTouchStart={onTouchStart}
       onTouchMove={onTouchMove}
       onTouchEnd={onTouchEnd}
@@ -1517,7 +1540,7 @@ export default function LearnContent() {
         {/* Left Sidebar - Course Navigation */}
         <div
           className={`${isSidebarOpen ? "translate-x-0" : "-translate-x-full"
-            } w-full lg:w-80 bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 flex flex-col absolute z-40 transition-transform duration-300 max-w-[90vw] md:max-w-[400px] h-full overflow-y-auto hide-scrollbar shadow-xl`}
+            } w-full lg:w-80 bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 flex flex-col absolute z-40 transition-transform duration-300 max-w-[90vw] md:max-w-[400px] h-full overflow-y-auto hide-scrollbar shadow-xl pb-32 pb-safe-bottom`}
         >
 
           <div className="p-4 lg:p-6 border-b border-gray-200 dark:border-gray-700">
@@ -1679,7 +1702,7 @@ export default function LearnContent() {
             ref={contentRef}
             className="flex-1 overflow-y-auto hide-scrollbar bg-white dark:bg-gray-800"
           >
-            <div className={`mx-auto p-4 sm:p-6 lg:p-8 pb-24 transition-all duration-300 ${isRightPanelOpen && isSidebarOpen ? "max-w-4xl" : "max-w-5xl"}`}>
+            <div className={`mx-auto p-4 sm:p-6 lg:p-8 pb-40 pb-safe-bottom transition-all duration-300 ${isRightPanelOpen && isSidebarOpen ? "max-w-4xl" : "max-w-5xl"}`}>
               {lessonContentLoading ? (
                 <div className="text-center py-12">
                   <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>

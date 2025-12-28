@@ -285,7 +285,7 @@ export default function Flashcards({ cardData }) {
   }
 
   return (
-    <section className="px-4 py-6 sm:px-6 lg:px-8 bg-white dark:bg-slate-900 min-h-screen">
+    <section className="px-4 py-6 sm:px-6 lg:px-8 bg-white dark:bg-slate-900 min-h-screen pb-32 pb-safe-bottom">
       <div className="mx-auto max-w-7xl">
         {/* Centered Title and Description */}
         <div className="mb-6">

@@ -233,8 +233,7 @@ const QuizInterface = ({ quizData, topic, onBack, existingQuizId }) => {
 
   return (
     <div
-      className={`p-4 sm:p-8 lg:p-12 bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-white min-h-screen transition-opacity duration-700 ${loaded ? "opacity-100" : "opacity-0"}`}
-      style={{ paddingTop: 'calc(env(safe-area-inset-top) + 1rem)' }}
+      className={`p-4 sm:p-8 lg:p-12 bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-white min-h-screen transition-opacity duration-700 pb-32 pb-safe-bottom pt-safe-top ${loaded ? "opacity-100" : "opacity-0"}`}
     >
       <div className="max-w-3xl mx-auto">
         {onBack ? (

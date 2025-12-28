@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import {
   User,
@@ -58,6 +58,7 @@ export default function ProfileContent() {
   const { user, refreshToken, logout } = useAuth();
   const { theme, setThemePreference } = useTheme();
   const [activeTab, setActiveTab] = useState("my-profile");
+  const tabContentRef = useRef(null);
   const [loading, setLoading] = useState(true);
   const [updating, setUpdating] = useState(false);
   const [error, setError] = useState(null);
@@ -109,6 +110,12 @@ export default function ProfileContent() {
       }));
     }
   }, [profileData]);
+
+  useEffect(() => {
+    if (activeTab && tabContentRef.current) {
+      tabContentRef.current.scrollIntoView({ behavior: "smooth", block: "start" });
+    }
+  }, [activeTab]);
 
   const fetchProfileData = async () => {
     try {
@@ -445,7 +452,10 @@ export default function ProfileContent() {
         </div>
 
         {/* Tab Detail Content */}
-        <div className={`mt-8 p-6 rounded-3xl ${theme === 'dark' ? "bg-gray-900 border border-gray-800" : "bg-white border border-gray-100"}`}>
+        <div 
+          ref={tabContentRef}
+          className={`mt-8 p-6 rounded-3xl scroll-mt-24 ${theme === 'dark' ? "bg-gray-900 border border-gray-800" : "bg-white border border-gray-100"}`}
+        >
           {activeTab === "my-profile" && (
             <div className="space-y-6">
               <h2 className="text-lg font-black uppercase tracking-widest mb-4">Account Usage</h2>
