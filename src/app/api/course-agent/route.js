@@ -319,9 +319,9 @@ Structure the lesson as follows:
     - *Detailed answer in italics*
   (Each question must be a top-level bullet point, and the answer must be a nested bullet point under it).
 - ## Key Takeaways: A synthesized summary in bulleted form, emphasizing core insights.
-- ## Further Reading and Resources: Curated list of 5-8 academic sources (books, papers, journals) with brief annotations.
+- ## Further Reading and Resources: Curated list of 5-8 academic sources (books, papers, journals) with brief annotations, provided as a standard bulleted list.
 
-IMPORTANT: Be exhaustive—elaborate on every sub-topic with nuance and depth. Avoid brevity; aim for comprehensive, graduate-level discourse. Use proper Markdown throughout for a polished, professional appearance.`;
+IMPORTANT: Be exhaustive—elaborate on every sub-topic with nuance and depth. Avoid brevity; aim for comprehensive, graduate-level discourse. Use proper Markdown throughout for a polished, professional appearance. Always wrap mermaid node labels in quotes if they contain special characters.`;
 
   // === Use Faster Model for Better Speed ===
   const model = isPremium ? "gpt-4o" : "gpt-4o-mini";

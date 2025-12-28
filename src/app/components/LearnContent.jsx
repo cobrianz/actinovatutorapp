@@ -1010,8 +1010,8 @@ export default function LearnContent() {
     let currentSection = "";
 
     html = lines.map((line) => {
-      // Track current section by looking for h1/h2 tags
-      const sectionMatch = line.match(/<h[12][^>]*>(.*?)<\/h[12]>/i);
+      // Track current section by looking for h1/h2/h3 tags
+      const sectionMatch = line.match(/<h[123][^>]*>(.*?)<\/h[123]>/i);
       if (sectionMatch) {
         currentSection = sectionMatch[1].replace(/<[^>]*>/g, '').trim();
       }
@@ -1019,13 +1019,10 @@ export default function LearnContent() {
       const isOrdered = /^\s*\d+\.\s+/.test(line);
       const isUnordered = /^\s*[-•*]\s+/.test(line);
 
-      const isSpecialSection = currentSection.toLowerCase().includes("practice exercise") ||
-        currentSection.toLowerCase().includes("further reading") ||
-        currentSection.toLowerCase().includes("resources");
+      const isSpecialSection = currentSection.toLowerCase().includes("practice exercise");
 
       if (isOrdered) {
-        // Found numbered item
-        const content = line.replace(/^\s*\d+\.\s+/, "");
+        const content = line.replace(/^\s*\d+\.\s+/, "").trim();
 
         // If we are in a Special Section (Exercise/Reading), treat numbers as ticks too
         if (isSpecialSection && !inOrderedList) {
@@ -1048,11 +1045,11 @@ export default function LearnContent() {
         // If not already in ordered list, start one
         if (!inOrderedList) {
           inOrderedList = true;
-          return prefix + '<ol class="list-decimal list-inside mb-4 space-y-2 text-gray-700 dark:text-gray-300 ml-4"><li class="mb-2">' + content + "</li>";
+          return prefix + '<ol class="list-decimal list-outside mb-6 space-y-4 text-gray-700 dark:text-gray-300 ml-8"><li class="pt-2">' + content + "</li>";
         }
 
         // Already in ordered list
-        return prefix + '<li class="mb-2">' + content + "</li>";
+        return prefix + '<li class="pt-2">' + content + "</li>";
       }
       else if (isUnordered) {
         // Found bullet item
@@ -1061,7 +1058,7 @@ export default function LearnContent() {
 
         // If we are in an ordered list, we want to render this bullet *inside* it
         if (inOrderedList) {
-          return '<ul class="list-disc list-inside ml-6 text-gray-600 dark:text-gray-400"><li class="mb-1">' + content + "</li></ul>";
+          return '<ul class="list-disc list-inside ml-6 text-gray-600 dark:text-gray-400"><li class="pt-1">' + content + "</li></ul>";
         }
 
         // Standard UL handling with specific styling for Exercises/Resources (Tick + Tab)
@@ -1074,7 +1071,7 @@ export default function LearnContent() {
                 : `<li class="flex items-start gap-3"><span class="text-black dark:text-white font-bold mt-1">✔</span><span class="font-medium">${content}</span></li>`
               );
           } else {
-            return '<ul class="list-disc list-inside mb-4 space-y-2 text-gray-700 dark:text-gray-300 ml-4"><li class="mb-2">' + content + "</li>";
+            return '<ul class="list-disc list-outside mb-6 space-y-4 text-gray-700 dark:text-gray-300 ml-8"><li class="pt-2">' + content + "</li>";
           }
         }
 
@@ -1083,12 +1080,19 @@ export default function LearnContent() {
             ? `<li class="ml-10 py-1 border-l-2 border-indigo-500/20 pl-4 italic text-gray-600 dark:text-gray-400">${content}</li>`
             : `<li class="flex items-start gap-3 pt-2"><span class="text-black dark:text-white font-bold mt-1">✔</span><span class="font-medium">${content}</span></li>`;
         } else {
-          return '<li class="mb-2">' + content + "</li>";
+          return '<li class="pt-2">' + content + "</li>";
         }
       }
       else {
         // Neither list type - generic text or blank
         let prefix = "";
+
+        // CUSTOM: If we are in a special section (Exercise/Reading) and the line is INDENTED,
+        // treat it as a continuation of the previous list item (the "tab")
+        if (inUnorderedList && isSpecialSection && /^\s{2,}/.test(line)) {
+          return `<li class="ml-10 py-1 border-l-2 border-indigo-500/20 pl-4 italic text-gray-600 dark:text-gray-400">${line.trim()}</li>`;
+        }
+
         if (inUnorderedList) {
           inUnorderedList = false;
           prefix += "</ul>";

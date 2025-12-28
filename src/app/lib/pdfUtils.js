@@ -92,10 +92,20 @@ export const downloadCourseAsPDF = async (data, mode = "course") => {
     // Helper to render Mermaid to PNG
     const renderMermaidToPng = async (code) => {
         try {
+            // Pre-process code to quote labels containing problematic characters which cause parse errors
+            const processedCode = code.replace(/\[([\s\S]*?)\]/g, (match, label) => {
+                // If label contains (), "", or comma, wrap in double quotes and escape internal quotes
+                if (/[()",]/.test(label)) {
+                    // Double-quote and escape internal quotes by doubling them (Mermaid syntax)
+                    return `["${label.trim().replace(/"/g, '""')}"]`;
+                }
+                return match;
+            });
+
             const id = `mermaid-pdf-${Date.now()}-${Math.floor(Math.random() * 10000)}`;
             // Ensure mermaid is initialized
             mermaid.initialize({ startOnLoad: false, theme: 'default' });
-            const { svg } = await mermaid.render(id, code);
+            const { svg } = await mermaid.render(id, processedCode);
 
             return new Promise((resolve, reject) => {
                 const img = new Image();
