@@ -360,17 +360,24 @@ export const downloadCourseAsPDF = async (data, mode = "course") => {
                 throw new Error("Capacitor plugins not available");
             }
 
+            // Request notification permissions
+            try {
+                await LocalNotifications.requestPermissions();
+            } catch (e) {
+                console.warn("Notification permissions denied", e);
+            }
+
             const result = await Filesystem.writeFile({
                 path: fileName,
                 data: pdfBase64,
-                directory: Directory.Cache,
+                directory: Directory.Documents,
             });
 
             // Schedule notification
             await LocalNotifications.schedule({
                 notifications: [{
                     title: 'Download Complete',
-                    body: `${data.title} has been saved to your device.`,
+                    body: `${data.title} saved to Documents. Tap to view.`,
                     id: Math.floor(Math.random() * 100000),
                     schedule: { at: new Date(Date.now() + 100) },
                     sound: null,
@@ -384,7 +391,7 @@ export const downloadCourseAsPDF = async (data, mode = "course") => {
                 title: 'Actinova PDF Download',
                 text: `Personalized material for ${data.title}`,
                 url: result.uri,
-                dialogTitle: 'Open PDF',
+                dialogTitle: 'Save or Open PDF',
             });
         } catch (error) {
             console.error('Capacitor PDF error:', error);
@@ -512,17 +519,24 @@ export const downloadQuizAsPDF = async (data) => {
                 throw new Error("Capacitor plugins not available");
             }
 
+            // Request notification permissions
+            try {
+                await LocalNotifications.requestPermissions();
+            } catch (e) {
+                console.warn("Notification permissions denied", e);
+            }
+
             const result = await Filesystem.writeFile({
                 path: fileName,
                 data: pdfBase64,
-                directory: Directory.Cache,
+                directory: Directory.Documents,
             });
 
             // Schedule notification
             await LocalNotifications.schedule({
                 notifications: [{
                     title: 'Download Complete',
-                    body: `Assessment for ${data.title} has been saved.`,
+                    body: `Assessment for ${data.title} saved to Documents.`,
                     id: Math.floor(Math.random() * 100000),
                     schedule: { at: new Date(Date.now() + 100) },
                     sound: null,
@@ -536,7 +550,7 @@ export const downloadQuizAsPDF = async (data) => {
                 title: 'Actinova Assessment Download',
                 text: `Assessment paper for ${data.title}`,
                 url: result.uri,
-                dialogTitle: 'Open Assessment PDF',
+                dialogTitle: 'Save or Open PDF',
             });
         } catch (error) {
             console.error('Capacitor PDF error:', error);
@@ -649,16 +663,23 @@ export const downloadReceiptAsPDF = async (data) => {
                 throw new Error("Capacitor plugins not available");
             }
 
+            // Request notification permissions
+            try {
+                await LocalNotifications.requestPermissions();
+            } catch (e) {
+                console.warn("Notification permissions denied", e);
+            }
+
             const result = await Filesystem.writeFile({
                 path: fileName,
                 data: pdfBase64,
-                directory: Directory.Cache,
+                directory: Directory.Documents,
             });
 
             await LocalNotifications.schedule({
                 notifications: [{
                     title: 'Receipt Downloaded',
-                    body: `Receipt for ${data.plan || "Subscription"} saved.`,
+                    body: `Receipt for ${data.plan || "Subscription"} saved to Documents.`,
                     id: Math.floor(Math.random() * 100000),
                     schedule: { at: new Date(Date.now() + 100) },
                     sound: null,
@@ -672,7 +693,7 @@ export const downloadReceiptAsPDF = async (data) => {
                 title: 'Actinova Receipt',
                 text: `Receipt for ${data.plan || "Subscription"}`,
                 url: result.uri,
-                dialogTitle: 'Open Receipt',
+                dialogTitle: 'Save or Open Receipt',
             });
         } catch (error) {
             console.error('Capacitor PDF error:', error);
