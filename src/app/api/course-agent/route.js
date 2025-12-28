@@ -220,10 +220,28 @@ async function handleGenerateLesson(body, userId, db) {
     );
   }
 
-  const isPremium = await getPremiumStatus(db, userId);
-  const wordCount = isPremium ? "2500–3000" : "1500–2000";
+  // === Determine User Tier ===
+  let userTier = "free";
+  if (userId) {
+    const user = await db.collection("users").findOne(
+      { _id: new ObjectId(userId) },
+      { projection: { isPremium: 1, "subscription.plan": 1, "subscription.status": 1 } }
+    );
 
-  // === Check Cache First ===
+    if (user?.subscription?.plan === "enterprise" && user?.subscription?.status === "active") {
+      userTier = "enterprise";
+    } else if (
+      user?.isPremium ||
+      (user?.subscription?.plan === "pro" && user?.subscription?.status === "active")
+    ) {
+      userTier = "pro";
+    }
+  }
+
+  const isPremium = userTier !== "free";
+  const wordCount = isPremium ? "3000–4000" : "2000–3000";
+
+  // === Check Cache First (Return immediately if cached) ===
   if (courseId && ObjectId.isValid(courseId)) {
     const course = await db.collection("library").findOne(
       { _id: new ObjectId(courseId) },
@@ -237,105 +255,156 @@ async function handleGenerateLesson(body, userId, db) {
     const cachedContent =
       course?.modules?.[moduleId - 1]?.lessons?.[lessonIndex]?.content;
 
-    if (
-      cachedContent &&
-      cachedContent.length > 500 &&
-      !cachedContent.includes("coming soon")
-    ) {
-      console.log("Cache hit for lesson:", lessonTitle);
-      return NextResponse.json({ content: cachedContent, cached: true });
+    if (cachedContent && cachedContent.length > 500 && !cachedContent.includes("coming soon")) {
+      return NextResponse.json({
+        content: cachedContent,
+        cached: true,
+        stream: false
+      });
     }
   }
 
+  // === Tier-Specific Visual Instructions ===
+  let visualInstructions = "";
+
+  if (userTier === "enterprise") {
+    visualInstructions = `- **Visual Content (ENTERPRISE TIER)**:
+    - Use visuals sparingly—only where absolutely necessary to clarify complex spatial or structural concepts that text alone cannot adequately convey (e.g., cellular organelles like mitochondria, molecular structures, or biological processes like mitosis). Avoid for abstract ideas, historical events, or simple explanations.
+    - For simple flowcharts or processes: Use Mermaid.js code blocks (\`\`\`mermaid\n...\n\`\`\`). Use \`graph TD\` or \`graph LR\`.
+    - For standard STEM diagrams (e.g., mitochondrion, animal cell, plant cell, neuron, DNA, heart) where visuals are critically needed: Output \`[Wikipedia Diagram: topic]\`. Example: \`[Wikipedia Diagram: mitochondrion]\` or \`[Wikipedia Diagram: animal cell]\`.
+    - For custom/specialized diagrams not on Wikipedia and only if essential: Output \`[DALLE_IMAGE: detailed prompt]\`. Example: \`[DALLE_IMAGE: A mitochondrion during the fission process with labeled stages]\`.
+    - For comparisons: Use detailed paragraph explanations with clear contrasts.
+    - **NO tables** - use rich text descriptions instead.
+    - **NEVER use ASCII art.**
+    - **Always explain fully in text first** before any diagram suggestion, and justify why the visual is needed.`;
+  } else if (userTier === "pro") {
+    visualInstructions = `- **Visual Content (PRO TIER)**:
+    - Use visuals sparingly—only for essential processes where flowcharts add critical value (e.g., algorithms or cycles).
+    - For flowcharts or processes: Use Mermaid.js code blocks (\`\`\`mermaid\n...\n\`\`\`). Use \`graph TD\` or \`graph LR\`.
+    - For comparisons: Use detailed paragraph explanations with clear contrasts.
+    - **NO tables, NO DALL·E images** (Enterprise features).
+    - **NEVER use ASCII art.**`;
+  } else {
+    visualInstructions = `- **Visual Content (FREE TIER)**:
+    - Use clear, detailed text explanations for all concepts.
+    - For comparisons, use numbered or bulleted lists with thorough explanations.
+    - **NO tables, NO diagrams, NO Mermaid** (Premium features).
+    - Focus on comprehensive written descriptions.`;
+  }
+
   // === Generate New Content ===
-  const promptBase = `Write an extremely detailed, high-quality educational lesson in Markdown.
-The lesson should be comprehensive, in-depth, and around 1000-1500 words minimum no tables use tables instead use lists incase of comparisons.
+  const promptBase = `Write an exhaustive, Harvard-level academic lesson in beautifully formatted Markdown.
+The lesson should be scholarly, professional, and intellectually rigorous, akin to a graduate seminar at Harvard University. Aim for a minimum of 2000-3000 words, with deep critical analysis, historical context, and interdisciplinary connections.
+
+**CRITICAL FORMATTING AND QUALITY REQUIREMENTS**:
+- Adopt a formal, academic tone: Precise, objective, and evidence-based, as if authored by a tenured professor.
+- Provide beautifully structured content: Use hierarchical headers (## for main sections, ### for subsections, #### for sub-subsections) for logical flow.
+- Ensure well-explained concepts: Dive deeply into each idea with layered explanations, building from fundamentals to advanced insights. Use analogies, real-world applications, and critical evaluations (e.g., strengths, limitations, debates in the field).
+- Break down complex topics: Employ step-by-step breakdowns, with transitional phrases for seamless readability.
+- Incorporate scholarly elements: Include inline citations (e.g., (Smith, 2020)) where relevant, historical overviews, and forward-looking implications.
+- Enhance readability: Use **bold** for key terms, *italics* for emphasis, numbered/bulleted lists for enumerations, > blockquotes for key quotes or definitions, and code blocks for examples.
+- **NEVER use tables** - express all comparisons, data, or lists in richly detailed paragraph form or bulleted/numbered lists with full explanations.
 
 Topic: ${courseTopic}
 Module: ${moduleTitle || "Core Concepts"}
 Lesson: ${lessonTitle}
 Difficulty: ${difficulty}
 Target length: ${wordCount} words
-Access tier: ${isPremium ? "Premium" : "Free"}
+Access tier: ${userTier.toUpperCase()}
 
-Include:
-- Engaging and thorough introduction
-- Clear, specific learning objectives
-- In-depth step-by-step explanations with multiple examples
-- Industry best practices and common pitfalls
-- Detailed code examples (if relevant) with line-by-line explanations
-- Real-world analogies and visuals (describe in detail)
-- 3-5 Practice exercises with solutions
-- Comprehensive Key takeaways
-- A specific "Further Reading" section with suggested topics
+Structure the lesson as follows:
+- ## Introduction: An engaging, scholarly overview with thesis-like statement and relevance to the field.
+- ## Learning Objectives: 4-6 specific, measurable objectives in a bulleted list.
+- ## Core Concepts: In-depth subsections with exhaustive explanations, multiple examples, analogies, and critical analysis.
+- ## Historical and Theoretical Context: Discuss evolution of the topic, key scholars, and debates.
+- ## Applications and Case Studies: Real-world examples with detailed breakdowns and implications.
+${visualInstructions}
+- ## Common Pitfalls and Best Practices: Thorough analysis of errors and professional strategies.
+- ## Practice Exercises: 4-6 challenging exercises with detailed, worked solutions and explanations.
+- ## Key Takeaways: A synthesized summary in bulleted form, emphasizing core insights.
+- ## Further Reading and Resources: Curated list of 5-8 academic sources (books, papers, journals) with brief annotations.
 
-Use proper Markdown: ##, ###, **bold**, *italics*, \`\`\`code\`\`\`, > quotes, lists.
-IMPORTANT: Avoid being concise. Dive deep into every sub-topic.`;
+IMPORTANT: Be exhaustive—elaborate on every sub-topic with nuance and depth. Avoid brevity; aim for comprehensive, graduate-level discourse. Use proper Markdown throughout for a polished, professional appearance.`;
+
+  // === Use Faster Model for Better Speed ===
+  const model = isPremium ? "gpt-4o" : "gpt-4o-mini";
 
   const completion = await openai.chat.completions.create({
-    model: "gpt-4o-mini",
+    model,
     messages: [
       {
         role: "system",
-        content:
-          "You are an elite academic educator writing exhaustive, high-value lesson content in Markdown. You never skip details.",
+        content: "You are an elite Harvard professor crafting rigorous, beautifully articulated academic lessons in Markdown. Prioritize depth, clarity, and scholarly excellence—never skim or simplify unduly.",
       },
       { role: "user", content: promptBase },
     ],
-    temperature: 0.75,
-    max_tokens: isPremium ? 4000 : 3000,
+    temperature: 0.65,
+    max_tokens: isPremium ? 4096 : 3500,
+    stream: true,
   });
 
-  let content = completion.choices[0]?.message?.content?.trim();
+  let fullContent = "";
 
-  if (!content) {
-    return NextResponse.json(
-      { error: "Failed to generate content" },
-      { status: 500 }
-    );
-  }
+  const stream = new ReadableStream({
+    async start(controller) {
+      const encoder = new TextEncoder();
 
-  // Ensure minimum length (at least 1000 words). If below threshold, attempt expansion.
-  const countWords = (txt) => (txt || "").split(/\s+/).filter(Boolean).length;
-  let attempts = 0;
-  while (countWords(content) < 1000 && attempts < 2) {
-    attempts += 1;
-    const expandPrompt = `${promptBase}\n\nThe lesson above is only ${countWords(content)} words. Please expand it significantly to reach at least 1000-1200 words. Add more examples, deeper explanations for each section, and more practice scenarios. Keep the same structure.`;
-    const expandResp = await openai.chat.completions.create({
-      model: "gpt-4o-mini",
-      messages: [
-        { role: "system", content: "You are a content expansion specialist for high-end educational courses." },
-        { role: "user", content: expandPrompt },
-      ],
-      temperature: 0.8,
-      max_tokens: isPremium ? 4000 : 3500,
-    });
-    const expanded = expandResp.choices[0]?.message?.content?.trim();
-    if (expanded && countWords(expanded) > countWords(content)) {
-      content = expanded;
-    } else {
-      break;
-    }
-  }
+      try {
+        for await (const chunk of completion) {
+          const delta = chunk.choices[0]?.delta?.content || "";
+          if (delta) {
+            fullContent += delta;
 
-  // === Save to DB (if valid courseId) ===
-  if (courseId && ObjectId.isValid(courseId)) {
-    const updatePath = `modules.${moduleId - 1}.lessons.${lessonIndex}.content`;
-    await db.collection("library").updateOne(
-      { _id: new ObjectId(courseId) },
-      {
-        $set: {
-          [updatePath]: content,
-          lastGenerated: new Date(),
-        },
+            // Send incremental content to frontend
+            const data = `data: ${JSON.stringify({
+              content: delta,
+              done: false
+            })}\n\n`;
+            controller.enqueue(encoder.encode(data));
+          }
+        }
+
+        // Final chunk with full content
+        const doneData = `data: ${JSON.stringify({
+          content: "",
+          done: true,
+          fullContent
+        })}\n\n`;
+        controller.enqueue(encoder.encode(doneData));
+
+        // === Save to DB only after full content is received ===
+        if (courseId && ObjectId.isValid(courseId)) {
+          const updatePath = `modules.${moduleId - 1}.lessons.${lessonIndex}.content`;
+          await db.collection("library").updateOne(
+            { _id: new ObjectId(courseId) },
+            {
+              $set: {
+                [updatePath]: fullContent,
+                lastGenerated: new Date(),
+              },
+            }
+          ).catch(err => console.error("DB save failed:", err));
+        }
+
+        controller.close();
+      } catch (error) {
+        console.error("Streaming error:", error);
+        const errorData = `data: ${JSON.stringify({
+          error: "Generation failed",
+          done: true
+        })}\n\n`;
+        controller.enqueue(encoder.encode(errorData));
+        controller.close();
       }
-    );
-  }
+    },
+  });
 
-  return NextResponse.json({
-    success: true,
-    content,
-    cached: false,
-    isPremium,
+  return new Response(stream, {
+    status: 200,
+    headers: {
+      "Content-Type": "text/event-stream",
+      "Cache-Control": "no-cache",
+      "Connection": "keep-alive",
+    },
   });
 }

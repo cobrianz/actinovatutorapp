@@ -16,6 +16,63 @@ const COLORS = {
     divider: [229, 231, 235],
 };
 
+const saveAndSharePDF = async (pdf, fileName, logTitle, notificationBody, logType = 'File') => {
+    // Mobile/Capacitor Support
+    const isCapacitor = typeof window !== 'undefined' && (window.Capacitor || window.location.protocol === 'capacitor:');
+
+    if (isCapacitor) {
+        try {
+            const pdfBase64 = pdf.output('datauristring').split(',')[1];
+            const { Filesystem, Directory } = await import('@capacitor/filesystem').catch(() => ({}));
+            const { Share } = await import('@capacitor/share').catch(() => ({}));
+            const { LocalNotifications } = await import('@capacitor/local-notifications').catch(() => ({}));
+
+            if (!Filesystem || !Share || !LocalNotifications) {
+                throw new Error("Capacitor plugins not available");
+            }
+
+            // Request notification permissions
+            try {
+                await LocalNotifications.requestPermissions();
+            } catch (e) {
+                console.warn("Notification permissions denied", e);
+            }
+
+            const result = await Filesystem.writeFile({
+                path: fileName,
+                data: pdfBase64,
+                directory: Directory.Documents,
+            });
+
+            // Schedule notification
+            await LocalNotifications.schedule({
+                notifications: [{
+                    title: 'Download Complete',
+                    body: notificationBody,
+                    id: Math.floor(Math.random() * 100000),
+                    schedule: { at: new Date(Date.now() + 100) },
+                    sound: null,
+                    attachments: null,
+                    actionTypeId: "",
+                    extra: null
+                }]
+            });
+
+            await Share.share({
+                title: `Actinova ${logType} Download`,
+                text: `${logType} for ${logTitle}`,
+                url: result.uri,
+                dialogTitle: 'Save or Open PDF',
+            });
+        } catch (error) {
+            console.error('Capacitor PDF error:', error);
+            pdf.save(fileName); // Fallback
+        }
+    } else {
+        pdf.save(fileName);
+    }
+};
+
 export const downloadCourseAsPDF = async (data, mode = "course") => {
     if (!data) throw new Error("No data provided");
 
@@ -112,6 +169,8 @@ export const downloadCourseAsPDF = async (data, mode = "course") => {
 
         // Strip ALL markdown before processing
         let cleanedText = text
+            .replace(/\[([^\]]+)\]\([^\)]+\)/g, '$1') // Strip markdown links, keep text
+            .replace(/https?:\/\/[^\s\)]+/g, '')     // Remove raw URLs
             .replace(/\*\*\*([^*]+)\*\*\*/g, '$1')  // Bold+Italic
             .replace(/\*\*([^*]+)\*\*/g, '$1')      // Bold
             .replace(/\*([^*]+)\*/g, '$1')          // Italic
@@ -135,23 +194,91 @@ export const downloadCourseAsPDF = async (data, mode = "course") => {
         if (!content) return;
         const lines = content.split('\n');
         let isInCodeBlock = false;
-        let hasSkippedTitle = false;
         let isFirstLine = true;
+        let tableBuffer = [];
+
+        const flushTable = () => {
+            if (tableBuffer.length === 0) return;
+
+            checkNewPage(20);
+            y += 5;
+
+            // Basic Table Rendering logic
+            const rows = tableBuffer.map(row => row.split('|').map(c => c.trim()).filter(c => c !== ''));
+            if (rows.length < 2) return; // Not a valid table
+
+            const headers = rows[0];
+            const colCount = headers.length;
+            const colWidth = (contentWidth - 10) / colCount;
+
+            // Header
+            pdf.setFillColor(245, 247, 250);
+            pdf.rect(margin, y, contentWidth, 10, "F");
+            pdf.setFont("helvetica", "bold");
+            pdf.setFontSize(10);
+            pdf.setTextColor(...COLORS.text);
+
+            headers.forEach((h, i) => {
+                pdf.text(h, margin + 5 + (i * colWidth), y + 6);
+            });
+            y += 10;
+
+            // Rows
+            pdf.setFont("helvetica", "normal");
+            rows.slice(2).forEach((row, rIdx) => {
+                const rowHeight = 10; // Fixed for simplicity currently
+                checkNewPage(rowHeight);
+
+                // Zebra striping
+                if (rIdx % 2 === 1) {
+                    pdf.setFillColor(249, 250, 251);
+                    pdf.rect(margin, y, contentWidth, rowHeight, "F");
+                }
+
+                row.forEach((cell, cIdx) => {
+                    const cellText = pdf.splitTextToSize(cell, colWidth - 5);
+                    pdf.text(cellText, margin + 5 + (cIdx * colWidth), y + 6);
+                });
+
+                pdf.setDrawColor(230, 230, 230);
+                pdf.line(margin, y + rowHeight, pageWidth - margin, y + rowHeight);
+                y += rowHeight;
+            });
+
+            y += 5;
+            tableBuffer = [];
+        };
 
         lines.forEach((line) => {
             const trimmed = line.trim();
 
             if (trimmed.startsWith("```")) {
-                isInCodeBlock = !isInCodeBlock;
+                flushTable(); // Flush pending table if any
+
+                // Check if it's a mermaid block
+                const lang = trimmed.substring(3).trim();
+                if (lang === 'mermaid') {
+                    isInCodeBlock = 'mermaid';
+                } else if (isInCodeBlock) {
+                    isInCodeBlock = false;
+                } else {
+                    isInCodeBlock = true;
+                }
+
                 y += 2;
                 isFirstLine = false;
+                return;
+            }
+
+            if (isInCodeBlock === 'mermaid') {
+                // Skip mermaid content lines - we'll show a placeholder instead
                 return;
             }
 
             if (isInCodeBlock) {
                 pdf.setFont("courier", "normal");
                 pdf.setFontSize(10);
-                pdf.setFillColor(245, 245, 245);
+                pdf.setFillColor(248, 250, 252); // Lighter background for code
                 pdf.rect(margin + 2, y - 4, contentWidth - 4, 6, "F");
                 pdf.text(line, margin + 4, y);
                 y += 6;
@@ -160,9 +287,27 @@ export const downloadCourseAsPDF = async (data, mode = "course") => {
                 return;
             }
 
+            // Table Detection
+            if (trimmed.startsWith('|') && trimmed.endsWith('|')) {
+                tableBuffer.push(trimmed);
+                return;
+            } else {
+                flushTable();
+            }
+
+            // Graph / Ascii Art Detection (simple heuristic: look for typical graph chars not starting with markdown)
+            if (!trimmed.startsWith('#') && !trimmed.startsWith('>') && (trimmed.includes('---|') || trimmed.includes('/ \\') || trimmed.includes(' +--') || trimmed.includes(' | '))) {
+                pdf.setFont("courier", "normal");
+                checkNewPage(6);
+                pdf.text(line, margin, y);
+                y += 6;
+                pdf.setFont("helvetica", "normal");
+                return;
+            }
+
             if (["---", "***", "___"].includes(trimmed)) {
                 checkNewPage(5);
-                y += 4; // Reduced spacing, no line
+                y += 4;
                 isFirstLine = false;
                 return;
             }
@@ -176,14 +321,14 @@ export const downloadCourseAsPDF = async (data, mode = "course") => {
             checkNewPage(12);
 
             // Skip module title
-            if (trimmed.startsWith('# Module: ') || trimmed.startsWith('MODULE: ') || trimmed.startsWith('Module: ')) {
+            if (trimmed.match(/^#? ?Module:.*/i)) {
                 isFirstLine = false;
                 return;
             }
 
             // Handle Lesson: line
             if (trimmed.startsWith('## LESSON: ') || trimmed.startsWith('LESSON: ') || trimmed.startsWith('Lesson: ')) {
-                y += 2; // Reduced top margin
+                y += 2;
                 pdf.setFont("helvetica", "bold");
                 pdf.setFontSize(20);
                 pdf.setTextColor(...COLORS.primary);
@@ -192,21 +337,20 @@ export const downloadCourseAsPDF = async (data, mode = "course") => {
                 const lines2 = pdf.splitTextToSize(headerText, contentWidth);
                 pdf.text(lines2, margin, y);
                 y += lines2.length * 10;
-                // Line removed
-                y += 2; // Reduced bottom margin
+                y += 2;
                 isFirstLine = false;
                 return;
             }
 
             // Handle first line as H1 if applicable
             if (isFirstLine && !trimmed.startsWith('#') && !trimmed.startsWith('##') && !trimmed.startsWith('###') && !trimmed.startsWith('> ') && !trimmed.match(/^[-*•]\s/) && !trimmed.match(/^\d+\.\s/)) {
-                y += 2; // Reduced top margin
+                y += 2;
                 pdf.setFont("helvetica", "bold");
                 pdf.setFontSize(26);
                 pdf.setTextColor(...COLORS.primary);
                 const headerLines = pdf.splitTextToSize(trimmed, contentWidth - 10);
                 pdf.text(headerLines, margin, y);
-                y += headerLines.length * 12 + 4; // Reduced bottom margin
+                y += headerLines.length * 12 + 4;
                 isFirstLine = false;
                 return;
             }
@@ -216,19 +360,18 @@ export const downloadCourseAsPDF = async (data, mode = "course") => {
             // Markdown Headers - left aligned
             if (trimmed.startsWith("# ")) {
                 const text = trimmed.substring(2).replace(/[\*_]/g, '').trim();
-                if (!hasSkippedTitle && titleToSkip && text.toLowerCase().includes(titleToSkip.toLowerCase())) {
-                    hasSkippedTitle = true;
-                    return;
-                }
-                y += 2; // Reduced top
+                // Skip if matches title we are skipping
+                if (titleToSkip && text.toLowerCase().includes(titleToSkip.toLowerCase())) return;
+
+                y += 2;
                 pdf.setFont("helvetica", "bold");
                 pdf.setFontSize(26);
                 pdf.setTextColor(...COLORS.primary);
                 const hLines = pdf.splitTextToSize(text, contentWidth);
                 pdf.text(hLines, margin, y);
-                y += hLines.length * 12 + 4; // Reduced bottom
+                y += hLines.length * 12 + 4;
             } else if (trimmed.startsWith("## ")) {
-                y += 2; // Reduced top
+                y += 2;
                 pdf.setFont("helvetica", "bold");
                 pdf.setFontSize(20);
                 pdf.setTextColor(...COLORS.primary);
@@ -236,26 +379,25 @@ export const downloadCourseAsPDF = async (data, mode = "course") => {
                 const hLines = pdf.splitTextToSize(text, contentWidth);
                 pdf.text(hLines, margin, y);
                 y += hLines.length * 10;
-                // Line removed
-                y += 2; // Reduced bottom
+                y += 2;
             } else if (trimmed.startsWith("### ")) {
-                y += 2; // Reduced top
+                y += 2;
                 pdf.setFont("helvetica", "bold");
                 pdf.setFontSize(16);
                 pdf.setTextColor(...COLORS.text);
                 const text = trimmed.substring(4).replace(/[\*_]/g, '').trim();
                 const hLines = pdf.splitTextToSize(text, contentWidth);
                 pdf.text(hLines, margin, y);
-                y += hLines.length * 9 + 2; // Reduced bottom
+                y += hLines.length * 9 + 2;
             } else if (trimmed.startsWith("#### ")) {
-                y += 2; // Reduced top
+                y += 2;
                 pdf.setFont("helvetica", "bold");
                 pdf.setFontSize(14);
                 pdf.setTextColor(...COLORS.text);
                 const text = trimmed.substring(5).replace(/[\*_]/g, '').trim();
                 const hLines = pdf.splitTextToSize(text, contentWidth);
                 pdf.text(hLines, margin, y);
-                y += hLines.length * 8 + 2; // Reduced bottom
+                y += hLines.length * 8 + 2;
             } else if (trimmed.startsWith("> ")) {
                 const quote = trimmed.substring(2).trim();
                 pdf.setFont("helvetica", "italic");
@@ -283,6 +425,8 @@ export const downloadCourseAsPDF = async (data, mode = "course") => {
                 renderMarkdownLine(trimmed, margin);
             }
         });
+
+        flushTable(); // Ensure last table is flushed
     };
 
     if (mode === "course") {
@@ -335,61 +479,13 @@ export const downloadCourseAsPDF = async (data, mode = "course") => {
     }
 
     const fileName = `${data.title?.replace(/\s+/g, "_").toLowerCase() || "actinova_study"}.pdf`;
-
-    // Mobile/Capacitor Support
-    const isCapacitor = typeof window !== 'undefined' && (window.Capacitor || window.location.protocol === 'capacitor:');
-
-    if (isCapacitor) {
-        try {
-            const pdfBase64 = pdf.output('datauristring').split(',')[1];
-            const { Filesystem, Directory } = await import('@capacitor/filesystem').catch(() => ({}));
-            const { Share } = await import('@capacitor/share').catch(() => ({}));
-            const { LocalNotifications } = await import('@capacitor/local-notifications').catch(() => ({}));
-
-            if (!Filesystem || !Share || !LocalNotifications) {
-                throw new Error("Capacitor plugins not available");
-            }
-
-            // Request notification permissions
-            try {
-                await LocalNotifications.requestPermissions();
-            } catch (e) {
-                console.warn("Notification permissions denied", e);
-            }
-
-            const result = await Filesystem.writeFile({
-                path: fileName,
-                data: pdfBase64,
-                directory: Directory.Documents,
-            });
-
-            // Schedule notification
-            await LocalNotifications.schedule({
-                notifications: [{
-                    title: 'Download Complete',
-                    body: `${data.title} saved to Documents. Tap to view.`,
-                    id: Math.floor(Math.random() * 100000),
-                    schedule: { at: new Date(Date.now() + 100) },
-                    sound: null,
-                    attachments: null,
-                    actionTypeId: "",
-                    extra: null
-                }]
-            });
-
-            await Share.share({
-                title: 'Actinova PDF Download',
-                text: `Personalized material for ${data.title}`,
-                url: result.uri,
-                dialogTitle: 'Save or Open PDF',
-            });
-        } catch (error) {
-            console.error('Capacitor PDF error:', error);
-            pdf.save(fileName); // Fallback
-        }
-    } else {
-        pdf.save(fileName);
-    }
+    await saveAndSharePDF(
+        pdf,
+        fileName,
+        data.title,
+        `${data.title} saved to Documents. Tap to view.`,
+        'Study Material'
+    );
 };
 
 export const downloadQuizAsPDF = async (data) => {
@@ -423,11 +519,10 @@ export const downloadQuizAsPDF = async (data) => {
     pdf.setFontSize(14);
     pdf.setTextColor(...COLORS.textLight);
     pdf.text(`Subject: ${data.topic || "General Knowledge"}`, pageWidth / 2, y, { align: "center" });
-    y += 20;
-    pdf.setDrawColor(...COLORS.primary);
-    pdf.setLineWidth(1);
-    pdf.line(margin, y, pageWidth - margin, y);
-    y += 15;
+    y += 10;
+    // Line removed
+    // pdf.line(margin, y, pageWidth - margin, y);
+    y += 10;
 
     data.questions.forEach((q, i) => {
         const qLines = pdf.splitTextToSize(`${i + 1}. ${q.text}`, contentWidth - 10);
@@ -442,7 +537,7 @@ export const downloadQuizAsPDF = async (data) => {
         pdf.setFontSize(12);
         pdf.setTextColor(...COLORS.text);
         pdf.text(qLines, margin, y);
-        y += qLines.length * 6 + 5;
+        y += qLines.length * 6 + 2;
 
         if (q.options) {
             pdf.setFont("helvetica", "normal");
@@ -452,14 +547,14 @@ export const downloadQuizAsPDF = async (data) => {
                 pdf.text(String.fromCharCode(65 + j) + ")", margin + 5, y);
                 pdf.setTextColor(...COLORS.text);
                 pdf.text(pdf.splitTextToSize(opt, contentWidth - 20), margin + 15, y);
-                y += 8;
+                y += 6;
             });
         } else {
-            pdf.setDrawColor(...COLORS.divider);
-            pdf.line(margin + 5, y + 5, pageWidth - margin - 5, y + 5);
-            y += 15;
+            // Line removed
+            // pdf.line(margin + 5, y + 5, pageWidth - margin - 5, y + 5);
+            y += 10;
         }
-        y += 10;
+        y += 5;
     });
 
     pdf.addPage();
@@ -484,7 +579,7 @@ export const downloadQuizAsPDF = async (data) => {
         pdf.setFont("helvetica", "normal");
         pdf.setTextColor(...COLORS.primary);
         pdf.text(String(q.correctAnswer), margin + 10, y);
-        y += 8;
+        y += 6;
     });
 
     const totalPages = pdf.internal.pages.length - 1;
@@ -493,62 +588,14 @@ export const downloadQuizAsPDF = async (data) => {
         addBranding(i, totalPages);
     }
 
-    // Mobile/Capacitor Support
-    const isCapacitor = typeof window !== 'undefined' && (window.Capacitor || window.location.protocol === 'capacitor:');
-
     const fileName = `assessment_${data.title?.replace(/\s+/g, "_").toLowerCase() || "exam"}.pdf`;
-
-    if (isCapacitor) {
-        try {
-            const pdfBase64 = pdf.output('datauristring').split(',')[1];
-            const { Filesystem, Directory } = await import('@capacitor/filesystem').catch(() => ({}));
-            const { Share } = await import('@capacitor/share').catch(() => ({}));
-            const { LocalNotifications } = await import('@capacitor/local-notifications').catch(() => ({}));
-
-            if (!Filesystem || !Share || !LocalNotifications) {
-                throw new Error("Capacitor plugins not available");
-            }
-
-            // Request notification permissions
-            try {
-                await LocalNotifications.requestPermissions();
-            } catch (e) {
-                console.warn("Notification permissions denied", e);
-            }
-
-            const result = await Filesystem.writeFile({
-                path: fileName,
-                data: pdfBase64,
-                directory: Directory.Documents,
-            });
-
-            // Schedule notification
-            await LocalNotifications.schedule({
-                notifications: [{
-                    title: 'Download Complete',
-                    body: `Assessment for ${data.title} saved to Documents.`,
-                    id: Math.floor(Math.random() * 100000),
-                    schedule: { at: new Date(Date.now() + 100) },
-                    sound: null,
-                    attachments: null,
-                    actionTypeId: "",
-                    extra: null
-                }]
-            });
-
-            await Share.share({
-                title: 'Actinova Assessment Download',
-                text: `Assessment paper for ${data.title}`,
-                url: result.uri,
-                dialogTitle: 'Save or Open PDF',
-            });
-        } catch (error) {
-            console.error('Capacitor PDF error:', error);
-            pdf.save(fileName); // Fallback
-        }
-    } else {
-        pdf.save(fileName);
-    }
+    await saveAndSharePDF(
+        pdf,
+        fileName,
+        data.title,
+        `Assessment for ${data.title} saved to Documents.`,
+        'Assessment'
+    );
 };
 
 export const downloadReceiptAsPDF = async (data) => {
@@ -589,10 +636,11 @@ export const downloadReceiptAsPDF = async (data) => {
     y = 70;
 
     // Transaction Details
-    pdf.setDrawColor(...COLORS.divider);
-    pdf.setLineWidth(0.5);
-    pdf.line(margin, y, pageWidth - margin, y);
-    y += 15;
+    // Line removed
+    // pdf.setDrawColor(...COLORS.divider);
+    // pdf.setLineWidth(0.5);
+    // pdf.line(margin, y, pageWidth - margin, y);
+    y += 10;
 
     const addRow = (label, value, isBold = false) => {
         pdf.setFont("helvetica", "normal");
@@ -603,7 +651,7 @@ export const downloadReceiptAsPDF = async (data) => {
         pdf.setFont("helvetica", isBold ? "bold" : "normal");
         pdf.setTextColor(...COLORS.text);
         pdf.text(value, pageWidth - margin, y, { align: "right" });
-        y += 10;
+        y += 8;
     };
 
     addRow("Reference ID", data.reference || "N/A");
@@ -611,9 +659,10 @@ export const downloadReceiptAsPDF = async (data) => {
     addRow("Plan", data.plan || "Premium Subscription");
     addRow("Billing Cycle", data.billingCycle || "Monthly");
 
-    y += 5;
-    pdf.line(margin, y, pageWidth - margin, y);
-    y += 15;
+    y += 2;
+    // Line removed
+    // pdf.line(margin, y, pageWidth - margin, y);
+    y += 10;
 
     // Amount
     pdf.setFont("helvetica", "bold");
@@ -638,58 +687,11 @@ export const downloadReceiptAsPDF = async (data) => {
     pdf.text("Thank you for your business!", pageWidth / 2, y, { align: "center" });
 
     const fileName = `receipt-${data.reference || "transaction"}.pdf`;
-
-    // Mobile/Capacitor Support
-    const isCapacitor = typeof window !== 'undefined' && (window.Capacitor || window.location.protocol === 'capacitor:');
-
-    if (isCapacitor) {
-        try {
-            const pdfBase64 = pdf.output('datauristring').split(',')[1];
-            const { Filesystem, Directory } = await import('@capacitor/filesystem').catch(() => ({}));
-            const { Share } = await import('@capacitor/share').catch(() => ({}));
-            const { LocalNotifications } = await import('@capacitor/local-notifications').catch(() => ({}));
-
-            if (!Filesystem || !Share || !LocalNotifications) {
-                throw new Error("Capacitor plugins not available");
-            }
-
-            // Request notification permissions
-            try {
-                await LocalNotifications.requestPermissions();
-            } catch (e) {
-                console.warn("Notification permissions denied", e);
-            }
-
-            const result = await Filesystem.writeFile({
-                path: fileName,
-                data: pdfBase64,
-                directory: Directory.Documents,
-            });
-
-            await LocalNotifications.schedule({
-                notifications: [{
-                    title: 'Receipt Downloaded',
-                    body: `Receipt for ${data.plan || "Subscription"} saved to Documents.`,
-                    id: Math.floor(Math.random() * 100000),
-                    schedule: { at: new Date(Date.now() + 100) },
-                    sound: null,
-                    attachments: null,
-                    actionTypeId: "",
-                    extra: null
-                }]
-            });
-
-            await Share.share({
-                title: 'Actinova Receipt',
-                text: `Receipt for ${data.plan || "Subscription"}`,
-                url: result.uri,
-                dialogTitle: 'Save or Open Receipt',
-            });
-        } catch (error) {
-            console.error('Capacitor PDF error:', error);
-            pdf.save(fileName);
-        }
-    } else {
-        pdf.save(fileName);
-    }
+    await saveAndSharePDF(
+        pdf,
+        fileName,
+        data.plan || "Subscription",
+        `Receipt for ${data.plan || "Subscription"} saved to Documents.`,
+        'Receipt'
+    );
 };

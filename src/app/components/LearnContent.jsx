@@ -35,6 +35,10 @@ import { useRouter } from "next/navigation";
 import ActinovaLoader from "./ActinovaLoader";
 import Flashcards from "./Flashcards";
 import QuizInterface from "./QuizInterface";
+import mermaid from "mermaid";
+import { getWikipediaDiagram } from "@/lib/wikipediaDiagrams";
+
+// Mermaid will be initialized dynamically based on theme
 
 export default function LearnContent() {
   const params = useParams();
@@ -79,6 +83,8 @@ export default function LearnContent() {
   const [typingContent, setTypingContent] = useState("");
   const fetchInProgressRef = useRef(false); // Prevent duplicate API calls
   const initializedCoursesRef = useRef(new Set()); // Track initialized courses
+  const abortControllerRef = useRef(null); // Track active fetch to allow cancellation
+  const mermaidCacheRef = useRef({}); // Cache for rendered Mermaid SVGs
   const contentRef = useRef(null);
   const chatContainerRef = useRef(null);
   const [showLimitModal, setShowLimitModal] = useState(false);
@@ -265,6 +271,212 @@ export default function LearnContent() {
     }
   }, [chatMessages]);
 
+  useEffect(() => {
+    // Initialize mermaid with theme based on current mode
+    const isDark = document.documentElement.classList.contains('dark');
+
+    mermaid.initialize({
+      startOnLoad: false,
+      theme: isDark ? 'dark' : 'base',
+      padding: 20,
+      themeVariables: isDark ? {
+        darkMode: true,
+        background: '#0f172a',
+        primaryColor: '#1e293b',
+        secondaryColor: '#334155',
+        tertiaryColor: '#0f172a',
+        primaryTextColor: '#e2e8f0',
+        secondaryTextColor: '#cbd5e1',
+        primaryBorderColor: '#475569',
+        lineColor: '#94a3b8',
+        fontSize: '16px',
+        fontFamily: 'ui-sans-serif, system-ui, sans-serif'
+      } : {
+        darkMode: false,
+        background: '#ffffff',
+        primaryColor: '#e0e7ff',
+        secondaryColor: '#f3f4f6',
+        tertiaryColor: '#fff',
+        primaryTextColor: '#374151',
+        secondaryTextColor: '#4b5563',
+        primaryBorderColor: '#d1d5db',
+        lineColor: '#6b7280',
+        fontSize: '16px',
+        fontFamily: 'ui-sans-serif, system-ui, sans-serif'
+      }
+    });
+
+    // Re-run mermaid whenever content changes
+    const t = setTimeout(() => {
+      mermaid.run({
+        nodes: document.querySelectorAll('.mermaid'),
+        suppressErrors: true,
+      }).then(() => {
+        // Cache the rendered SVGs to prevent flashing on re-render
+        document.querySelectorAll('.mermaid svg').forEach(svg => {
+          const container = svg.parentElement;
+          if (container && container.getAttribute('data-code')) {
+            const code = decodeURIComponent(container.getAttribute('data-code'));
+            mermaidCacheRef.current[code] = container.innerHTML;
+          }
+        });
+      }).catch(err => console.debug('Mermaid error (harmless)', err));
+    }, 100);
+
+    return () => clearTimeout(t);
+  }, [activeLesson, courseData]);
+
+  // Watch for theme changes
+  useEffect(() => {
+    const observer = new MutationObserver(() => {
+      const isDark = document.documentElement.classList.contains('dark');
+
+      mermaid.initialize({
+        startOnLoad: false,
+        theme: isDark ? 'dark' : 'base',
+        padding: 20,
+        themeVariables: isDark ? {
+          darkMode: true,
+          background: '#0f172a',
+          primaryColor: '#1e293b',
+          secondaryColor: '#334155',
+          tertiaryColor: '#0f172a',
+          primaryTextColor: '#e2e8f0',
+          secondaryTextColor: '#cbd5e1',
+          primaryBorderColor: '#475569',
+          lineColor: '#94a3b8',
+          fontSize: '16px',
+          fontFamily: 'ui-sans-serif, system-ui, sans-serif'
+        } : {
+          darkMode: false,
+          background: '#ffffff',
+          primaryColor: '#e0e7ff',
+          secondaryColor: '#f3f4f6',
+          tertiaryColor: '#fff',
+          primaryTextColor: '#374151',
+          secondaryTextColor: '#4b5563',
+          primaryBorderColor: '#d1d5db',
+          lineColor: '#6b7280',
+          fontSize: '16px',
+          fontFamily: 'ui-sans-serif, system-ui, sans-serif'
+        }
+      });
+
+      // Re-render all diagrams
+      setTimeout(() => {
+        mermaid.run({
+          nodes: document.querySelectorAll('.mermaid'),
+        }).catch(err => console.debug('Mermaid theme switch error', err));
+      }, 50);
+    });
+
+    observer.observe(document.documentElement, {
+      attributes: true,
+      attributeFilter: ['class']
+    });
+
+    return () => observer.disconnect();
+  }, []);
+
+  // Handle DALL·E image generation
+  useEffect(() => {
+    const containers = document.querySelectorAll('.dalle-image-container');
+
+    containers.forEach(async (container) => {
+      const prompt = container.getAttribute('data-prompt');
+      const imageId = container.getAttribute('data-id');
+
+      // Skip if already processed
+      if (container.getAttribute('data-processed') === 'true') return;
+      container.setAttribute('data-processed', 'true');
+
+      try {
+        const response = await authenticatedFetch('/api/generate-image', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'x-user-id': user?._id || user?.id || user?.idString || '',
+          },
+          body: JSON.stringify({ prompt }),
+        });
+
+        if (!response.ok) {
+          throw new Error('Failed to generate image');
+        }
+
+        const data = await response.json();
+
+        // Replace placeholder with actual image
+        container.innerHTML = `
+          <div class="max-w-2xl mx-auto">
+            <img 
+              src="${data.imageUrl}" 
+              alt="${prompt}" 
+              class="w-full h-auto rounded-lg shadow-lg border border-gray-200 dark:border-gray-700"
+            />
+            <p class="text-xs text-gray-500 dark:text-gray-400 mt-2 text-center italic">AI-generated diagram</p>
+          </div>
+        `;
+      } catch (error) {
+        console.error('DALL·E generation error:', error);
+        container.innerHTML = `
+          <div class="bg-red-50 dark:bg-red-900/20 p-4 rounded-lg border border-red-200 dark:border-red-800 text-center">
+            <p class="text-red-600 dark:text-red-400 text-sm">Failed to generate diagram</p>
+          </div>
+        `;
+      }
+    });
+  }, [activeLesson, courseData, user]);
+
+  // Handle Wikipedia diagram rendering
+  useEffect(() => {
+    const containers = document.querySelectorAll('.wikipedia-diagram-container');
+
+    containers.forEach((container) => {
+      const topic = container.getAttribute('data-topic');
+
+      // Skip if already processed
+      if (container.getAttribute('data-processed') === 'true') return;
+      container.setAttribute('data-processed', 'true');
+
+      try {
+        const imageUrl = getWikipediaDiagram(topic);
+
+        if (imageUrl) {
+          // Replace placeholder with actual image
+          container.innerHTML = `
+            <div class="max-w-2xl mx-auto">
+              <img 
+                src="${imageUrl}" 
+                alt="${topic} diagram from Wikipedia" 
+                class="w-full h-auto rounded-lg shadow-lg border border-gray-200 dark:border-gray-700"
+              />
+              <p class="text-xs text-gray-500 dark:text-gray-400 mt-2 text-center">
+                <a href="https://commons.wikimedia.org" target="_blank" class="hover:underline">
+                  📚 Diagram from Wikimedia Commons
+                </a>
+              </p>
+            </div>
+          `;
+        } else {
+          // Diagram not found in library
+          container.innerHTML = `
+            <div class="bg-yellow-50 dark:bg-yellow-900/20 p-4 rounded-lg border border-yellow-200 dark:border-yellow-800 text-center">
+              <p class="text-yellow-700 dark:text-yellow-400 text-sm">Wikipedia diagram for "${topic}" not available in library</p>
+            </div>
+          `;
+        }
+      } catch (error) {
+        console.error('Wikipedia diagram error:', error);
+        container.innerHTML = `
+          <div class="bg-red-50 dark:bg-red-900/20 p-4 rounded-lg border border-red-200 dark:border-red-800 text-center">
+            <p class="text-red-600 dark:text-red-400 text-sm">Failed to load diagram: ${error.message}</p>
+          </div>
+        `;
+      }
+    });
+  }, [activeLesson, courseData]);
+
   const [activeRightPanel, setActiveRightPanel] = useState("notes");
 
   // Handle responsive sidebar defaults
@@ -302,7 +514,17 @@ export default function LearnContent() {
   };
 
   const selectLesson = async (moduleId, lessonIndex) => {
+    // 1. Cancel any ongoing generation logic
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+      abortControllerRef.current = null;
+    }
+
     setActiveLesson({ moduleId, lessonIndex });
+
+    // Reset generation UI state immediately when switching
+    setLessonContentLoading(false);
+    setTypingContent("");
 
     // Only auto-close sidebar on smaller screens
     if (window.innerWidth < 1024) {
@@ -344,7 +566,8 @@ export default function LearnContent() {
         lesson.content ===
         "Content will be generated when you start the lesson.")
     ) {
-      await fetchLessonContent(
+      // Don't await here to prevent blocking UI
+      fetchLessonContent(
         moduleId,
         lessonIndex,
         lesson.title,
@@ -360,11 +583,15 @@ export default function LearnContent() {
     moduleTitle
   ) => {
     try {
+      const controller = new AbortController();
+      abortControllerRef.current = controller;
+
       setLessonContentLoading(true);
       setTypingContent("");
 
       const response = await authenticatedFetch("/api/course-agent", {
         method: "POST",
+        signal: controller.signal,
         body: JSON.stringify({
           action: "generateLesson",
           courseId: courseData?._id || null,
@@ -381,35 +608,99 @@ export default function LearnContent() {
         throw new Error("Failed to generate lesson content");
       }
 
-      const data = await response.json();
+      // Check if response is streaming (SSE) or regular JSON
+      const contentType = response.headers.get("content-type");
 
-      // Update course data with the new content
-      setCourseData((prevData) => {
-        const newData = { ...prevData };
-        if (newData.modules && newData.modules[moduleId - 1]) {
-          if (newData.modules[moduleId - 1].lessons[lessonIndex]) {
-            newData.modules[moduleId - 1].lessons[lessonIndex].content =
-              data.content;
+      if (contentType?.includes("text/event-stream")) {
+        // Handle streaming response
+        const reader = response.body.getReader();
+        const decoder = new TextDecoder();
+        let fullContent = "";
+
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+
+          const chunk = decoder.decode(value, { stream: true });
+          const lines = chunk.split("\n");
+
+          for (const line of lines) {
+            if (line.startsWith("data: ")) {
+              try {
+                const data = JSON.parse(line.slice(6));
+
+                if (data.content) {
+                  fullContent += data.content;
+
+                  // Update UI in real-time
+                  setCourseData((prevData) => {
+                    const newData = { ...prevData };
+                    if (newData.modules && newData.modules[moduleId - 1]) {
+                      if (newData.modules[moduleId - 1].lessons[lessonIndex]) {
+                        newData.modules[moduleId - 1].lessons[lessonIndex].content = fullContent;
+                      }
+                    }
+                    return newData;
+                  });
+                }
+
+                if (data.done) {
+                  // Streaming complete
+                  break;
+                }
+              } catch (e) {
+                // Skip invalid JSON
+              }
+            }
           }
         }
-        return newData;
-      });
 
-      // Save to local storage for faster future access (both cached and newly generated content)
-      const localStorageKey = `lesson_${actualTopic}_${difficulty}_${moduleId}_${lessonIndex}`;
-      try {
-        localStorage.setItem(localStorageKey, data.content);
-        // Trigger usage update in sidebar
-        if (typeof window !== "undefined") {
-          window.dispatchEvent(new Event("usageUpdated"));
+        // Save to local storage
+        const localStorageKey = `lesson_${actualTopic}_${difficulty}_${moduleId}_${lessonIndex}`;
+        try {
+          localStorage.setItem(localStorageKey, fullContent);
+          if (typeof window !== "undefined") {
+            window.dispatchEvent(new Event("usageUpdated"));
+          }
+        } catch (storageError) {
+          // Silent fail
         }
-      } catch (storageError) {
-        // Silent fail for localStorage
-      }
 
-      // Show typing animation
-      setTypingContent(data.content);
+        setTypingContent(fullContent);
+      } else {
+        // Fallback to regular JSON response (for cached content)
+        const data = await response.json();
+
+        // Update course data with the new content
+        setCourseData((prevData) => {
+          const newData = { ...prevData };
+          if (newData.modules && newData.modules[moduleId - 1]) {
+            if (newData.modules[moduleId - 1].lessons[lessonIndex]) {
+              newData.modules[moduleId - 1].lessons[lessonIndex].content =
+                data.content;
+            }
+          }
+          return newData;
+        });
+
+        // Save to local storage for faster future access
+        const localStorageKey = `lesson_${actualTopic}_${difficulty}_${moduleId}_${lessonIndex}`;
+        try {
+          localStorage.setItem(localStorageKey, data.content);
+          if (typeof window !== "undefined") {
+            window.dispatchEvent(new Event("usageUpdated"));
+          }
+        } catch (storageError) {
+          // Silent fail for localStorage
+        }
+
+        setTypingContent(data.content);
+      }
     } catch (error) {
+      if (error.name === 'AbortError') {
+        console.log("Fetch aborted");
+        return;
+      }
       toast.error("Failed to load lesson content");
       // Set a fallback message
       setCourseData((prevData) => {
@@ -423,7 +714,12 @@ export default function LearnContent() {
         return newData;
       });
     } finally {
-      setLessonContentLoading(false);
+      if (abortControllerRef.current === null) {
+        // Already aborted/cleared
+      } else {
+        setLessonContentLoading(false);
+        abortControllerRef.current = null;
+      }
     }
   };
 
@@ -653,6 +949,51 @@ export default function LearnContent() {
 
     let html = content;
 
+    // CRITICAL FIX: Strip any wrapping markdown code fences that might wrap the entire content
+    // This prevents the entire lesson from being rendered as a code block
+    html = html.trim();
+    if (html.startsWith('```markdown') || html.startsWith('```md') || html.startsWith('```')) {
+      // Find the opening fence
+      const firstNewline = html.indexOf('\n');
+      if (firstNewline !== -1) {
+        html = html.substring(firstNewline + 1);
+      }
+      // Remove closing fence
+      if (html.endsWith('```')) {
+        html = html.substring(0, html.lastIndexOf('```')).trim();
+      }
+    }
+
+    // Handle Wikipedia Diagrams FIRST (free, high-quality)
+    html = html.replace(/\[Wikipedia Diagram:\s*([^\]]+)\]/gi, (match, topic) => {
+      const cleanTopic = topic.trim();
+      // We'll fetch the URL client-side from our library
+      return `<div class="wikipedia-diagram-container my-6 flex justify-center" data-topic="${cleanTopic}">
+        <div class="max-w-2xl mx-auto">
+          <div class="bg-gray-100 dark:bg-gray-800 p-4 rounded-lg border border-gray-200 dark:border-gray-700">
+            <div class="animate-pulse text-center">
+              <div class="text-gray-500 dark:text-gray-400 mb-2">📚 Loading Wikipedia diagram...</div>
+              <div class="text-sm text-gray-400 dark:text-gray-500">${cleanTopic}</div>
+            </div>
+          </div>
+        </div>
+      </div>`;
+    });
+
+    // Handle DALL·E image markers (for custom diagrams)
+    html = html.replace(/\[DALLE_IMAGE:\s*([^\]]+)\]/g, (match, prompt) => {
+      const imageId = `dalle-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+      // Return a placeholder that will be processed by a useEffect
+      return `<div class="dalle-image-container my-6 flex justify-center" data-prompt="${prompt.trim()}" data-id="${imageId}">
+        <div class="bg-gray-100 dark:bg-gray-800 p-8 rounded-lg border-2 border-dashed border-gray-300 dark:border-gray-600 text-center">
+          <div class="animate-pulse">
+            <div class="text-gray-500 dark:text-gray-400 mb-2">🎨 Generating diagram...</div>
+            <div class="text-sm text-gray-400 dark:text-gray-500">AI-powered illustration</div>
+          </div>
+        </div>
+      </div>`;
+    });
+
     // keep content as generated
 
     // First, escape any HTML that might be in the content
@@ -669,9 +1010,29 @@ export default function LearnContent() {
     // Handle code blocks FIRST (before other replacements) - CRITICAL
     const codeBlocks = [];
     html = html.replace(/```(\w+)?\s*\n([\s\S]*?)```/g, (match, lang, code) => {
+      const trimmedCode = code.trim();
+
+      // Handle Mermaid Diagrams
+      if (lang === 'mermaid') {
+        const commonClasses = "mermaid-container my-6 flex justify-center p-6 rounded-lg overflow-x-auto border border-gray-200 dark:border-gray-700 shadow-sm transition-colors duration-200";
+        // Fix background: bg-white for light, dark:bg-gray-900 (dark) instead of dark:bg-gray-100 (light gray)
+        const bgClasses = "bg-white dark:bg-gray-900";
+
+        // Use cached SVG if available to prevent flashing
+        const cached = mermaidCacheRef.current[trimmedCode];
+        if (cached) {
+          // Return div without 'mermaid' class so it doesn't get re-processed, but with same styles
+          return `<div class="${commonClasses} ${bgClasses}">${cached}</div>`;
+        }
+
+        // Wrap in a div with 'mermaid' class that mermaid.js will process
+        // Store code in data attribute for caching references
+        return `<div class="mermaid ${commonClasses} ${bgClasses}" data-code="${encodeURIComponent(trimmedCode)}">${trimmedCode}</div>`;
+      }
+
       const placeholder = `___CODEBLOCK_${codeBlocks.length}___`;
       codeBlocks.push(
-        `<pre class="bg-gray-900 dark:bg-gray-950 p-4 rounded-lg overflow-x-auto my-4 border border-gray-700"><code class="text-sm text-green-400 language-${lang || "plaintext"}">${code.trim().replace(/</g, "&lt;").replace(/>/g, "&gt;")}</code></pre>`
+        `<pre class="bg-gray-900 dark:bg-gray-950 p-4 rounded-lg overflow-x-auto my-4 border border-gray-700"><code class="text-sm text-green-400 language-${lang || "plaintext"}">${trimmedCode.replace(/</g, "&lt;").replace(/>/g, "&gt;")}</code></pre>`
       );
       return placeholder;
     });
@@ -686,10 +1047,22 @@ export default function LearnContent() {
       return placeholder;
     });
 
+    // Handle equations - LaTeX display mode \[...\]
+    html = html.replace(
+      /\\\[([^\]]*?)\\\]/g,
+      '<div class="my-4 p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg text-center overflow-x-auto"><span class="text-lg font-serif italic text-gray-900 dark:text-gray-100">$1</span></div>'
+    );
+
+    // Handle equations - LaTeX inline mode \(...\)
+    html = html.replace(
+      /\\\(([^\)]*?)\\\)/g,
+      '<span class="font-serif italic text-blue-600 dark:text-blue-400 mx-1">$1</span>'
+    );
+
     // Handle equations - display mode $$...$$
     html = html.replace(
       /\$\$([\s\S]*?)\$\$/g,
-      '<div class="my-4 p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg text-center"><span class="text-lg font-serif italic text-gray-900 dark:text-gray-100">$1</span></div>'
+      '<div class="my-4 p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg text-center overflow-x-auto"><span class="text-lg font-serif italic text-gray-900 dark:text-gray-100">$1</span></div>'
     );
 
     // Handle equations - inline mode $...$
@@ -701,7 +1074,7 @@ export default function LearnContent() {
     // Handle headers
     html = html.replace(
       /^# (.*$)/gm,
-      '<h1 class="text-3xl font-bold text-gray-900 dark:text-gray-100 mb-6 mt-8 border-b-2 border-blue-500 pb-2">$1</h1>'
+      '<h1 class="text-3xl font-bold text-gray-900 dark:text-gray-100 mb-6 mt-8">$1</h1>'
     );
     html = html.replace(
       /^## (.*$)/gm,
@@ -794,7 +1167,7 @@ export default function LearnContent() {
       .map((para) => {
         para = para.trim();
         if (para && !para.startsWith("<")) {
-          return `<p class="mb-4 text-gray-700 dark:text-gray-300 leading-relaxed">${para}</p>`;
+          return `<p class="mb-4 text-gray-700 dark:text-gray-300 leading-loose">${para}</p>`;
         }
         return para;
       })
@@ -803,8 +1176,50 @@ export default function LearnContent() {
     // Handle horizontal rules
     html = html.replace(
       /^---+$/gm,
-      '<hr class="my-6 border-gray-300 dark:border-gray-600" />'
+      '<div class="my-4"></div>'
     );
+
+    // Filter out "Module: X" title lines
+    html = html.replace(/^#? ?Module:.*$/igm, '');
+
+    // Handle Tables
+    const tables = [];
+    html = html.replace(/(\n|^)(\|.*\|(\n|$))+/g, (match) => {
+      const tablePlaceholder = `___TABLE_${tables.length}___`;
+      const rows = match.trim().split('\n').filter(r => r.trim());
+
+      let tableHtml = '<div class="overflow-x-auto my-6 rounded-lg border border-gray-200 dark:border-gray-700 shadow-sm"><table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">';
+
+      // Header
+      const headerRow = rows[0];
+      const headers = headerRow.split('|').filter(c => c.trim() !== '').map(c => c.trim());
+
+      tableHtml += '<thead class="bg-gray-50 dark:bg-gray-800"><tr>';
+      headers.forEach(h => {
+        tableHtml += `<th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">${h}</th>`;
+      });
+      tableHtml += '</tr></thead>';
+
+      // Body
+      tableHtml += '<tbody class="bg-white dark:bg-gray-900 divide-y divide-gray-200 dark:divide-gray-700">';
+      // Skip separator line (row 1)
+      for (let i = 2; i < rows.length; i++) {
+        const cells = rows[i].split('|').filter(c => c.trim() !== '').map(c => c.trim());
+        tableHtml += '<tr>';
+        cells.forEach(c => {
+          tableHtml += `<td class="px-6 py-4 whitespace-normal text-sm text-gray-700 dark:text-gray-300">${c}</td>`;
+        });
+        tableHtml += '</tr>';
+      }
+      tableHtml += '</tbody></table></div>';
+
+      tables.push(tableHtml);
+      return tablePlaceholder;
+    });
+
+    // Restore Tables (after list processing to avoid interference)
+
+    // ... (rest of logic)
 
     // Restore code blocks
     codeBlocks.forEach((block, i) => {
@@ -814,6 +1229,11 @@ export default function LearnContent() {
     // Restore inline codes
     inlineCodes.forEach((code, i) => {
       html = html.replace(`___INLINECODE_${i}___`, code);
+    });
+
+    // Restore Tables
+    tables.forEach((table, i) => {
+      html = html.replace(`___TABLE_${i}___`, table);
     });
 
     return html;
