@@ -997,18 +997,46 @@ export default function LearnContent() {
       '<em class="italic text-gray-800 dark:text-gray-200">$1</em>'
     );
 
+    // Force separation between Question (bold) and Answer (italics) if they are adjacent
+    html = html.replace(/<\/strong>\s*<em>/gi, "</strong><br><em>")
+      .replace(/<\/b>\s*<em>/gi, "</b><br><em>")
+      .replace(/<\/strong>\s*<i>/gi, "</strong><br><i>")
+      .replace(/<\/b>\s*<i>/gi, "</b><br><i>");
+
     // Unified List Processing (Handles nesting without breaking ordered sequences)
     const lines = html.split("\n");
     let inOrderedList = false;
     let inUnorderedList = false;
+    let currentSection = "";
 
     html = lines.map((line) => {
+      // Track current section by looking for h1/h2 tags
+      const sectionMatch = line.match(/<h[12][^>]*>(.*?)<\/h[12]>/i);
+      if (sectionMatch) {
+        currentSection = sectionMatch[1].replace(/<[^>]*>/g, '').trim();
+      }
+
       const isOrdered = /^\s*\d+\.\s+/.test(line);
       const isUnordered = /^\s*[-•*]\s+/.test(line);
+
+      const isSpecialSection = currentSection.toLowerCase().includes("practice exercise") ||
+        currentSection.toLowerCase().includes("further reading") ||
+        currentSection.toLowerCase().includes("resources");
 
       if (isOrdered) {
         // Found numbered item
         const content = line.replace(/^\s*\d+\.\s+/, "");
+
+        // If we are in a Special Section (Exercise/Reading), treat numbers as ticks too
+        if (isSpecialSection && !inOrderedList) {
+          // Treat as unordered for styling
+          if (!inUnorderedList) {
+            inUnorderedList = true;
+            return '<ul class="list-none mb-6 space-y-4 text-gray-700 dark:text-gray-300 ml-2">' +
+              `<li class="flex items-start gap-3"><span class="text-black dark:text-white font-bold mt-1">✔</span><span class="font-medium">${content}</span></li>`;
+          }
+          return `<li class="flex items-start gap-3 pt-2"><span class="text-black dark:text-white font-bold mt-1">✔</span><span class="font-medium">${content}</span></li>`;
+        }
 
         // If we were in a bullet list, close it
         let prefix = "";
@@ -1029,22 +1057,34 @@ export default function LearnContent() {
       else if (isUnordered) {
         // Found bullet item
         const content = line.replace(/^\s*[-•*]\s+/, "");
+        const isNested = /^\s{2,}/.test(line);
 
         // If we are in an ordered list, we want to render this bullet *inside* it
-        // but wrapped in its own UL, without closing the OL.
         if (inOrderedList) {
-          // Render a nested UL item (self-contained for this line)
-          // Note: Ideally this should be inside the previous LI, but appending it works visually in most browsers
           return '<ul class="list-disc list-inside ml-6 text-gray-600 dark:text-gray-400"><li class="mb-1">' + content + "</li></ul>";
         }
 
-        // Standard UL handling
+        // Standard UL handling with specific styling for Exercises/Resources (Tick + Tab)
         if (!inUnorderedList) {
           inUnorderedList = true;
-          return '<ul class="list-disc list-inside mb-4 space-y-2 text-gray-700 dark:text-gray-300 ml-4"><li class="mb-2">' + content + "</li>";
+          if (isSpecialSection) {
+            return '<ul class="list-none mb-6 space-y-4 text-gray-700 dark:text-gray-300 ml-2">' +
+              (isNested
+                ? `<li class="ml-10 py-1 border-l-2 border-indigo-500/20 pl-4 italic text-gray-600 dark:text-gray-400">${content}</li>`
+                : `<li class="flex items-start gap-3"><span class="text-black dark:text-white font-bold mt-1">✔</span><span class="font-medium">${content}</span></li>`
+              );
+          } else {
+            return '<ul class="list-disc list-inside mb-4 space-y-2 text-gray-700 dark:text-gray-300 ml-4"><li class="mb-2">' + content + "</li>";
+          }
         }
 
-        return '<li class="mb-2">' + content + "</li>";
+        if (isSpecialSection) {
+          return isNested
+            ? `<li class="ml-10 py-1 border-l-2 border-indigo-500/20 pl-4 italic text-gray-600 dark:text-gray-400">${content}</li>`
+            : `<li class="flex items-start gap-3 pt-2"><span class="text-black dark:text-white font-bold mt-1">✔</span><span class="font-medium">${content}</span></li>`;
+        } else {
+          return '<li class="mb-2">' + content + "</li>";
+        }
       }
       else {
         // Neither list type - generic text or blank
@@ -1071,18 +1111,6 @@ export default function LearnContent() {
       .map((para) => {
         para = para.trim();
         if (para && !para.startsWith("<")) {
-          // Check if this looks like an exercise (starts with bold)
-          if (para.startsWith("<strong>") || para.startsWith("<b>")) {
-            // Force separation between Question (bold) and Answer (italics) if they are adjacent
-            para = para.replace(/<\/strong>\s*<em>/gi, "</strong><br><em>")
-              .replace(/<\/b>\s*<em>/gi, "</b><br><em>")
-              .replace(/<\/strong>\s*<i>/gi, "</strong><br><i>")
-              .replace(/<\/b>\s*<i>/gi, "</b><br><i>");
-
-            // Force block formatting for exercises to ensure Question is on top of Answer
-            // and apply line-height 2 (leading-loose)
-            return `<div class="mb-6 space-y-4 text-gray-700 dark:text-gray-300 leading-loose">${para.replace(/<br\s*\/?>/gi, "</div><div class='leading-loose'>")}</div>`;
-          }
           return `<p class="mb-4 text-gray-700 dark:text-gray-300 leading-loose">${para}</p>`;
         }
         return para;

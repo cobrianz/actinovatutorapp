@@ -312,13 +312,12 @@ Access tier: ${userTier.toUpperCase()}
 Structure the lesson as follows:
 - ## Introduction: An engaging, scholarly overview with thesis-like statement and relevance to the field.
 - ## Learning Objectives: 4-6 specific, measurable objectives in a bulleted list.
-- ## Core Concepts: In-depth subsections with exhaustive explanations, multiple examples, analogies, and critical analysis.
+- ## Core Concepts: Exhaustive and comprehensive subsections. Provide extremely detailed explanations, covering every nuance, multiple complex examples, layered analogies, and deep critical analysis. Each concept should be explored thoroughly.
 - ## Historical and Theoretical Context: Discuss evolution of the topic, key scholars, and debates.
-- ## Practice Exercises: 4-6 challenging exercises.
-  **Question text in bold**
-  
-  *Answer text in italics*
-  (Ensure there is a full blank line between the Question and the Answer).
+- ## Practice Exercises: Exactly 5 challenging practice questions with detailed solutions. Use the following structure:
+  - **Question in bold**
+    - *Detailed answer in italics*
+  (Each question must be a top-level bullet point, and the answer must be a nested bullet point under it).
 - ## Key Takeaways: A synthesized summary in bulleted form, emphasizing core insights.
 - ## Further Reading and Resources: Curated list of 5-8 academic sources (books, papers, journals) with brief annotations.
 

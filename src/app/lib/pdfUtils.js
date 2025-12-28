@@ -99,8 +99,9 @@ export const downloadCourseAsPDF = async (data, mode = "course") => {
 
             return new Promise((resolve, reject) => {
                 const img = new Image();
-                const svgBlob = new Blob([svg], { type: 'image/svg+xml;charset=utf-8' });
-                const url = URL.createObjectURL(svgBlob);
+                // Use base64 Data URI instead of Blob URL to avoid tainted canvas SecurityError
+                const base64Svg = btoa(unescape(encodeURIComponent(svg)));
+                const url = `data:image/svg+xml;base64,${base64Svg}`;
 
                 img.onload = () => {
                     const canvas = document.createElement('canvas');
@@ -114,7 +115,6 @@ export const downloadCourseAsPDF = async (data, mode = "course") => {
                     ctx.fillRect(0, 0, canvas.width, canvas.height);
                     ctx.scale(scale, scale);
                     ctx.drawImage(img, 0, 0);
-                    URL.revokeObjectURL(url);
                     resolve({
                         dataUrl: canvas.toDataURL('image/png'),
                         width: img.width, // unscaled dimensions for PDF layout
@@ -123,9 +123,9 @@ export const downloadCourseAsPDF = async (data, mode = "course") => {
                 };
                 img.onerror = (e) => {
                     console.error("Image load error", e);
-                    URL.revokeObjectURL(url);
                     resolve(null); // Fallback to raw code
                 };
+                img.crossOrigin = "anonymous";
                 img.src = url;
             });
         } catch (e) {
