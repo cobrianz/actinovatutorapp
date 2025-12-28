@@ -644,7 +644,7 @@ export default function Library({ setActiveContent, setHideNavs }) {
                 <stat.icon size={12} className="stroke-[2.5]" />
               </div>
               <div className="flex flex-row items-center gap-1.5 min-w-0">
-                <div className="text-xs font-black text-gray-900 dark:text-white leading-none truncate">{stat.value}</div>
+                <div className="text-xs font-bold text-gray-900 dark:text-white leading-none truncate">{stat.value}</div>
                 <div className="text-[10px] font-bold text-gray-600 dark:text-gray-300 truncate">{stat.label}</div>
               </div>
             </div>
@@ -655,7 +655,7 @@ export default function Library({ setActiveContent, setHideNavs }) {
       {/* Discovery Hub Header & Categories */}
       <div className="space-y-6">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-          <h1 className="text-2xl font-black uppercase tracking-tight text-gray-900 dark:text-white">
+          <h1 className="text-2xl font-bold uppercase tracking-tight text-gray-900 dark:text-white">
             Discovery Hub
           </h1>
 
@@ -666,13 +666,13 @@ export default function Library({ setActiveContent, setHideNavs }) {
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="Search disciplines..."
-              className="w-full pl-12 pr-4 py-3 bg-white dark:bg-gray-800 border-2 border-purple-100 dark:border-purple-900/30 rounded-2xl focus:ring-2 focus:ring-purple-500/20 outline-none transition-all placeholder:text-gray-400 placeholder:font-medium font-medium text-sm"
+              className="w-full pl-12 pr-4 py-3 bg-[#C2C4E1] dark:bg-gray-800 border-2 border-purple-100 dark:border-purple-900/30 rounded-2xl focus:ring-2 focus:ring-purple-500/20 outline-none transition-all placeholder:text-gray-500 placeholder:font-medium font-medium text-sm text-gray-900 dark:text-white"
             />
           </div>
         </div>
 
         <div className="flex items-center justify-between">
-          <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-500">
+          <h3 className="text-[10px] font-bold uppercase tracking-[0.2em] text-gray-500">
             Categories
           </h3>
           <Link
@@ -689,7 +689,7 @@ export default function Library({ setActiveContent, setHideNavs }) {
               onClick={() => handleCategoryClick(cat.name)}
               className={`flex-shrink-0 flex items-center gap-2 px-5 py-3 rounded-2xl font-bold text-sm transition-all active:scale-95 ${selectedCategory === cat.name
                 ? "bg-indigo-600 text-white shadow-lg shadow-indigo-500/20"
-                : "bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700/50"
+                : "bg-[#C2C4E1] dark:bg-gray-800 text-gray-700 dark:text-gray-400 hover:bg-[#b0b3d6] dark:hover:bg-gray-700/50"
                 }`}
             >
               <IconComponent name={cat.icon} size={16} />
@@ -698,7 +698,7 @@ export default function Library({ setActiveContent, setHideNavs }) {
           ))}
           <Link
             href="/explore"
-            className="flex-shrink-0 flex items-center gap-2 px-5 py-3 rounded-2xl font-bold text-sm transition-all active:scale-95 bg-white dark:bg-gray-800 text-indigo-600 hover:bg-gray-50 dark:hover:bg-gray-700/50"
+            className="flex-shrink-0 flex items-center gap-2 px-5 py-3 rounded-2xl font-bold text-sm transition-all active:scale-95 bg-[#C2C4E1] dark:bg-gray-800 text-indigo-700 hover:bg-[#b0b3d6] dark:hover:bg-gray-700/50"
           >
             <Grid size={16} />
             <span>View More</span>
@@ -712,7 +712,7 @@ export default function Library({ setActiveContent, setHideNavs }) {
         premiumCourses.length > 0 && (
           <div className="space-y-4">
             <div className="flex items-center justify-between px-1">
-              <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-500">Premium Spotlight</h3>
+              <h3 className="text-[10px] font-bold uppercase tracking-[0.2em] text-gray-500">Premium Spotlight</h3>
               <button onClick={() => setActiveContent("staff-picks")} className="text-[10px] font-bold text-indigo-600 uppercase tracking-widest hover:underline">View All</button>
             </div>
             <div className="flex gap-4 overflow-x-auto pb-4 -mx-4 px-4 scrollbar-hide no-scrollbar scroll-smooth">
@@ -734,7 +734,7 @@ export default function Library({ setActiveContent, setHideNavs }) {
                       )}
 
                     </div>
-                    <h4 className="font-black text-lg leading-tight mb-2 line-clamp-2">{course.title}</h4>
+                    <h4 className="font-bold text-lg leading-tight mb-2 line-clamp-2">{course.title}</h4>
                     <p className="text-white/70 text-xs font-medium line-clamp-2 mb-4">{course.description}</p>
                     <div className="mt-auto flex items-center gap-3">
                       <div className="flex -space-x-2">
@@ -755,7 +755,7 @@ export default function Library({ setActiveContent, setHideNavs }) {
         exploreCourses.length > 0 && (
           <div className="space-y-4">
             <div className="flex items-center justify-between px-1">
-              <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-500">Featured Discovery</h3>
+              <h3 className="text-[10px] font-bold uppercase tracking-[0.2em] text-gray-500">Featured Discovery</h3>
               <button onClick={() => setActiveContent("explore")} className="text-[10px] font-bold text-indigo-600 uppercase tracking-widest hover:underline">View All</button>
             </div>
             <div className="flex gap-4 overflow-x-auto pb-4 -mx-4 px-4 scrollbar-hide no-scrollbar scroll-smooth">
@@ -763,11 +763,11 @@ export default function Library({ setActiveContent, setHideNavs }) {
                 <motion.div
                   key={idx}
                   whileHover={{ y: -4 }}
-                  className="flex-shrink-0 w-[260px] bg-white dark:bg-gray-800 rounded-xl p-5 border border-gray-100 dark:border-gray-700/50 shadow-sm relative overflow-hidden group cursor-pointer"
+                  className="flex-shrink-0 w-[260px] bg-[#C2C4E1] dark:bg-gray-800 rounded-xl p-5 border border-transparent dark:border-gray-700/50 shadow-sm relative overflow-hidden group cursor-pointer"
                   onClick={() => handleGenerateCourse(course)}
                 >
                   <div className="flex items-center gap-3 mb-4">
-                    <div className="w-10 h-10 rounded-2xl bg-gray-50 dark:bg-gray-700/50 flex items-center justify-center text-gray-400 group-hover:text-indigo-500 transition-colors">
+                    <div className="w-10 h-10 rounded-2xl bg-white/50 dark:bg-gray-700/50 flex items-center justify-center text-gray-600 dark:text-gray-400 group-hover:text-indigo-600 transition-colors">
                       <Scroll size={20} />
                     </div>
                     <div>
@@ -790,7 +790,7 @@ export default function Library({ setActiveContent, setHideNavs }) {
       {/* Your Collection */}
       <div className="space-y-6">
         <div className="flex items-center justify-between px-1">
-          <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-500">Your Collection</h3>
+          <h3 className="text-[10px] font-bold uppercase tracking-[0.2em] text-gray-500">Your Collection</h3>
           <div className="flex bg-gray-100 dark:bg-gray-800 rounded-xl p-1 opacity-0 pointer-events-none hidden">
             <button onClick={() => setViewMode("grid")} className={`p-1.5 rounded-lg transition-all ${viewMode === "grid" ? "bg-white dark:bg-gray-700 shadow-sm" : "text-gray-400"}`}><Grid size={14} /></button>
             <button onClick={() => setViewMode("list")} className={`p-1.5 rounded-lg transition-all ${viewMode === "list" ? "bg-white dark:bg-gray-700 shadow-sm" : "text-gray-400"}`}><List size={14} /></button>
@@ -800,7 +800,7 @@ export default function Library({ setActiveContent, setHideNavs }) {
         {loading ? (
           <div className="grid grid-cols-2 md:grid-cols-3 gap-6">
             {[...Array(6)].map((_, i) => (
-              <div key={i} className="bg-white dark:bg-gray-800 border rounded-xl p-6 animate-pulse h-40"></div>
+              <div key={i} className="bg-[#C2C4E1] dark:bg-gray-800 border-none rounded-xl p-6 animate-pulse h-40"></div>
             ))}
           </div>
         ) : courses.length === 0 ? (
@@ -847,8 +847,23 @@ export default function Library({ setActiveContent, setHideNavs }) {
                       .replace(/[^a-zA-Z0-9\s-]/g, "")
                       .trim()
                       .replace(/\s+/g, "-");
+
+                    // Check for saved position (Resume functionality)
+                    let resumeParams = "";
+                    try {
+                      const savedPos = localStorage.getItem(`last_position_${course.id || course._id}`);
+                      if (savedPos) {
+                        const { moduleId, lessonIndex } = JSON.parse(savedPos);
+                        if (moduleId && (lessonIndex !== undefined)) {
+                          resumeParams = `&moduleId=${moduleId}&lessonIndex=${lessonIndex}`;
+                        }
+                      }
+                    } catch (e) {
+                      console.log("Error reading resume position", e);
+                    }
+
                     router.push(
-                      `/learn/content?topic=${encodeURIComponent(course.topic || course.title)}&format=${course.format}&difficulty=${course.difficulty || "beginner"}&originalTopic=${encodeURIComponent(course.topic || course.title)}&id=${course.id || course._id}`
+                      `/learn/content?topic=${encodeURIComponent(course.topic || course.title)}&format=${course.format}&difficulty=${course.difficulty || "beginner"}&originalTopic=${encodeURIComponent(course.topic || course.title)}&id=${course.id || course._id}${resumeParams}`
                     );
                   }}
                   className="w-full rounded-xl p-6 relative overflow-hidden group cursor-pointer transition-transform hover:scale-[1.02] shadow-sm border border-black/5"
@@ -889,7 +904,7 @@ export default function Library({ setActiveContent, setHideNavs }) {
                       </div>
                     </div>
 
-                    <h4 className="font-black text-xl leading-snug mb-4 line-clamp-2 text-white">
+                    <h4 className="font-bold text-xl leading-snug mb-4 line-clamp-2 text-white">
                       {course.title}
                     </h4>
 

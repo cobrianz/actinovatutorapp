@@ -268,22 +268,19 @@ async function handleGenerateLesson(body, userId, db) {
   let visualInstructions = "";
 
   if (userTier === "enterprise") {
-    visualInstructions = `- **Visual Content (ENTERPRISE TIER)**:
-    - Use visuals sparingly—only where absolutely necessary to clarify complex spatial or structural concepts that text alone cannot adequately convey (e.g., cellular organelles like mitochondria, molecular structures, or biological processes like mitosis). Avoid for abstract ideas, historical events, or simple explanations.
-    - For simple flowcharts or processes: Use Mermaid.js code blocks (\`\`\`mermaid\n...\n\`\`\`). Use \`graph TD\` or \`graph LR\`.
-    - For standard STEM diagrams (e.g., mitochondrion, animal cell, plant cell, neuron, DNA, heart) where visuals are critically needed: Output \`[Wikipedia Diagram: topic]\`. Example: \`[Wikipedia Diagram: mitochondrion]\` or \`[Wikipedia Diagram: animal cell]\`.
-    - For custom/specialized diagrams not on Wikipedia and only if essential: Output \`[DALLE_IMAGE: detailed prompt]\`. Example: \`[DALLE_IMAGE: A mitochondrion during the fission process with labeled stages]\`.
-    - For comparisons: Use detailed paragraph explanations with clear contrasts.
-    - **NO tables** - use rich text descriptions instead.
+    visualInstructions = `- **Visual Content (ENTERPRISE/PRO TIER)**:
+    - You represent a premium learning experience. Use high-quality visual suggestions for any complex concept, especially structural biological or physical systems (e.g., Cell Structure, Human Heart, Atomic Models).
+    - For flowcharts or processes: Use Mermaid.js code blocks (\`\`\`mermaid\n...\n\`\`\`). Use \`graph TD\` or \`graph LR\`.
+    - **CRITICAL**: Do NOT output any "Justification" text. Just provide the visual tag or code block directly where it fits naturally.
     - **NEVER use ASCII art.**
-    - **Always explain fully in text first** before any diagram suggestion, and justify why the visual is needed.`;
+    - **NO DALL-E/Image Generation** tags.`;
   } else if (userTier === "pro") {
     visualInstructions = `- **Visual Content (PRO TIER)**:
-    - Use visuals sparingly—only for essential processes where flowcharts add critical value (e.g., algorithms or cycles).
+     - You represent a premium learning experience. Use high-quality visual suggestions for any complex concept, especially structural biological or physical systems (e.g., Cell Structure, Human Heart, Atomic Models).
     - For flowcharts or processes: Use Mermaid.js code blocks (\`\`\`mermaid\n...\n\`\`\`). Use \`graph TD\` or \`graph LR\`.
-    - For comparisons: Use detailed paragraph explanations with clear contrasts.
-    - **NO tables, NO DALL·E images** (Enterprise features).
-    - **NEVER use ASCII art.**`;
+    - **CRITICAL**: Do NOT output any "Justification" text. Just provide the visual tag or code block directly where it fits naturally.
+    - **NEVER use ASCII art.**
+    - **NO DALL-E/Image Generation** tags.`;
   } else {
     visualInstructions = `- **Visual Content (FREE TIER)**:
     - Use clear, detailed text explanations for all concepts.
@@ -317,10 +314,11 @@ Structure the lesson as follows:
 - ## Learning Objectives: 4-6 specific, measurable objectives in a bulleted list.
 - ## Core Concepts: In-depth subsections with exhaustive explanations, multiple examples, analogies, and critical analysis.
 - ## Historical and Theoretical Context: Discuss evolution of the topic, key scholars, and debates.
-- ## Applications and Case Studies: Real-world examples with detailed breakdowns and implications.
-${visualInstructions}
-- ## Common Pitfalls and Best Practices: Thorough analysis of errors and professional strategies.
-- ## Practice Exercises: 4-6 challenging exercises with detailed, worked solutions and explanations.
+- ## Practice Exercises: 4-6 challenging exercises.
+  **Question text in bold**
+  
+  *Answer text in italics*
+  (Ensure there is a full blank line between the Question and the Answer).
 - ## Key Takeaways: A synthesized summary in bulleted form, emphasizing core insights.
 - ## Further Reading and Resources: Curated list of 5-8 academic sources (books, papers, journals) with brief annotations.
 
@@ -360,3 +358,5 @@ IMPORTANT: Be exhaustive—elaborate on every sub-topic with nuance and depth. A
 
   return NextResponse.json({ content });
 }
+
+// Handler for Image Generation removed as per user request

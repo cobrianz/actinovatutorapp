@@ -61,8 +61,8 @@ export default function LearnContent() {
   const [completedLessons, setCompletedLessons] = useState(new Set());
   const [expandedModules, setExpandedModules] = useState(new Set([1]));
   const [activeLesson, setActiveLesson] = useState({
-    moduleId: 1,
-    lessonIndex: 0,
+    moduleId: parseInt(searchParams.get("moduleId")) || 1,
+    lessonIndex: parseInt(searchParams.get("lessonIndex")) || 0,
   });
   const [notes, setNotes] = useState("");
   const [isSavingNotes, setIsSavingNotes] = useState(false);
@@ -216,6 +216,17 @@ export default function LearnContent() {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [courseData?._id]);
+
+  // Save current lesson position to local storage for "Resume" functionality
+  useEffect(() => {
+    if (courseIdParam || courseData?._id) {
+      const id = courseIdParam || courseData?._id;
+      // Key format: last_position_[courseId]
+      const key = `last_position_${id}`;
+      const position = JSON.stringify(activeLesson);
+      localStorage.setItem(key, position);
+    }
+  }, [activeLesson, courseIdParam, courseData?._id]);
 
   // Activity tracking for bottom bar
   useEffect(() => {
@@ -377,56 +388,6 @@ export default function LearnContent() {
 
     return () => observer.disconnect();
   }, []);
-
-  // Handle DALL·E image generation
-  useEffect(() => {
-    const containers = document.querySelectorAll('.dalle-image-container');
-
-    containers.forEach(async (container) => {
-      const prompt = container.getAttribute('data-prompt');
-      const imageId = container.getAttribute('data-id');
-
-      // Skip if already processed
-      if (container.getAttribute('data-processed') === 'true') return;
-      container.setAttribute('data-processed', 'true');
-
-      try {
-        const response = await authenticatedFetch('/api/generate-image', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'x-user-id': user?._id || user?.id || user?.idString || '',
-          },
-          body: JSON.stringify({ prompt }),
-        });
-
-        if (!response.ok) {
-          throw new Error('Failed to generate image');
-        }
-
-        const data = await response.json();
-
-        // Replace placeholder with actual image
-        container.innerHTML = `
-          <div class="max-w-2xl mx-auto">
-            <img 
-              src="${data.imageUrl}" 
-              alt="${prompt}" 
-              class="w-full h-auto rounded-lg shadow-lg border border-gray-200 dark:border-gray-700"
-            />
-            <p class="text-xs text-gray-500 dark:text-gray-400 mt-2 text-center italic">AI-generated diagram</p>
-          </div>
-        `;
-      } catch (error) {
-        console.error('DALL·E generation error:', error);
-        container.innerHTML = `
-          <div class="bg-red-50 dark:bg-red-900/20 p-4 rounded-lg border border-red-200 dark:border-red-800 text-center">
-            <p class="text-red-600 dark:text-red-400 text-sm">Failed to generate diagram</p>
-          </div>
-        `;
-      }
-    });
-  }, [activeLesson, courseData, user]);
 
   // Handle Wikipedia diagram rendering
   useEffect(() => {
@@ -921,19 +882,7 @@ export default function LearnContent() {
       </div>`;
     });
 
-    // Handle DALL·E image markers (for custom diagrams)
-    html = html.replace(/\[DALLE_IMAGE:\s*([^\]]+)\]/g, (match, prompt) => {
-      const imageId = `dalle-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-      // Return a placeholder that will be processed by a useEffect
-      return `<div class="dalle-image-container my-6 flex justify-center" data-prompt="${prompt.trim()}" data-id="${imageId}">
-        <div class="bg-gray-100 dark:bg-gray-800 p-8 rounded-lg border-2 border-dashed border-gray-300 dark:border-gray-600 text-center">
-          <div class="animate-pulse">
-            <div class="text-gray-500 dark:text-gray-400 mb-2">🎨 Generating diagram...</div>
-            <div class="text-sm text-gray-400 dark:text-gray-500">AI-powered illustration</div>
-          </div>
-        </div>
-      </div>`;
-    });
+    // keep content as generated
 
     // keep content as generated
 
@@ -1015,11 +964,11 @@ export default function LearnContent() {
     // Handle headers
     html = html.replace(
       /^# (.*$)/gm,
-      '<h1 class="text-3xl font-bold text-gray-900 dark:text-gray-100 mb-6 mt-8">$1</h1>'
+      '<h1 class="text-3xl font-bold text-blue-600 dark:text-blue-400 underline decoration-blue-500/30 mb-6 mt-8">$1</h1>'
     );
     html = html.replace(
       /^## (.*$)/gm,
-      '<h2 class="text-2xl font-semibold text-gray-900 dark:text-gray-100 mb-4 mt-6">$1</h2>'
+      '<h2 class="text-2xl font-semibold text-blue-600 dark:text-blue-400 underline decoration-blue-500/30 mb-4 mt-6">$1</h2>'
     );
     html = html.replace(
       /^### (.*$)/gm,
@@ -1048,58 +997,72 @@ export default function LearnContent() {
       '<em class="italic text-gray-800 dark:text-gray-200">$1</em>'
     );
 
-    // Handle numbered lists
+    // Unified List Processing (Handles nesting without breaking ordered sequences)
+    const lines = html.split("\n");
     let inOrderedList = false;
-    html = html
-      .split("\n")
-      .map((line) => {
-        if (/^\d+\.\s+/.test(line)) {
-          const content = line.replace(/^\d+\.\s+/, "");
-          if (!inOrderedList) {
-            inOrderedList = true;
-            return (
-              '<ol class="list-decimal list-inside mb-4 space-y-2 text-gray-700 dark:text-gray-300 ml-4"><li class="mb-2">' +
-              content +
-              "</li>"
-            );
-          }
-          return '<li class="mb-2">' + content + "</li>";
-        } else {
-          if (inOrderedList) {
-            inOrderedList = false;
-            return "</ol>" + line;
-          }
-          return line;
-        }
-      })
-      .join("\n");
-    if (inOrderedList) html += "</ol>";
-
-    // Handle bullet lists
     let inUnorderedList = false;
-    html = html
-      .split("\n")
-      .map((line) => {
-        if (/^[-•*]\s+/.test(line)) {
-          const content = line.replace(/^[-•*]\s+/, "");
-          if (!inUnorderedList) {
-            inUnorderedList = true;
-            return (
-              '<ul class="list-disc list-inside mb-4 space-y-2 text-gray-700 dark:text-gray-300 ml-4"><li class="mb-2">' +
-              content +
-              "</li>"
-            );
-          }
-          return '<li class="mb-2">' + content + "</li>";
-        } else {
-          if (inUnorderedList) {
-            inUnorderedList = false;
-            return "</ul>" + line;
-          }
-          return line;
+
+    html = lines.map((line) => {
+      const isOrdered = /^\s*\d+\.\s+/.test(line);
+      const isUnordered = /^\s*[-•*]\s+/.test(line);
+
+      if (isOrdered) {
+        // Found numbered item
+        const content = line.replace(/^\s*\d+\.\s+/, "");
+
+        // If we were in a bullet list, close it
+        let prefix = "";
+        if (inUnorderedList) {
+          inUnorderedList = false;
+          prefix += "</ul>";
         }
-      })
-      .join("\n");
+
+        // If not already in ordered list, start one
+        if (!inOrderedList) {
+          inOrderedList = true;
+          return prefix + '<ol class="list-decimal list-inside mb-4 space-y-2 text-gray-700 dark:text-gray-300 ml-4"><li class="mb-2">' + content + "</li>";
+        }
+
+        // Already in ordered list
+        return prefix + '<li class="mb-2">' + content + "</li>";
+      }
+      else if (isUnordered) {
+        // Found bullet item
+        const content = line.replace(/^\s*[-•*]\s+/, "");
+
+        // If we are in an ordered list, we want to render this bullet *inside* it
+        // but wrapped in its own UL, without closing the OL.
+        if (inOrderedList) {
+          // Render a nested UL item (self-contained for this line)
+          // Note: Ideally this should be inside the previous LI, but appending it works visually in most browsers
+          return '<ul class="list-disc list-inside ml-6 text-gray-600 dark:text-gray-400"><li class="mb-1">' + content + "</li></ul>";
+        }
+
+        // Standard UL handling
+        if (!inUnorderedList) {
+          inUnorderedList = true;
+          return '<ul class="list-disc list-inside mb-4 space-y-2 text-gray-700 dark:text-gray-300 ml-4"><li class="mb-2">' + content + "</li>";
+        }
+
+        return '<li class="mb-2">' + content + "</li>";
+      }
+      else {
+        // Neither list type - generic text or blank
+        let prefix = "";
+        if (inUnorderedList) {
+          inUnorderedList = false;
+          prefix += "</ul>";
+        }
+        if (inOrderedList) {
+          inOrderedList = false;
+          prefix += "</ol>";
+        }
+        return prefix + line;
+      }
+    }).join("\n");
+
+    // Close any remaining open lists at the end
+    if (inOrderedList) html += "</ol>";
     if (inUnorderedList) html += "</ul>";
 
     // Handle paragraphs
@@ -1108,6 +1071,18 @@ export default function LearnContent() {
       .map((para) => {
         para = para.trim();
         if (para && !para.startsWith("<")) {
+          // Check if this looks like an exercise (starts with bold)
+          if (para.startsWith("<strong>") || para.startsWith("<b>")) {
+            // Force separation between Question (bold) and Answer (italics) if they are adjacent
+            para = para.replace(/<\/strong>\s*<em>/gi, "</strong><br><em>")
+              .replace(/<\/b>\s*<em>/gi, "</b><br><em>")
+              .replace(/<\/strong>\s*<i>/gi, "</strong><br><i>")
+              .replace(/<\/b>\s*<i>/gi, "</b><br><i>");
+
+            // Force block formatting for exercises to ensure Question is on top of Answer
+            // and apply line-height 2 (leading-loose)
+            return `<div class="mb-6 space-y-4 text-gray-700 dark:text-gray-300 leading-loose">${para.replace(/<br\s*\/?>/gi, "</div><div class='leading-loose'>")}</div>`;
+          }
           return `<p class="mb-4 text-gray-700 dark:text-gray-300 leading-loose">${para}</p>`;
         }
         return para;
