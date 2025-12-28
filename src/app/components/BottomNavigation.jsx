@@ -1,12 +1,30 @@
 "use client";
 
-import React from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Home, LayoutDashboard, Compass, User, MessageSquare } from "lucide-react";
+import { Keyboard } from "@capacitor/keyboard";
+import { Capacitor } from "@capacitor/core";
 
 export default function BottomNavigation() {
     const pathname = usePathname();
+    const [isKeyboardOpen, setIsKeyboardOpen] = useState(false);
+
+    useEffect(() => {
+        if (Capacitor.isNativePlatform()) {
+            Keyboard.addListener('keyboardWillShow', () => {
+                setIsKeyboardOpen(true);
+            });
+            Keyboard.addListener('keyboardWillHide', () => {
+                setIsKeyboardOpen(false);
+            });
+
+            return () => {
+                Keyboard.removeAllListeners();
+            };
+        }
+    }, []);
 
     const navItems = [
         {
@@ -42,7 +60,7 @@ export default function BottomNavigation() {
     ];
 
     return (
-        <div className="fixed bottom-0 left-0 right-0 bg-white/80 dark:bg-gray-900/80 backdrop-blur-lg border-t border-gray-200 dark:border-gray-800 pb-safe-bottom z-50">
+        <div className={`fixed bottom-0 left-0 right-0 bg-white/80 dark:bg-gray-900/80 backdrop-blur-lg border-t border-gray-200 dark:border-gray-800 pb-safe-bottom z-50 transition-transform duration-300 ${isKeyboardOpen ? "translate-y-full" : "translate-y-0"}`}>
             <div className="flex justify-around items-center h-14">
                 {navItems.map((item) => {
                     const active = item.isActive(pathname);

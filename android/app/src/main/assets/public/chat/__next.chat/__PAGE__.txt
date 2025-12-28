@@ -3,7 +3,7 @@
 3:I[41378,["6609","static/chunks/6609-c7438e2830a47ecf.js","8500","static/chunks/8500-c06c4ddedc716401.js","24","static/chunks/24-2bc8470a485100c3.js","6788","static/chunks/6788-e2e62ae9129a4e5e.js","8457","static/chunks/app/chat/page-ef453a3351048650.js"],"default"]
 6:I[90484,[],"OutletBoundary"]
 7:"$Sreact.suspense"
-0:{"buildId":"7LFBBjfs5LMJbvAb9FRvz","rsc":["$","$1","c",{"children":[["$","$L2",null,{"Component":"$3","serverProvidedParams":{"searchParams":{},"params":{},"promises":["$@4","$@5"]}}],null,["$","$L6",null,{"children":["$","$7",null,{"name":"Next.MetadataOutlet","children":"$@8"}]}]]}],"loading":null,"isPartial":false}
+0:{"buildId":"e7IqOYH6RoTEk113JY-bY","rsc":["$","$1","c",{"children":[["$","$L2",null,{"Component":"$3","serverProvidedParams":{"searchParams":{},"params":{},"promises":["$@4","$@5"]}}],null,["$","$L6",null,{"children":["$","$7",null,{"name":"Next.MetadataOutlet","children":"$@8"}]}]]}],"loading":null,"isPartial":false}
 4:{}
 5:"$0:rsc:props:children:0:props:serverProvidedParams:params"
 8:null

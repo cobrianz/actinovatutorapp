@@ -548,9 +548,137 @@ export const downloadQuizAsPDF = async (data) => {
 };
 
 export const downloadReceiptAsPDF = async (data) => {
-    // Basic implementation for receipts if not handled by React-PDF
-    // This is a placeholder if the user is using jsPDF for receipts too
-    // If they use @react-pdf/renderer, that logic will be in the component
-    // But based on user request "download lessons, courses and receipts are saved in the phone"
-    // we should ensure whatever method they use supports Capacitor.
+    if (!data) throw new Error("No data provided");
+
+    const pdf = new jsPDF({
+        orientation: "portrait",
+        unit: "mm",
+        format: "a4",
+    });
+
+    const pageWidth = 210;
+    const pageHeight = 297;
+    const margin = 20;
+    let y = 40;
+
+    // Header
+    pdf.setFillColor(248, 250, 252); // Light gray bg for header
+    pdf.rect(0, 0, pageWidth, 50, "F");
+
+    pdf.setFont("helvetica", "bold");
+    pdf.setFontSize(24);
+    pdf.setTextColor(...COLORS.primary);
+    pdf.text("RECEIPT", pageWidth - margin, 25, { align: "right" });
+
+    pdf.setFontSize(10);
+    pdf.setTextColor(...COLORS.textLight);
+    pdf.text("PAYMENT CONFIRMATION", pageWidth - margin, 32, { align: "right" });
+
+    // Logo placeholder text
+    pdf.setFontSize(18);
+    pdf.setTextColor(...COLORS.text);
+    pdf.text("Actinova AI Tutor", margin, 25);
+    pdf.setFontSize(10);
+    pdf.setTextColor(...COLORS.textLight);
+    pdf.text("123 Learning Lane, EdTech City", margin, 32);
+
+    y = 70;
+
+    // Transaction Details
+    pdf.setDrawColor(...COLORS.divider);
+    pdf.setLineWidth(0.5);
+    pdf.line(margin, y, pageWidth - margin, y);
+    y += 15;
+
+    const addRow = (label, value, isBold = false) => {
+        pdf.setFont("helvetica", "normal");
+        pdf.setFontSize(10);
+        pdf.setTextColor(...COLORS.textLight);
+        pdf.text(label, margin, y);
+
+        pdf.setFont("helvetica", isBold ? "bold" : "normal");
+        pdf.setTextColor(...COLORS.text);
+        pdf.text(value, pageWidth - margin, y, { align: "right" });
+        y += 10;
+    };
+
+    addRow("Reference ID", data.reference || "N/A");
+    addRow("Date", new Date(data.date || data.paidAt || Date.now()).toLocaleDateString());
+    addRow("Plan", data.plan || "Premium Subscription");
+    addRow("Billing Cycle", data.billingCycle || "Monthly");
+
+    y += 5;
+    pdf.line(margin, y, pageWidth - margin, y);
+    y += 15;
+
+    // Amount
+    pdf.setFont("helvetica", "bold");
+    pdf.setFontSize(14);
+    pdf.setTextColor(...COLORS.text);
+    pdf.text("Total Amount", margin, y);
+    pdf.setFontSize(18);
+    pdf.setTextColor(...COLORS.primary);
+    pdf.text(
+        new Intl.NumberFormat('en-US', { style: 'currency', currency: data.currency || 'USD' }).format(data.amount || 0),
+        pageWidth - margin,
+        y,
+        { align: "right" }
+    );
+
+    y += 40;
+
+    // Footer
+    pdf.setFont("helvetica", "normal");
+    pdf.setFontSize(9);
+    pdf.setTextColor(...COLORS.textLight);
+    pdf.text("Thank you for your business!", pageWidth / 2, y, { align: "center" });
+
+    const fileName = `receipt-${data.reference || "transaction"}.pdf`;
+
+    // Mobile/Capacitor Support
+    const isCapacitor = typeof window !== 'undefined' && (window.Capacitor || window.location.protocol === 'capacitor:');
+
+    if (isCapacitor) {
+        try {
+            const pdfBase64 = pdf.output('datauristring').split(',')[1];
+            const { Filesystem, Directory } = await import('@capacitor/filesystem').catch(() => ({}));
+            const { Share } = await import('@capacitor/share').catch(() => ({}));
+            const { LocalNotifications } = await import('@capacitor/local-notifications').catch(() => ({}));
+
+            if (!Filesystem || !Share || !LocalNotifications) {
+                throw new Error("Capacitor plugins not available");
+            }
+
+            const result = await Filesystem.writeFile({
+                path: fileName,
+                data: pdfBase64,
+                directory: Directory.Cache,
+            });
+
+            await LocalNotifications.schedule({
+                notifications: [{
+                    title: 'Receipt Downloaded',
+                    body: `Receipt for ${data.plan || "Subscription"} saved.`,
+                    id: Math.floor(Math.random() * 100000),
+                    schedule: { at: new Date(Date.now() + 100) },
+                    sound: null,
+                    attachments: null,
+                    actionTypeId: "",
+                    extra: null
+                }]
+            });
+
+            await Share.share({
+                title: 'Actinova Receipt',
+                text: `Receipt for ${data.plan || "Subscription"}`,
+                url: result.uri,
+                dialogTitle: 'Open Receipt',
+            });
+        } catch (error) {
+            console.error('Capacitor PDF error:', error);
+            pdf.save(fileName);
+        }
+    } else {
+        pdf.save(fileName);
+    }
 };
