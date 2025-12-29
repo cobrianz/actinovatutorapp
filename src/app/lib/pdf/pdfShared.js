@@ -26,7 +26,14 @@ export const saveAndSharePDF = async (pdf, fileName, logTitle, notificationBody,
 
             if (!Filesystem || !Share || !LocalNotifications) throw new Error("Capacitor plugins not available");
 
+            // Request permissions
             try { await LocalNotifications.requestPermissions(); } catch (e) { }
+            try {
+                const status = await Filesystem.requestPermissions();
+                if (status.publicStorage !== 'granted') {
+                    console.warn("Storage permission not granted, falling back to app-specific storage.");
+                }
+            } catch (e) { }
 
             const result = await Filesystem.writeFile({
                 path: fileName,
@@ -46,7 +53,7 @@ export const saveAndSharePDF = async (pdf, fileName, logTitle, notificationBody,
 
             await Share.share({
                 title: `${logType} Downloaded`,
-                text: `Successfully downloaded ${logTitle}`,
+                text: `Successfully downloaded ${logTitle}. You can find it in your device's Downloads folder.`,
                 url: result.uri,
                 dialogTitle: 'Share or Open Document',
             });
