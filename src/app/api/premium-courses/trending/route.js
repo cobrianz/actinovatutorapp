@@ -163,6 +163,30 @@ function formatCourse(c) {
   };
 }
 
+export async function cleanupOldTrendingCourses() {
+  try {
+    const { db } = await connectToDatabase();
+    const col = db.collection("premium_trending_courses");
+    const lastFriday = getLastFriday();
+
+    const result = await col.deleteMany({
+      generatedAt: { $lt: lastFriday }
+    });
+
+    return {
+      success: true,
+      deletedCount: result.deletedCount,
+      threshold: lastFriday
+    };
+  } catch (error) {
+    console.error("Global trending cleanup failed:", error);
+    return {
+      success: false,
+      error: error.message
+    };
+  }
+}
+
 export async function GET(request) {
   let user = null;
   let token = request.headers.get("authorization")?.split("Bearer ")[1];

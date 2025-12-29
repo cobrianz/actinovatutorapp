@@ -278,6 +278,7 @@ async function loginHandler(request) {
       },
     });
   } catch (error) {
+    console.error("[Actinova] Login Critical Error:", error);
     return NextResponse.json(
       { error: "Authentication failed. Please try again later." },
       { status: 500 }
