@@ -31,7 +31,7 @@ export const saveAndSharePDF = async (pdf, fileName, logTitle, notificationBody,
                 }
             } catch (e) { }
 
-            console.log(`[PDF] Attempting to write ${fileName} to Downloads...`);
+
             const result = await Filesystem.writeFile({
                 path: fileName,
                 data: pdfBase64,
@@ -39,7 +39,7 @@ export const saveAndSharePDF = async (pdf, fileName, logTitle, notificationBody,
                 recursive: true
             });
 
-            console.log(`[PDF] File written successfully: ${result.uri}`);
+
 
             // These are optional - failure here shouldn't stop the download
             if (LocalNotifications) {
@@ -67,7 +67,7 @@ export const saveAndSharePDF = async (pdf, fileName, logTitle, notificationBody,
                         url: result.uri,
                         dialogTitle: 'Share or Open Document',
                     });
-                    console.log(`[PDF] Share sheet opened for ${result.uri}`);
+
                 } catch (err) { console.error("[PDF] Share error:", err); }
             }
         } catch (error) {

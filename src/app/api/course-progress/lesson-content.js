@@ -83,7 +83,7 @@ export async function POST(request) {
         !cachedContent.includes("coming soon") &&
         cachedContent.length > 300
       ) {
-        console.log("Cache hit:", lessonTitle);
+
         return NextResponse.json({
           success: true,
           content: cachedContent,
@@ -186,7 +186,7 @@ Make it engaging, professional, and perfectly structured.`;
             },
           }
         );
-        console.log("Lesson saved to DB:", lessonTitle);
+
       } catch (saveError) {
         console.error("Failed to save lesson:", saveError);
         // Don't fail the request — user still gets content

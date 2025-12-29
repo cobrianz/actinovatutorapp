@@ -109,11 +109,7 @@ export async function POST(request) {
   const bodyRaw = await request.text();
   const signature = headers().get("x-paystack-signature");
 
-  console.log("Webhook received", {
-    event: "unknown",
-    hasSignature: !!signature,
-    bodyLength: bodyRaw.length,
-  });
+
 
   try {
     // === 1. Validate request timeout (prevent replay attacks) ===
@@ -138,7 +134,7 @@ export async function POST(request) {
       return NextResponse.json({ error: "Invalid payload" }, { status: 400 });
     }
 
-    console.log("Processing Paystack event:", event.event);
+
 
     await connectToDatabase();
 
@@ -184,7 +180,7 @@ export async function POST(request) {
           },
           { runValidators: true }
         );
-        console.log(`Subscription activated: ${data.subscription_code}`);
+
         break;
       }
 
@@ -201,7 +197,7 @@ export async function POST(request) {
             "subscription.canceledAt": new Date(),
             "subscription.autoRenew": false,
           });
-          console.log(`Subscription canceled: ${code}`);
+
         }
         break;
       }
@@ -224,11 +220,11 @@ export async function POST(request) {
       }
 
       default:
-        console.log(`Unhandled event: ${event.event}`);
+
     }
 
     const processingTime = Date.now() - startTime;
-    console.log(`Webhook processed in ${processingTime}ms`);
+
 
     return NextResponse.json({ received: true, processed: true });
   } catch (error) {

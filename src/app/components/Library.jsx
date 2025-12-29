@@ -267,7 +267,7 @@ export default function Library({ setActiveContent, setHideNavs }) {
       if (!res.ok) {
         if (res.status === 401 && retryAfterRefresh) {
           // Try to refresh token and retry
-          console.log("Token expired, attempting to refresh...");
+
           const refreshSuccess = await refreshToken();
           if (refreshSuccess) {
             // Retry the request after successful refresh

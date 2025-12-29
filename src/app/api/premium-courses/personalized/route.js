@@ -5,7 +5,7 @@ import { verifyToken } from "@/lib/auth";
 import { ObjectId } from "mongodb";
 
 export async function POST(request) {
-  console.log("Personalized courses API called");
+
 
   let token = request.headers.get("authorization")?.split("Bearer ")[1];
   let userId;

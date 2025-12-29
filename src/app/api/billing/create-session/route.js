@@ -99,11 +99,7 @@ async function createCheckoutSessionHandler(request) {
     // Logic to match the requested plan ID
     const targetPlanId = plan || "pro";
 
-    console.log("Debug Plan Selection:", {
-      targetPlanId,
-      dbPlansCount: dbPlans.length,
-      dbPlans: dbPlans.map(p => ({ id: p.id, name: p.name }))
-    });
+
 
     const selectedPlan = dbPlans.find(p => {
       const pId = p.id || p.name.toLowerCase().split(' ')[0];
@@ -239,9 +235,7 @@ async function createCheckoutSessionHandler(request) {
       );
     }
 
-    console.warn(
-      `Success: Paystack session created → ${currency} ${planConfig.amount / 100} | Ref: ${data.reference}`
-    );
+
 
     // Provide safe user info alongside session so UI can use it immediately
     const safeUser = {

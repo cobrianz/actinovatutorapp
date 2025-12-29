@@ -52,7 +52,7 @@ export async function GET(request) {
     }
 
     if (data.status !== "success") {
-      console.log(`Payment not successful: ${data.status}`, data);
+
       return redirectTo(
         request,
         `/dashboard?payment=failed&status=${data.status}`
@@ -131,7 +131,7 @@ export async function GET(request) {
     );
 
     if (alreadyProcessed) {
-      console.log("Transaction already processed (idempotent)", data.reference);
+
       return redirectTo(
         request,
         `/dashboard?payment=success&plan=${plan}&ref=${data.reference}`

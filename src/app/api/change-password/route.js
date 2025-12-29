@@ -142,9 +142,7 @@ async function changePasswordHandler(req) {
         { $set: { password: hashedPassword, lastPasswordChange: new Date() } }
       );
 
-      console.log(
-        `Password changed successfully for user: ${user.email || userId}`
-      );
+
 
       // Send password change notification email
       try {
@@ -152,9 +150,7 @@ async function changePasswordHandler(req) {
           to: user.email,
           name: user.name || user.firstName || "User",
         });
-        console.log(
-          `Password change notification email sent to: ${user.email}`
-        );
+
       } catch (emailError) {
         console.error(
           "Failed to send password change notification email:",

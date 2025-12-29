@@ -47,7 +47,7 @@ export async function POST(request) {
     });
     */
 
-    console.log("Daily cleanup completed:", results);
+
 
     return NextResponse.json({
       success: true,

@@ -118,14 +118,14 @@ async function ensureCourses(db) {
   const count = await col.countDocuments();
 
   if (count === 0) {
-    console.log("Seeding premium courses...");
+
     await col.insertMany(
       PREMIUM_COURSES_SEED.map((course) => ({
         ...course,
         _id: new ObjectId(),
       }))
     );
-    console.log("Premium courses seeded successfully");
+
   }
 }
 

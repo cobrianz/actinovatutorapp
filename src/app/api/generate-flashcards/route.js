@@ -100,7 +100,7 @@ export async function POST(request) {
         });
 
         if (existingDuplicate) {
-          console.log(`Returning existing card set for ${topic} (${difficulty})`);
+
           return NextResponse.json({
             success: true,
             cardSetId: existingDuplicate._id.toString(),
@@ -325,7 +325,7 @@ No markdown. Only JSON. Perfect for spaced repetition.`,
 
       // Save async
       await db.collection("cardSets").insertOne(cardSet);
-      console.log(`Card set saved: ${cardSetId}`);
+
 
       // Enforce per-user card set limits (free: 1, premium: 20) in background or check before?
       // Check before is better, but here we check after insert (if it's just check).
