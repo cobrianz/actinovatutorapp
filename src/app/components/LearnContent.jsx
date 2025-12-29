@@ -2151,6 +2151,13 @@ export default function LearnContent() {
                 </div>
               ) : currentLesson?.content ? (
                 <div>
+                  {/* Lesson Title Header */}
+                  <div className="mb-6 pb-4 border-b border-gray-200 dark:border-gray-700">
+                    <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white">
+                      {currentLesson.title || "Lesson Content"}
+                    </h1>
+                  </div>
+
                   <div className="prose prose-sm sm:prose-base lg:prose-lg dark:prose-invert max-w-none">
                     {/* Visualizations removed: use images or links in content */}
                     <div

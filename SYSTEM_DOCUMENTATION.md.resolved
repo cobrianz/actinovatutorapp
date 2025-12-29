@@ -1,0 +1,1360 @@
+# Actinova AI Tutor - System Documentation
+
+**Version:** 0.1.0  
+**Last Updated:** December 29, 2025  
+**Document Status:** Production Ready
+
+---
+
+## Table of Contents
+
+1. [System Overview](#1-system-overview)
+2. [Architecture](#2-architecture)
+3. [Technology Stack](#3-technology-stack)
+4. [Database Schema](#4-database-schema)
+5. [API Reference](#5-api-reference)
+6. [Authentication & Authorization](#6-authentication--authorization)
+7. [Subscription & Billing](#7-subscription--billing)
+8. [Content Generation](#8-content-generation)
+9. [PDF Generation System](#9-pdf-generation-system)
+10. [Mobile Application](#10-mobile-application)
+11. [Deployment](#11-deployment)
+12. [Security](#12-security)
+13. [Monitoring & Maintenance](#13-monitoring--maintenance)
+14. [Troubleshooting](#14-troubleshooting)
+
+---
+
+## 1. System Overview
+
+### 1.1 Purpose
+Actinova AI Tutor is an intelligent learning platform that leverages OpenAI's GPT models to generate personalized educational content including courses, flashcards, quizzes, and interactive lessons.
+
+### 1.2 Key Features
+- **AI-Powered Content Generation**: Courses, flashcards, quizzes, and study materials
+- **Personalized Learning Paths**: Adaptive content based on user preferences
+- **Interactive Chat Interface**: Real-time AI tutoring
+- **PDF Export**: Professional course materials and receipts
+- **Subscription Management**: Paystack integration for payments
+- **Mobile Support**: Capacitor-based Android application
+- **Progress Tracking**: Comprehensive learning analytics
+
+### 1.3 Target Audience
+- **Students**: K-12, university, and lifelong learners
+- **Educators**: Content creators and instructors
+- **Administrators**: System managers and support staff
+
+---
+
+## 2. Architecture
+
+### 2.1 High-Level Architecture
+
+```mermaid
+graph TB
+    Client[Client Browser/Mobile App]
+    NextJS[Next.js 16.1.0 Server]
+    MongoDB[(MongoDB Database)]
+    OpenAI[OpenAI API]
+    Paystack[Paystack Payment Gateway]
+    Email[Email Service - Nodemailer]
+    
+    Client -->|HTTPS| NextJS
+    NextJS -->|Mongoose ODM| MongoDB
+    NextJS -->|API Calls| OpenAI
+    NextJS -->|Payment Processing| Paystack
+    NextJS -->|Transactional Emails| Email
+```
+
+### 2.2 Application Layers
+
+#### **Presentation Layer**
+- **Framework**: Next.js 16.1.0 with React 19.2.3
+- **UI Library**: Radix UI + Tailwind CSS 4.1.10
+- **State Management**: React Context API (AuthProvider)
+- **Routing**: Next.js App Router
+
+#### **Business Logic Layer**
+- **API Routes**: 59 serverless functions
+- **Middleware**: Authentication, CSRF protection, rate limiting
+- **Utilities**: User management, plan limits, PDF generation
+
+#### **Data Layer**
+- **Database**: MongoDB 6.20.0
+- **ODM**: Mongoose 8.18.3
+- **Models**: 12 core data models
+
+#### **External Services**
+- **AI**: OpenAI GPT-4
+- **Payments**: Paystack API
+- **Email**: Nodemailer with SMTP
+- **Mobile**: Capacitor 8.0.0
+
+### 2.3 Directory Structure
+
+```
+src/app/
+├── api/                    # API routes (59 endpoints)
+│   ├── auth/              # Authentication (11 endpoints)
+│   ├── billing/           # Payment processing (4 endpoints)
+│   ├── courses/           # Course management
+│   ├── flashcards/        # Flashcard CRUD
+│   ├── quizzes/           # Quiz management
+│   └── ...
+├── components/            # React components (84 files)
+│   ├── ui/               # Reusable UI components
+│   ├── AuthProvider.jsx  # Authentication context
+│   ├── DashboardContent.jsx
+│   └── ...
+├── lib/                   # Utilities (23 files)
+│   ├── auth.js           # JWT & password hashing
+│   ├── mongodb.js        # Database connection
+│   ├── planLimits.js     # Subscription limits
+│   ├── pdf/              # PDF generation
+│   └── ...
+├── models/                # Mongoose models (12 files)
+│   ├── User.js
+│   ├── Course.js
+│   ├── Quiz.js
+│   └── ...
+└── (pages)/               # Next.js pages
+    ├── dashboard/
+    ├── auth/
+    └── ...
+```
+
+---
+
+## 3. Technology Stack
+
+### 3.1 Core Technologies
+
+| Category | Technology | Version | Purpose |
+|----------|-----------|---------|---------|
+| **Framework** | Next.js | 16.1.0 | Full-stack React framework |
+| **Runtime** | Node.js | 18+ | Server runtime |
+| **Language** | JavaScript | ES2022 | Primary language |
+| **UI Library** | React | 19.2.3 | Component library |
+| **Database** | MongoDB | 6.20.0 | NoSQL database |
+| **ODM** | Mongoose | 8.18.3 | Object modeling |
+
+### 3.2 Key Dependencies
+
+#### **Frontend**
+- **Styling**: Tailwind CSS 4.1.10, Radix UI
+- **Icons**: Lucide React 0.522.0
+- **Forms**: React Hook Form 7.58.1, Zod 3.25.76
+- **Animations**: Framer Motion 12.18.1
+- **Notifications**: Sonner 2.0.5
+- **Markdown**: React Markdown 10.1.0
+
+#### **Backend**
+- **Authentication**: jsonwebtoken 9.0.2, bcryptjs 3.0.2
+- **AI**: openai 6.0.0
+- **Payments**: paystack-api 2.0.6
+- **Email**: nodemailer 7.0.6, @react-email/components 0.5.5
+- **PDF**: jspdf 3.0.4, pdf-lib 1.17.1
+- **Diagrams**: mermaid 11.12.2
+
+#### **Mobile**
+- **Framework**: @capacitor/core 8.0.0
+- **Plugins**: filesystem, share, local-notifications, haptics
+
+### 3.3 Development Tools
+- **Linting**: ESLint 9
+- **Git Hooks**: Husky 9.1.0
+- **Build**: Webpack (via Next.js)
+
+---
+
+## 4. Database Schema
+
+### 4.1 User Model
+
+**Collection**: `users`
+
+```javascript
+{
+  _id: ObjectId,
+  firstName: String (required, 2-50 chars),
+  lastName: String (required, 2-50 chars),
+  email: String (required, unique, lowercase),
+  password: String (hashed, bcrypt),
+  role: Enum["student", "instructor", "admin"],
+  status: Enum["active", "inactive", "suspended", "pending"],
+  
+  // Email Verification
+  emailVerified: Boolean,
+  emailVerificationToken: String,
+  emailVerificationCode: String,
+  emailVerificationExpires: Date,
+  
+  // Password Reset
+  passwordResetCode: String,
+  passwordResetExpires: Date,
+  lastPasswordChange: Date,
+  
+  // Security
+  refreshTokens: [{token: String, createdAt: Date}],
+  loginAttempts: Number,
+  lockUntil: Date,
+  lastLogin: Date,
+  
+  // Profile
+  profile: {
+    avatar: String,
+    bio: String (max 500 chars),
+    preferences: {
+      theme: Enum["light", "dark", "auto"],
+      notifications: {email: Boolean, push: Boolean}
+    }
+  },
+  
+  // Onboarding
+  interests: [String],
+  interestCategories: [String],
+  skillLevel: Enum["beginner", "intermediate", "advanced"],
+  goals: [String],
+  timeCommitment: String,
+  ageGroup: String,
+  educationLevel: String,
+  learningStyle: String,
+  onboardingCompleted: Boolean,
+  
+  // Premium Courses
+  generatedPremiumCourses: [{
+    courseId: String,
+    courseTitle: String,
+    generatedAt: Date
+  }],
+  
+  // Courses
+  courses: [{
+    courseId: ObjectId (ref: Course),
+    progress: Number (0-100),
+    completed: Boolean,
+    enrolledAt: Date
+  }],
+  
+  // Subscription
+  subscription: {
+    plan: Enum["free", "pro", "team", "premium", "editors-choice"],
+    status: Enum["active", "inactive", "canceled", "pending"],
+    paystackReference: String,
+    paystackCustomerCode: String,
+    startedAt: Date,
+    expiresAt: Date,
+    autoRenew: Boolean
+  },
+  
+  // Billing
+  billingHistory: [{
+    type: Enum["subscription", "one-time", "refund"],
+    amount: Number,
+    currency: String,
+    date: Date,
+    reference: String,
+    status: Enum["success", "failed", "pending"],
+    authorization: {cardType, last4, bank, ...}
+  }],
+  
+  // Settings
+  settings: {
+    notifications: {email, push, marketing, courseUpdates},
+    privacy: {profileVisible, progressVisible, achievementsVisible},
+    preferences: {theme, language, difficulty, learningStyle, dailyGoal}
+  },
+  
+  createdAt: Date,
+  updatedAt: Date
+}
+```
+
+**Indexes**:
+- `email` (unique)
+- `status`
+- `role`
+- `createdAt` (descending)
+
+### 4.2 Course Model
+
+**Collection**: `courses`
+
+```javascript
+{
+  _id: ObjectId,
+  title: String (required),
+  level: Enum["beginner", "intermediate", "advanced"],
+  totalModules: Number,
+  totalLessons: Number,
+  
+  modules: [{
+    id: Number,
+    title: String,
+    lessons: [{
+      title: String,
+      content: String (markdown)
+    }]
+  }],
+  
+  createdBy: ObjectId (ref: User),
+  userId: ObjectId (ref: User, indexed),
+  
+  createdAt: Date,
+  updatedAt: Date
+}
+```
+
+### 4.3 Quiz Model
+
+**Collection**: `quizzes`
+
+```javascript
+{
+  _id: ObjectId,
+  title: String,
+  topic: String,
+  difficulty: Enum["beginner", "intermediate", "advanced"],
+  
+  questions: [{
+    text: String,
+    options: [String],
+    correctAnswer: String,
+    explanation: String
+  }],
+  
+  userId: ObjectId (ref: User),
+  performances: [{
+    score: Number,
+    totalQuestions: Number,
+    completedAt: Date
+  }],
+  
+  createdAt: Date,
+  updatedAt: Date
+}
+```
+
+### 4.4 Additional Models
+
+- **Chat**: Conversation history
+- **Comment**: Discussion comments
+- **Contact**: Contact form submissions
+- **Guide**: Study guides
+- **Interaction**: User interactions
+- **Post**: Community posts
+- **Session**: User sessions
+- **UserActivity**: Activity tracking
+- **VisitorCounter**: Site analytics
+
+---
+
+## 5. API Reference
+
+### 5.1 Authentication APIs
+
+#### **POST /api/auth/signup**
+Create a new user account.
+
+**Request Body**:
+```json
+{
+  "firstName": "John",
+  "lastName": "Doe",
+  "email": "john@example.com",
+  "password": "SecureP@ss123",
+  "confirmPassword": "SecureP@ss123",
+  "acceptTerms": true
+}
+```
+
+**Password Requirements**:
+- Minimum 8 characters
+- At least one uppercase letter
+- At least one lowercase letter
+- At least one number
+- At least one special character (any non-alphanumeric)
+
+**Response** (201):
+```json
+{
+  "success": true,
+  "message": "Account created successfully! Please check your email to verify your account.",
+  "requiresVerification": true,
+  "user": {
+    "id": "507f1f77bcf86cd799439011",
+    "name": "John Doe",
+    "email": "john@example.com",
+    "isPremium": false
+  }
+}
+```
+
+**Rate Limit**: 5 attempts per 15 minutes per IP
+
+---
+
+#### **POST /api/auth/login**
+Authenticate user and create session.
+
+**Request Body**:
+```json
+{
+  "email": "john@example.com",
+  "password": "SecureP@ss123"
+}
+```
+
+**Response** (200):
+```json
+{
+  "success": true,
+  "user": {
+    "id": "507f1f77bcf86cd799439011",
+    "email": "john@example.com",
+    "name": "John Doe",
+    "isPremium": true,
+    "onboardingCompleted": true
+  },
+  "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+}
+```
+
+**Security**:
+- Account locks after 5 failed attempts for 2 hours
+- JWT token stored in HTTP-only cookie
+- CSRF token generated
+
+---
+
+#### **POST /api/auth/logout**
+End user session.
+
+**Headers**: `X-CSRF-Token: <token>`
+
+**Response** (200):
+```json
+{
+  "success": true,
+  "message": "Logged out successfully"
+}
+```
+
+---
+
+#### **POST /api/auth/verify-email**
+Verify email with code or token.
+
+**Request Body**:
+```json
+{
+  "code": "123456"
+  // OR
+  "token": "uuid-token"
+}
+```
+
+**Response** (200):
+```json
+{
+  "success": true,
+  "message": "Email verified successfully",
+  "token": "jwt-token",
+  "user": {...}
+}
+```
+
+---
+
+#### **POST /api/auth/forgot-password**
+Request password reset.
+
+**Request Body**:
+```json
+{
+  "email": "john@example.com"
+}
+```
+
+**Response** (200):
+```json
+{
+  "success": true,
+  "message": "Password reset code sent to your email"
+}
+```
+
+---
+
+#### **POST /api/auth/reset-password**
+Reset password with token.
+
+**Request Body**:
+```json
+{
+  "token": "reset-token",
+  "password": "NewP@ss123",
+  "confirmPassword": "NewP@ss123"
+}
+```
+
+---
+
+### 5.2 Course APIs
+
+#### **POST /api/generate-course**
+Generate AI-powered course content.
+
+**Request Body**:
+```json
+{
+  "topic": "Introduction to Python Programming",
+  "difficulty": "beginner",
+  "modules": 5,
+  "lessonsPerModule": 3
+}
+```
+
+**Plan Limits**:
+- **Free**: 3 modules, 3 lessons/module (9 total)
+- **Premium**: 20 modules, 5 lessons/module (100 total)
+- **Enterprise**: 30 modules, 8 lessons/module (240 total)
+
+**Response** (200):
+```json
+{
+  "success": true,
+  "course": {
+    "_id": "507f1f77bcf86cd799439011",
+    "title": "Introduction to Python Programming",
+    "level": "beginner",
+    "totalModules": 5,
+    "totalLessons": 15,
+    "modules": [
+      {
+        "id": 1,
+        "title": "Python Basics",
+        "lessons": [
+          {
+            "title": "Variables and Data Types",
+            "content": "# Variables and Data Types\n\n..."
+          }
+        ]
+      }
+    ]
+  }
+}
+```
+
+---
+
+#### **GET /api/courses**
+Retrieve user's courses.
+
+**Query Parameters**:
+- `page`: Page number (default: 1)
+- `limit`: Items per page (default: 10)
+
+**Response** (200):
+```json
+{
+  "success": true,
+  "courses": [...],
+  "pagination": {
+    "total": 25,
+    "page": 1,
+    "pages": 3
+  }
+}
+```
+
+---
+
+#### **GET /api/courses/[id]**
+Get specific course details.
+
+**Response** (200):
+```json
+{
+  "success": true,
+  "course": {
+    "_id": "507f1f77bcf86cd799439011",
+    "title": "Introduction to Python",
+    "modules": [...]
+  }
+}
+```
+
+---
+
+#### **DELETE /api/courses/delete**
+Delete a course (Premium only).
+
+**Request Body**:
+```json
+{
+  "courseId": "507f1f77bcf86cd799439011"
+}
+```
+
+---
+
+### 5.3 Flashcard APIs
+
+#### **POST /api/generate-flashcards**
+Generate flashcard sets.
+
+**Request Body**:
+```json
+{
+  "topic": "JavaScript ES6 Features",
+  "difficulty": "intermediate",
+  "numberOfCards": 20
+}
+```
+
+**Plan Limits**:
+- **Free**: 8 cards per set, 5 sets total
+- **Premium**: 40 cards per set, 100 sets total
+- **Enterprise**: 100 cards per set, unlimited sets
+
+**Response** (200):
+```json
+{
+  "success": true,
+  "cardSetId": "507f1f77bcf86cd799439011",
+  "cards": [
+    {
+      "front": "What is destructuring in ES6?",
+      "back": "A way to extract values from arrays or properties from objects..."
+    }
+  ]
+}
+```
+
+---
+
+### 5.4 Quiz APIs
+
+#### **POST /api/quizzes**
+Generate quiz.
+
+**Request Body**:
+```json
+{
+  "topic": "World History",
+  "difficulty": "intermediate",
+  "numberOfQuestions": 10
+}
+```
+
+**Response** (200):
+```json
+{
+  "success": true,
+  "quiz": {
+    "_id": "507f1f77bcf86cd799439011",
+    "title": "World History Quiz",
+    "questions": [
+      {
+        "text": "When did World War II end?",
+        "options": ["1943", "1944", "1945", "1946"],
+        "correctAnswer": "1945"
+      }
+    ]
+  }
+}
+```
+
+---
+
+#### **POST /api/quizzes/[id]/performance**
+Save quiz performance.
+
+**Request Body**:
+```json
+{
+  "score": 8,
+  "totalQuestions": 10,
+  "timeSpent": 300
+}
+```
+
+---
+
+### 5.5 Billing APIs
+
+#### **POST /api/billing/create-session**
+Initialize payment session.
+
+**Request Body**:
+```json
+{
+  "plan": "pro",
+  "billingCycle": "monthly",
+  "paymentMethod": "card"
+}
+```
+
+**Response** (200):
+```json
+{
+  "success": true,
+  "sessionUrl": "https://checkout.paystack.com/...",
+  "reference": "T123456789",
+  "amount": 999900,
+  "currency": "NGN"
+}
+```
+
+---
+
+#### **GET /api/billing/verify-payment**
+Verify payment after redirect.
+
+**Query Parameters**:
+- `reference`: Paystack transaction reference
+
+**Response**: Redirects to `/dashboard?payment=success`
+
+---
+
+#### **POST /api/billing/webhook**
+Handle Paystack webhooks.
+
+**Events Handled**:
+- `charge.success`
+- `subscription.create`
+- `subscription.disable`
+- `invoice.payment_failed`
+
+**Security**: Validates Paystack signature
+
+---
+
+### 5.6 User Management APIs
+
+#### **GET /api/me**
+Get current user profile.
+
+**Response** (200):
+```json
+{
+  "success": true,
+  "user": {
+    "id": "507f1f77bcf86cd799439011",
+    "email": "john@example.com",
+    "name": "John Doe",
+    "isPremium": true,
+    "subscription": {...},
+    "usage": {
+      "used": 5,
+      "limit": 50,
+      "remaining": 45
+    }
+  }
+}
+```
+
+---
+
+#### **PUT /api/profile**
+Update user profile.
+
+**Request Body**:
+```json
+{
+  "firstName": "John",
+  "lastName": "Doe",
+  "bio": "Software developer",
+  "interests": ["programming", "ai"],
+  "generatedPremiumCourses": [...]
+}
+```
+
+---
+
+#### **POST /api/change-password**
+Change user password.
+
+**Request Body**:
+```json
+{
+  "currentPassword": "OldP@ss123",
+  "newPassword": "NewP@ss456",
+  "confirmPassword": "NewP@ss456"
+}
+```
+
+**Security**:
+- Requires current password verification
+- Enforces 30-day cooldown between changes
+- Prevents password reuse
+
+---
+
+### 5.7 Content APIs
+
+#### **POST /api/chat**
+AI chat interaction.
+
+**Request Body**:
+```json
+{
+  "message": "Explain quantum computing",
+  "context": "beginner level"
+}
+```
+
+**Response** (200):
+```json
+{
+  "success": true,
+  "response": "Quantum computing is...",
+  "conversationId": "507f1f77bcf86cd799439011"
+}
+```
+
+---
+
+#### **GET /api/explore**
+Discover courses and content.
+
+**Query Parameters**:
+- `category`: Filter by category
+- `trending`: Boolean
+
+**Response** (200):
+```json
+{
+  "success": true,
+  "courses": [...],
+  "categories": [...]
+}
+```
+
+---
+
+#### **GET /api/library**
+Get user's library.
+
+**Response** (200):
+```json
+{
+  "success": true,
+  "library": {
+    "courses": [...],
+    "flashcards": [...],
+    "quizzes": [...],
+    "stats": {
+      "totalCourses": 10,
+      "completedCourses": 3,
+      "pinned": 2
+    }
+  }
+}
+```
+
+---
+
+## 6. Authentication & Authorization
+
+### 6.1 Authentication Flow
+
+```mermaid
+sequenceDiagram
+    participant User
+    participant Client
+    participant API
+    participant DB
+    participant Email
+    
+    User->>Client: Enter credentials
+    Client->>API: POST /api/auth/signup
+    API->>DB: Create user (status: pending)
+    API->>Email: Send verification code
+    API->>Client: Success + requiresVerification
+    
+    User->>Client: Enter verification code
+    Client->>API: POST /api/auth/verify-email
+    API->>DB: Update user (status: active)
+    API->>Client: JWT token + user data
+    Client->>Client: Store token in cookie
+```
+
+### 6.2 JWT Token Structure
+
+```javascript
+{
+  "id": "507f1f77bcf86cd799439011",
+  "email": "john@example.com",
+  "role": "student",
+  "iat": 1703894400,
+  "exp": 1703980800
+}
+```
+
+**Token Lifetime**:
+- Access Token: 24 hours
+- Refresh Token: 30 days
+
+### 6.3 CSRF Protection
+
+All state-changing requests require CSRF token:
+```javascript
+headers: {
+  'X-CSRF-Token': getCsrfToken()
+}
+```
+
+### 6.4 Role-Based Access Control
+
+| Role | Permissions |
+|------|------------|
+| **student** | Create courses, flashcards, quizzes; view own content |
+| **instructor** | All student permissions + manage guides |
+| **admin** | Full system access + user management |
+
+---
+
+## 7. Subscription & Billing
+
+### 7.1 Plan Comparison
+
+| Feature | Free | Premium (Pro) | Enterprise |
+|---------|------|---------------|------------|
+| **Courses** | 3 | 15 | Unlimited |
+| **Flashcard Sets** | 5 | 100 | Unlimited |
+| **Quizzes** | 3 | 60 | Unlimited |
+| **AI Responses** | 3/day | Unlimited | Unlimited |
+| **Cards per Set** | 8 | 40 | 100 |
+| **Modules per Course** | 3 | 20 | 30 |
+| **Lessons per Module** | 3 | 5 | 8 |
+| **PDF Download** | ❌ | ✅ | ✅ |
+| **Delete Courses** | ❌ | ✅ | ✅ |
+| **Priority Support** | ❌ | ✅ | ✅ |
+| **API Access** | ❌ | ❌ | ✅ |
+| **Custom Branding** | ❌ | ❌ | ✅ |
+
+### 7.2 Pricing (NGN)
+
+- **Pro Monthly**: ₦9,999
+- **Pro Yearly**: ₦111,588 (7% discount)
+- **Enterprise**: Custom pricing
+
+### 7.3 Payment Flow
+
+```mermaid
+sequenceDiagram
+    participant User
+    participant Frontend
+    participant API
+    participant Paystack
+    participant Webhook
+    
+    User->>Frontend: Select plan
+    Frontend->>API: POST /api/billing/create-session
+    API->>Paystack: Initialize transaction
+    Paystack->>API: Return checkout URL
+    API->>Frontend: Session URL
+    Frontend->>Paystack: Redirect to checkout
+    User->>Paystack: Complete payment
+    Paystack->>API: GET /api/billing/verify-payment
+    API->>Paystack: Verify transaction
+    Paystack->>Webhook: POST /api/billing/webhook
+    Webhook->>API: Update subscription
+    API->>Frontend: Redirect to dashboard
+```
+
+### 7.4 Subscription Management
+
+**Activation**:
+- Immediate upon successful payment
+- Auto-renewal enabled by default
+
+**Cancellation**:
+- Access continues until period end
+- No refunds for partial periods
+
+**Renewal**:
+- Automatic via Paystack subscription
+- Email notification 7 days before renewal
+
+---
+
+## 8. Content Generation
+
+### 8.1 AI Integration
+
+**Provider**: OpenAI GPT-4
+
+**Configuration**:
+```javascript
+{
+  model: "gpt-4",
+  temperature: 0.7,
+  max_tokens: 4000,
+  top_p: 1,
+  frequency_penalty: 0,
+  presence_penalty: 0
+}
+```
+
+### 8.2 Course Generation Pipeline
+
+```mermaid
+graph LR
+    A[User Request] --> B[Validate Limits]
+    B --> C[Generate Outline]
+    C --> D[Generate Modules]
+    D --> E[Generate Lessons]
+    E --> F[Format Content]
+    F --> G[Save to DB]
+    G --> H[Return to User]
+```
+
+**Prompt Template**:
+```
+Generate a comprehensive course on {topic} at {difficulty} level.
+Include {modules} modules with {lessonsPerModule} lessons each.
+Format: Markdown with headings, lists, code blocks, and examples.
+```
+
+### 8.3 Content Caching
+
+- **Lesson Content**: Cached in database
+- **Cache Key**: `${courseId}_${moduleId}_${lessonId}`
+- **Invalidation**: Manual or on course update
+
+---
+
+## 9. PDF Generation System
+
+### 9.1 PDF Types
+
+1. **Course PDFs**: Complete course textbooks
+2. **Lesson PDFs**: Individual lesson notes
+3. **Quiz PDFs**: Assessment papers with answer keys
+4. **Receipt PDFs**: Payment receipts
+
+### 9.2 PDF Features
+
+- **Branding**: Logo, colors, copyright footer
+- **Typography**: Professional fonts (Helvetica)
+- **Formatting**: Markdown to PDF conversion
+- **Diagrams**: Mermaid diagram rendering
+- **Tables**: Auto-formatted tables
+- **Code Blocks**: Syntax highlighting
+- **Page Numbers**: Automatic pagination
+
+### 9.3 Mobile PDF Handling
+
+**Capacitor Integration**:
+```javascript
+// Save to Downloads folder
+await Filesystem.writeFile({
+  path: fileName,
+  data: pdfBase64,
+  directory: Directory.Downloads
+});
+
+// Show notification
+await LocalNotifications.schedule({
+  notifications: [{
+    title: 'Download Successful',
+    body: 'Your PDF is ready'
+  }]
+});
+
+// Share option
+await Share.share({
+  title: 'Course PDF',
+  url: fileUri
+});
+```
+
+---
+
+## 10. Mobile Application
+
+### 10.1 Capacitor Configuration
+
+**Platform**: Android 8.0.0
+
+**Plugins**:
+- `@capacitor/filesystem`: File operations
+- `@capacitor/share`: Share functionality
+- `@capacitor/local-notifications`: Push notifications
+- `@capacitor/haptics`: Haptic feedback
+- `@capacitor/status-bar`: Status bar styling
+- `@capacitor/keyboard`: Keyboard management
+
+### 10.2 Build Process
+
+```bash
+# Build web assets
+npm run build
+
+# Sync with Capacitor
+npx cap sync android
+
+# Open in Android Studio
+npx cap open android
+```
+
+### 10.3 API Configuration
+
+**Mobile API Base URL**:
+```javascript
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 
+  (IS_CAPACITOR ? 'https://actinova.ai' : '');
+```
+
+---
+
+## 11. Deployment
+
+### 11.1 Environment Variables
+
+**Required**:
+```env
+# Database
+MONGODB_URI=mongodb+srv://...
+
+# Authentication
+JWT_SECRET=your-secret-key
+JWT_REFRESH_SECRET=your-refresh-secret
+
+# OpenAI
+OPENAI_API_KEY=sk-...
+
+# Paystack
+PAYSTACK_SECRET_KEY=sk_live_...
+PAYSTACK_PUBLIC_KEY=pk_live_...
+
+# Email
+SMTP_HOST=smtp.gmail.com
+SMTP_PORT=587
+SMTP_USER=your-email@gmail.com
+SMTP_PASS=your-app-password
+EMAIL_FROM=noreply@actinova.ai
+
+# Application
+NEXT_PUBLIC_API_URL=https://actinova.ai
+NODE_ENV=production
+```
+
+### 11.2 Deployment Platforms
+
+**Recommended**: Vercel
+
+**Build Command**:
+```bash
+npm run build
+```
+
+**Output Directory**: `.next`
+
+**Node Version**: 18.x or higher
+
+### 11.3 Database Setup
+
+1. Create MongoDB Atlas cluster
+2. Configure network access (0.0.0.0/0 for serverless)
+3. Create database user
+4. Get connection string
+5. Add to environment variables
+
+### 11.4 Post-Deployment
+
+1. Seed subscription plans:
+   ```bash
+   npm run seed:plans
+   ```
+
+2. Configure Paystack webhook:
+   - URL: `https://your-domain.com/api/billing/webhook`
+   - Events: All payment events
+
+3. Test email delivery
+
+4. Verify OpenAI API access
+
+---
+
+## 12. Security
+
+### 12.1 Security Measures
+
+**Authentication**:
+- ✅ Bcrypt password hashing (12 rounds)
+- ✅ JWT with HTTP-only cookies
+- ✅ CSRF protection on state-changing requests
+- ✅ Account lockout after 5 failed attempts
+- ✅ Email verification required
+
+**API Security**:
+- ✅ Rate limiting (5 requests/15min for signup)
+- ✅ Input validation with Zod
+- ✅ SQL injection prevention (Mongoose ODM)
+- ✅ XSS protection (React escaping)
+
+**Data Protection**:
+- ✅ Sensitive data excluded from JSON responses
+- ✅ Password reset tokens expire in 1 hour
+- ✅ Refresh tokens expire in 30 days
+- ✅ HTTPS enforced in production
+
+### 12.2 Security Best Practices
+
+1. **Never log sensitive data** (passwords, tokens)
+2. **Validate all user input** server-side
+3. **Use parameterized queries** (Mongoose handles this)
+4. **Keep dependencies updated** regularly
+5. **Monitor for security vulnerabilities**
+
+---
+
+## 13. Monitoring & Maintenance
+
+### 13.1 Logging
+
+**Production Logging**:
+- Error logs: `console.error()`
+- Warnings: `console.warn()`
+- Info: Removed in production
+
+**Key Events to Log**:
+- Authentication failures
+- Payment transactions
+- API errors
+- Database connection issues
+
+### 13.2 Performance Monitoring
+
+**Metrics to Track**:
+- API response times
+- Database query performance
+- OpenAI API latency
+- PDF generation time
+- User session duration
+
+### 13.3 Maintenance Tasks
+
+**Daily**:
+- Monitor error logs
+- Check payment webhook status
+
+**Weekly**:
+- Review user feedback
+- Analyze usage patterns
+- Check disk space
+
+**Monthly**:
+- Update dependencies
+- Review security advisories
+- Optimize database indexes
+- Clean up expired tokens
+
+---
+
+## 14. Troubleshooting
+
+### 14.1 Common Issues
+
+#### **Build Errors**
+
+**Issue**: "Invalid server response expected JSON"
+**Solution**: Ensure all API routes return valid JSON with proper error handling
+
+**Issue**: "Unterminated string constant"
+**Solution**: Check for escaped quotes in string literals
+
+#### **Authentication Issues**
+
+**Issue**: "Invalid or missing CSRF token"
+**Solution**: Ensure CSRF token is included in request headers
+
+**Issue**: "Account locked"
+**Solution**: Wait 2 hours or reset via admin panel
+
+#### **Payment Issues**
+
+**Issue**: "Payment verification failed"
+**Solution**: Check Paystack webhook configuration and signature validation
+
+**Issue**: "Subscription not activated"
+**Solution**: Verify webhook received and processed successfully
+
+#### **PDF Generation Issues**
+
+**Issue**: "Text overflow in PDF"
+**Solution**: Use `splitTextToSize()` for long text
+
+**Issue**: "Mermaid diagrams not rendering"
+**Solution**: Check diagram syntax and mermaid initialization
+
+### 14.2 Debug Mode
+
+Enable detailed logging:
+```javascript
+if (process.env.NODE_ENV === 'development') {
+  console.log('Debug info:', data);
+}
+```
+
+### 14.3 Support Contacts
+
+- **Technical Support**: support@actinova.ai
+- **Billing Issues**: billing@actinova.ai
+- **Security Concerns**: security@actinova.ai
+
+---
+
+## Appendix A: API Error Codes
+
+| Code | Meaning | Action |
+|------|---------|--------|
+| 400 | Bad Request | Check request format |
+| 401 | Unauthorized | Login required |
+| 403 | Forbidden | Insufficient permissions |
+| 404 | Not Found | Resource doesn't exist |
+| 409 | Conflict | Duplicate entry |
+| 429 | Too Many Requests | Rate limit exceeded |
+| 500 | Server Error | Contact support |
+
+---
+
+## Appendix B: Database Indexes
+
+```javascript
+// Users
+db.users.createIndex({ email: 1 }, { unique: true });
+db.users.createIndex({ status: 1 });
+db.users.createIndex({ createdAt: -1 });
+
+// Courses
+db.courses.createIndex({ userId: 1 });
+db.courses.createIndex({ createdAt: -1 });
+
+// Quizzes
+db.quizzes.createIndex({ userId: 1 });
+```
+
+---
+
+## Appendix C: Glossary
+
+- **ODM**: Object Document Mapper (Mongoose)
+- **JWT**: JSON Web Token
+- **CSRF**: Cross-Site Request Forgery
+- **SSR**: Server-Side Rendering
+- **ISR**: Incremental Static Regeneration
+- **Capacitor**: Native mobile runtime
+- **Paystack**: Payment gateway for Africa
+
+---
+
+**Document End**
+
+*For updates and contributions, please contact the development team.*

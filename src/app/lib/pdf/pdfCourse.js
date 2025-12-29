@@ -42,8 +42,8 @@ export const downloadCourseAsPDF = async (data) => {
     pdf.setFontSize(14);
     pdf.setTextColor(...COLORS.textLight);
     pdf.text("Personalized Course Textbook", pageWidth / 2, y + 60, { align: "center" });
-    pdf.text(`Generated: ${new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}`, 
-             pageWidth / 2, y + 75, { align: "center" });
+    pdf.text(`Generated: ${new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}`,
+        pageWidth / 2, y + 75, { align: "center" });
 
     // === TABLE OF CONTENTS ===
     pdf.addPage();
@@ -109,7 +109,7 @@ export const downloadCourseAsPDF = async (data) => {
                 if (lesson.content) {
                     y = await processContent(pdf, lesson.content, y, {
                         titleToSkip: lesson.title,
-                        isFirstLesson: lIdx === 0 && idx === 0
+                        isFirstLesson: true  // Always skip lesson titles in content for course PDFs
                     });
                 }
                 y += 20;

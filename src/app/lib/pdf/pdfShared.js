@@ -29,7 +29,7 @@ export const saveAndSharePDF = async (pdf, fileName, logTitle, notificationBody,
             const result = await Filesystem.writeFile({
                 path: fileName,
                 data: pdfBase64,
-                directory: Directory.Downloads || Directory.Documents,
+                directory: Directory.Downloads,
                 recursive: true
             });
 
@@ -41,7 +41,11 @@ export const saveAndSharePDF = async (pdf, fileName, logTitle, notificationBody,
                             body: notificationBody || `Your ${logType.toLowerCase()} "${logTitle}" is ready.`,
                             id: Math.floor(Math.random() * 100000),
                             schedule: { at: new Date(Date.now() + 500) },
-                            iconColor: '#1E40AF'
+                            iconColor: '#1E40AF',
+                            smallIcon: 'ic_launcher',
+                            largeIcon: 'logo',
+                            sound: null,
+                            attachments: []
                         }]
                     });
                 } catch (err) { console.error("[PDF] Notification error:", err); }
@@ -245,7 +249,9 @@ export const processContent = async (pdf, content, currentY, options = {}) => {
 
         if (trimmed.startsWith("# ")) {
             const text = trimmed.substring(2).replace(/[\*_]/g, '').trim();
-            if (titleToSkip && text.toLowerCase().includes(titleToSkip.toLowerCase()) && isFirstLesson) continue;
+            // For lesson PDFs, skip ALL H1 headings (course/module titles)
+            // For course PDFs, only skip on first lesson
+            if (titleToSkip && isFirstLesson) continue;
 
             y += 10;
             pdf.setFillColor(...COLORS.primaryLight);

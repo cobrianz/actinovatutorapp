@@ -56,7 +56,7 @@ export const downloadReceiptAsPDF = async (data, userName = "Scholar") => {
     pdf.text("Date:", col1, y); pdf.text(date, col1 + 40, y);
     pdf.text("Plan:", col2, y); pdf.text(data.plan || "Pro", col2 + 30, y);
     y += 10;
-    pdf.text("Receipt #:", col1, y); pdf.text(data.reference?.slice(-8).toUpperCase() || "N/A", col1 + 40, y);
+    pdf.text("Receipt #:", col1, y); pdf.text(data.reference?.toUpperCase() || "N/A", col1 + 40, y);
     pdf.text("Status:", col2, y); pdf.setTextColor(...COLORS.success); pdf.text("PAID", col2 + 30, y);
     y += 20;
 
