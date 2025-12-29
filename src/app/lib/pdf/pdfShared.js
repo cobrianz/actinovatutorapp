@@ -31,13 +31,13 @@ export const saveAndSharePDF = async (pdf, fileName, logTitle, notificationBody,
             const result = await Filesystem.writeFile({
                 path: fileName,
                 data: pdfBase64,
-                directory: Directory.Documents,
+                directory: Directory.Downloads || Directory.Documents,
             });
 
             await LocalNotifications.schedule({
                 notifications: [{
                     title: 'Download Successful',
-                    body: `The ${logType.toLowerCase()} for "${logTitle}" is now available in your documents.`,
+                    body: `The ${logType.toLowerCase()} for "${logTitle}" is now available in your downloads.`,
                     id: Math.floor(Math.random() * 100000),
                     schedule: { at: new Date(Date.now() + 500) },
                     sound: null,

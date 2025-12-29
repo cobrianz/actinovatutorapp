@@ -130,6 +130,6 @@ export const downloadCourseAsPDF = async (data) => {
     }
 
     const fileName = `${data.title?.replace(/\s+/g, "_").toLowerCase() || "course"}.pdf`;
-    const notificationBody = `The course textbook for "${data.title}" is now available in your documents.`;
+    const notificationBody = `The course textbook for "${data.title}" is now available in your downloads.`;
     await saveAndSharePDF(pdf, fileName, data.title, notificationBody, 'Course');
 };
