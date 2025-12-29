@@ -43,8 +43,9 @@ export default function SignupPage() {
     if (!/\d/.test(password)) {
       errors.push("Password must contain at least one number");
     }
-    if (!/[@$!%*?&]/.test(password)) {
-      errors.push("Password must contain at least one special character (@$!%*?&)");
+    // Accept any non-alphanumeric character as special
+    if (!/[^a-zA-Z0-9]/.test(password)) {
+      errors.push("Password must contain at least one special character");
     }
     return errors;
   };
@@ -240,7 +241,7 @@ export default function SignupPage() {
                 </button>
               </div>
               <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">
-                Must be at least 8 characters with uppercase, lowercase, number, and special character (@$!%*?&)
+                Must be at least 8 characters with uppercase, lowercase, number, and any special character.
               </p>
             </div>
 

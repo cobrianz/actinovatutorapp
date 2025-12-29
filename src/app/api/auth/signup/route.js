@@ -84,7 +84,8 @@ async function signupHandler(request) {
   if (!/[a-z]/.test(password)) passwordErrors.push("lowercase letter");
   if (!/[A-Z]/.test(password)) passwordErrors.push("uppercase letter");
   if (!/\d/.test(password)) passwordErrors.push("number");
-  if (!/[@$!%*?&]/.test(password)) passwordErrors.push("special character (@$!%*?&)");
+  // Accept any non-alphanumeric character as special
+  if (!/[^a-zA-Z0-9]/.test(password)) passwordErrors.push("special character");
 
   if (passwordErrors.length > 0) {
     record.count++;
@@ -182,6 +183,7 @@ async function signupHandler(request) {
     return NextResponse.json(
       {
         success: true,
+        message: \"Account created successfully! Please check your email to verify your account.\",
         requiresVerification: true,
         user: {
           id: user._id.toString(),
@@ -200,8 +202,13 @@ async function signupHandler(request) {
       { status: 201 }
     );
   } catch (error) {
+    console.error("Signup error:", error);
     return NextResponse.json(
-      { error: "Registration failed. Please try again later." },
+      {
+        success: false,
+        error: "Registration failed. Please try again later.",
+        message: process.env.NODE_ENV === "development" ? error.message : undefined
+      },
       { status: 500 }
     );
   }
