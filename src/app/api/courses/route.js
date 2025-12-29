@@ -153,6 +153,7 @@ export async function POST(request) {
     const newCourse = {
       ...body,
       createdBy: userId,
+      userId: userId,
       createdAt: new Date(),
       updatedAt: new Date(),
       students: 0,

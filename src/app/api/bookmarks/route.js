@@ -51,13 +51,13 @@ export async function GET(request) {
 
     const [bookmarks, totalCount] = await Promise.all([
       bookmarksCol
-        .find({ userId, type })
+        .find({ userId: new ObjectId(userId), type })
         .sort({ createdAt: -1 })
         .skip(skip)
         .limit(limit)
         .toArray(),
 
-      bookmarksCol.countDocuments({ userId, type }),
+      bookmarksCol.countDocuments({ userId: new ObjectId(userId), type }),
     ]);
 
     const totalPages = Math.ceil(totalCount / limit);
@@ -116,7 +116,7 @@ export async function POST(request) {
 
     // Prevent duplicates
     const exists = await bookmarksCol.findOne({
-      userId,
+      userId: new ObjectId(userId),
       itemId,
       type,
     });
@@ -129,7 +129,7 @@ export async function POST(request) {
     }
 
     const bookmark = {
-      userId,
+      userId: new ObjectId(userId),
       itemId: new ObjectId(itemId),
       type,
       itemData: itemData || null,
@@ -186,7 +186,7 @@ export async function DELETE(request) {
     const bookmarksCol = db.collection("bookmarks");
 
     const result = await bookmarksCol.deleteOne({
-      userId,
+      userId: new ObjectId(userId),
       itemId: new ObjectId(itemId),
       type,
     });

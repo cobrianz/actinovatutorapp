@@ -89,7 +89,7 @@ export async function POST(request) {
         { status: 429 }
       );
     }
-    const newTest = new Test({ ...body, createdBy: userId });
+    const newTest = new Test({ ...body, createdBy: userId, userId: userId });
     await newTest.save();
     return NextResponse.json(newTest, { status: 201 });
   } catch (error) {

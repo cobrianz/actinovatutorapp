@@ -27,6 +27,7 @@ const QuizSchema = new mongoose.Schema(
     course: { type: String, required: true },
     questions: [QuestionSchema],
     createdBy: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
+    userId: { type: mongoose.Schema.Types.ObjectId, ref: "User", index: true },
     performances: [PerformanceSchema],
   },
   { timestamps: true }

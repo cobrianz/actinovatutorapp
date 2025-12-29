@@ -23,7 +23,7 @@ function getLastFriday() {
 async function generateTrendingCourses(user = null) {
   const { db } = await connectToDatabase();
   const col = db.collection("premium_trending_courses");
-  const userId = user?._id?.toString() || user?.id?.toString() || "anonymous";
+  const userId = user?._id ? new ObjectId(user._id) : (user?.id ? new ObjectId(user.id) : "anonymous");
 
   // 1. Weekly Logic: Check if we have courses generated AFTER the most recent Friday
   const lastFriday = getLastFriday();
@@ -31,7 +31,7 @@ async function generateTrendingCourses(user = null) {
   // Find valid recent courses for this user
   const recent = await col
     .find({
-      userId,
+      userId: userId instanceof ObjectId ? userId : userId,
       generatedAt: { $gte: lastFriday } // Must be generated on or after last Friday
     })
     .sort({ generatedAt: -1 }) // Newest first
@@ -44,7 +44,7 @@ async function generateTrendingCourses(user = null) {
 
   // 2. Cleanup: Remove old courses for this user (older than last Friday) to "clear" them
   await col.deleteMany({
-    userId,
+    userId: userId instanceof ObjectId ? userId : userId,
     generatedAt: { $lt: lastFriday }
   });
 
@@ -125,7 +125,7 @@ async function generateTrendingCourses(user = null) {
     courses = courses.slice(0, 6).map((c, i) => ({
       ...c,
       id: `trending-${Date.now()}-${i}`,
-      userId,
+      userId: userId instanceof ObjectId ? userId : userId,
       isPremium: true,
       isTrending: true,
       price: 0,
