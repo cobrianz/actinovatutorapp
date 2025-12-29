@@ -6,174 +6,71 @@ export const downloadReceiptAsPDF = async (data, userName = "Scholar") => {
 
     const pdf = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
     const pageWidth = 210;
-    const pageHeight = 297;
-    const margin = 20;
+    let y = 30;
 
-    // LaTeX Colors
-    const COLORS_LATEX = {
-        primary: [0, 102, 204],
-        accent: [0, 168, 255],
-        gray: [100, 100, 100],
-        success: [0, 128, 0]
-    };
+    // Subtle watermark
+    pdf.setFontSize(70);
+    pdf.setTextColor(240, 240, 240);
+    pdf.text("ACTINOVA", pageWidth / 2, 160, { align: "center" });
 
-    let y = 20;
-
-    // --- LOGO (ABOVE HEADER) ---
     try {
-        pdf.addImage("/logo.png", "PNG", (pageWidth - 25) / 2, y, 25, 25);
-        y += 30;
-    } catch (e) {
-        y += 5;
-    }
+        pdf.addImage("/logo.png", "PNG", (pageWidth - 40) / 2, y, 40, 40);
+        y += 55;
+    } catch (e) { y += 10; }
 
-    // --- HEADER BAR ---
-    pdf.setFillColor(...COLORS_LATEX.primary);
-    pdf.rect(margin, y, pageWidth - (margin * 2), 12, "F");
-
+    // Header
+    pdf.setFillColor(...COLORS.primary);
+    pdf.rect(MARGIN, y, pageWidth - MARGIN * 2, 15, "F");
     pdf.setFont("helvetica", "bold");
-    pdf.setFontSize(14);
-    pdf.setTextColor(255, 255, 255);
-    pdf.text("Payment Receipt", pageWidth / 2, y + 8, { align: "center" });
-    y += 15;
-
-    // --- BRANDING ---
-    pdf.setTextColor(0, 0, 0);
     pdf.setFontSize(18);
+    pdf.setTextColor(255, 255, 255);
+    pdf.text("PAYMENT RECEIPT", pageWidth / 2, y + 10, { align: "center" });
+    y += 30;
+
+    pdf.setTextColor(...COLORS.text);
+    pdf.setFontSize(22);
     pdf.text("Actinova AI Tutor", pageWidth / 2, y, { align: "center" });
-
-    y += 6;
-    pdf.setFont("helvetica", "normal");
-    pdf.setFontSize(10);
-    pdf.text("Your Intelligent Learning Companion", pageWidth / 2, y, { align: "center" });
-
-    y += 8;
-    pdf.setTextColor(...COLORS_LATEX.gray);
-    pdf.text("www.actinova.ai", pageWidth / 2, y, { align: "center" });
-
     y += 12;
-    pdf.setTextColor(0, 0, 0);
-    pdf.setFont("helvetica", "bold");
-    pdf.setFontSize(11);
-    pdf.text(`Billed To: ${userName}`, pageWidth / 2, y, { align: "center" });
-
-    y += 8;
-    pdf.setFont("helvetica", "bold");
-    pdf.text("Thank you for your subscription!", pageWidth / 2, y, { align: "center" });
-
-    y += 6;
-    pdf.setDrawColor(...COLORS_LATEX.accent);
-    pdf.setLineWidth(0.5);
-    pdf.line(pageWidth / 2 - 40, y, pageWidth / 2 + 40, y);
-
-    // --- TRANSACTION DETAILS (TWO COLUMNS) ---
+    pdf.setFontSize(12);
+    pdf.setTextColor(...COLORS.textLight);
+    pdf.text("Your Intelligent Learning Companion", pageWidth / 2, y, { align: "center" });
     y += 20;
-    const col1X = margin;
-    const col2X = pageWidth / 2 + 5;
-    const detailFontSize = 10;
-    const labelSpacing = 6;
 
-    const date = new Date(data.date || data.paidAt || Date.now()).toLocaleDateString('en-US', {
-        month: 'long',
-        day: 'numeric',
-        year: 'numeric'
-    });
+    pdf.setFontSize(12);
+    pdf.setTextColor(...COLORS.text);
+    pdf.text(`Billed to: ${userName}`, pageWidth / 2, y, { align: "center" });
+    y += 20;
 
-    // Column 1
-    pdf.setFontSize(detailFontSize);
-    pdf.setTextColor(0, 0, 0);
-
-    let leftY = y;
-    pdf.setFont("helvetica", "bold");
-    pdf.text("Transaction Date:", col1X, leftY);
-    pdf.setFont("helvetica", "normal");
-    pdf.text(date, col1X + 35, leftY);
-
-    leftY += labelSpacing;
-    pdf.setFont("helvetica", "bold");
-    pdf.text("Receipt Number:", col1X, leftY);
-    pdf.setFont("helvetica", "normal");
-    pdf.text(data.reference?.slice(-10).toUpperCase() || "ORD-" + Math.floor(Math.random() * 1000000), col1X + 35, leftY);
-
-    leftY += labelSpacing;
-    pdf.setFont("helvetica", "bold");
-    pdf.text("Reference:", col1X, leftY);
-    pdf.setFont("helvetica", "normal");
-    pdf.text(data.reference || "N/A", col1X + 35, leftY);
-
-    leftY += labelSpacing;
-    pdf.setFont("helvetica", "bold");
-    pdf.text("Payment Status:", col1X, leftY);
-    pdf.setFont("helvetica", "bold");
-    pdf.setTextColor(...COLORS_LATEX.success);
-    pdf.text("SUCCESS", col1X + 35, leftY);
-
-    leftY += labelSpacing;
-    pdf.setTextColor(0, 0, 0);
-    pdf.setFont("helvetica", "bold");
-    pdf.text("Payment Method:", col1X, leftY);
-    pdf.setFont("helvetica", "normal");
-    pdf.text("Credit/Debit Card", col1X + 35, leftY);
-
-    // Column 2
-    let rightY = y;
-    pdf.setFont("helvetica", "bold");
-    pdf.text("Plan:", col2X, rightY);
-    pdf.setFont("helvetica", "normal");
-    pdf.text(`${data.plan || "Pro Subscription"}`, col2X + 30, rightY);
-
-    rightY += labelSpacing;
-    pdf.setFont("helvetica", "bold");
-    pdf.text("Status:", col2X, rightY);
-    pdf.setFont("helvetica", "normal");
-    pdf.text("Active", col2X + 30, rightY);
-
-    rightY += labelSpacing;
-    pdf.setFont("helvetica", "bold");
-    pdf.text("Auto-Renew:", col2X, rightY);
-    pdf.setFont("helvetica", "normal");
-    pdf.text("Enabled", col2X + 30, rightY);
-
-    rightY += labelSpacing;
-    pdf.setFont("helvetica", "bold");
-    pdf.text("Valid From:", col2X, rightY);
-    pdf.setFont("helvetica", "normal");
-    pdf.text(date, col2X + 30, rightY);
-
-    // --- AMOUNT ---
-    y = Math.max(leftY, rightY) + 25;
     pdf.setFont("helvetica", "bold");
     pdf.setFontSize(16);
+    pdf.text("Thank you for your subscription!", pageWidth / 2, y, { align: "center" });
+    y += 25;
+
+    // Details
+    const col1 = MARGIN + 10;
+    const col2 = pageWidth / 2 + 10;
+    const date = new Date(data.date || data.paidAt || Date.now()).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
+
+    pdf.setFontSize(11);
+    pdf.setFont("helvetica", "bold");
+    pdf.text("Date:", col1, y); pdf.text(date, col1 + 40, y);
+    pdf.text("Plan:", col2, y); pdf.text(data.plan || "Pro", col2 + 30, y);
+    y += 10;
+    pdf.text("Receipt #:", col1, y); pdf.text(data.reference?.slice(-8).toUpperCase() || "N/A", col1 + 40, y);
+    pdf.text("Status:", col2, y); pdf.setTextColor(...COLORS.success); pdf.text("PAID", col2 + 30, y);
+    y += 20;
+
+    // Amount
+    pdf.setFontSize(20);
+    pdf.setTextColor(...COLORS.primary);
     const amount = new Intl.NumberFormat('en-US', { style: 'currency', currency: data.currency || 'USD' }).format(data.amount || 0);
-    pdf.text(`Amount Paid: ${amount}`, pageWidth / 2, y, { align: "center" });
+    pdf.text(`Amount: ${amount}`, pageWidth / 2, y, { align: "center" });
+    y += 30;
 
-    y += 15;
-    pdf.setFont("helvetica", "bold");
     pdf.setFontSize(10);
-    const time = new Date(data.date || data.paidAt || Date.now()).toLocaleTimeString('en-US', { hour12: false });
-    pdf.text(`Payment processed on ${date} at ${time} EAT`, pageWidth / 2, y, { align: "center" });
+    pdf.setTextColor(...COLORS.textLight);
+    pdf.text("This is an official receipt. Contact support@actinova.ai for questions.", pageWidth / 2, y, { align: "center" });
 
-    y += 12;
-    pdf.setFont("helvetica", "italic");
-    pdf.setFontSize(9);
-    pdf.setTextColor(...COLORS_LATEX.gray);
-    pdf.text("This is an auto-generated receipt. No signature required.", pageWidth / 2, y, { align: "center" });
-
-    y += 10;
-    pdf.setFont("helvetica", "normal");
-    pdf.setTextColor(0, 0, 0);
-    pdf.text("Questions? Contact us at support@actinova.ai", pageWidth / 2, y, { align: "center" });
-
-    y += 10;
-    pdf.setDrawColor(...COLORS_LATEX.accent);
-    pdf.setLineWidth(0.5);
-    pdf.line(pageWidth / 2 - 50, y, pageWidth / 2 + 50, y);
-
-    y += 8;
-    pdf.setFont("helvetica", "bold");
-    pdf.setFontSize(12);
-    pdf.text("Thank you for choosing Actinova AI Tutor!", pageWidth / 2, y, { align: "center" });
-
-    const fileName = `receipt-${data.reference || "transaction"}.pdf`;
-    await saveAndSharePDF(pdf, fileName, data.plan || "Subscription", "Your receipt is ready.", 'Receipt');
+    const fileName = `receipt-${data.reference || "payment"}.pdf`;
+    await saveAndSharePDF(pdf, fileName, "Subscription Payment", "Your receipt has been downloaded.", 'Receipt');
 };
