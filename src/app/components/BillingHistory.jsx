@@ -8,9 +8,13 @@ import {
     Loader2
 } from "lucide-react";
 import { downloadReceiptAsPDF } from "@/lib/pdfUtils";
+import { useAuth } from "./AuthProvider";
 import { toast } from "sonner";
 
 export default function BillingHistory({ billingHistory, theme }) {
+    const { user } = useAuth();
+    const userName = user?.firstName ? `${user.firstName} ${user.lastName}` : (user?.name || "Scholar");
+
     if (!billingHistory || billingHistory.length === 0) {
         return (
             <div className={`p-8 rounded-2xl border border-dashed text-center ${theme === 'dark' ? "bg-gray-800/20 border-gray-700" : "bg-gray-50 border-gray-200"}`}>
@@ -23,7 +27,7 @@ export default function BillingHistory({ billingHistory, theme }) {
     const handleDownload = async (entry) => {
         try {
             toast.loading("Generating receipt...");
-            await downloadReceiptAsPDF(entry);
+            await downloadReceiptAsPDF(entry, userName);
             toast.dismiss();
             toast.success("Receipt downloaded");
         } catch (e) {

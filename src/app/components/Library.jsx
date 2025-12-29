@@ -32,7 +32,7 @@ import { useRouter } from "next/navigation";
 import ConfirmModal from "./ConfirmModal";
 import { toast } from "sonner";
 import { getApiUrl, authenticatedFetch } from "../lib/apiConfig";
-import { downloadCourseAsPDF } from "@/lib/pdfUtils";
+import { downloadCourseAsPDF, downloadQuizAsPDF } from "@/lib/pdfUtils";
 import { useAuth } from "./AuthProvider";
 
 const staticCategories = [
@@ -556,8 +556,11 @@ export default function Library({ setActiveContent, setHideNavs }) {
       const data = await res.json();
       if (!data.item) throw new Error("Course data not found");
 
-      // Use the full item (which contains modules/lessons) for PDF generation
-      await downloadCourseAsPDF(data.item, course.format);
+      if (course.format === "quiz" || course.format === "questions") {
+        await downloadQuizAsPDF(data.item);
+      } else {
+        await downloadCourseAsPDF(data.item, course.format);
+      }
       toast.success("Download started!", { id: toastId });
     } catch (err) {
       console.error("Library download error:", err);

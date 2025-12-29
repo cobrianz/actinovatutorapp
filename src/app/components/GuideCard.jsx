@@ -55,93 +55,21 @@ export default function Guides({ setActiveContent }) {
     // Visualization modal removed per policy
     return null;
   };
-        key: "sunburst",
-        icon: <Sparkles className="w-4 h-4" />,
-        label: "Sunburst",
-        color: "from-indigo-500 to-purple-500",
-      },
-    ];
 
-    return (
-      <div className="fixed inset-0 bg-gradient-to-br from-black/70 via-purple-900/20 to-black/70 backdrop-blur-xl flex items-center justify-center z-50 p-4">
-        <div className="bg-white/95 dark:bg-gray-900/95 backdrop-blur-2xl rounded-3xl max-w-7xl w-full max-h-[95vh] overflow-hidden shadow-2xl border border-white/30 dark:border-gray-700/50">
-          {/* Enhanced Header */}
-          <div className="p-8 border-b border-gray-200/50 dark:border-gray-700/50 bg-gradient-to-r from-blue-50/60 via-indigo-50/60 to-purple-50/60 dark:from-gray-800/50 dark:via-gray-900/50 dark:to-gray-800/50">
-            <div className="flex justify-between items-start">
-              <div className="flex items-start space-x-4">
-                <div className="p-3 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-2xl shadow-lg">
-                  <Eye className="w-7 h-7 text-white" />
-                </div>
-                <div>
-                  <h2 className="text-3xl font-bold bg-gradient-to-r from-gray-900 to-gray-700 dark:from-white dark:to-gray-200 bg-clip-text text-transparent">
-                    {guide.title}
-                  </h2>
-                  <p className="text-sm text-gray-600 dark:text-gray-400 mt-2 font-medium">
-                    Interactive Data Visualization Dashboard
-                  </p>
-                  <div className="flex items-center space-x-4 mt-3">
-                    <div className="flex items-center space-x-2 text-sm text-gray-500 dark:text-gray-400">
-                      <Book className="w-4 h-4" />
-                      <span>{guide.modules.length} modules</span>
-                    </div>
-                    <div className="flex items-center space-x-2 text-sm text-gray-500 dark:text-gray-400">
-                      <Users className="w-4 h-4" />
-                      <span className="capitalize">{guide.level} level</span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-              <button
-                onClick={onClose}
-                className="group relative p-3 rounded-2xl bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm hover:bg-white/95 dark:hover:bg-gray-700/80 transition-all duration-300 shadow-lg hover:shadow-xl border border-white/40 dark:border-gray-700/40 hover:scale-105"
-              >
-                <X className="w-5 h-5 text-gray-600 dark:text-gray-400 group-hover:text-gray-900 dark:group-hover:text-white transition-colors" />
-              </button>
-            </div>
-
-            {/* Enhanced Visualization Type Selector */}
-            <div className="flex flex-wrap gap-3 mt-8 bg-white/60 dark:bg-gray-800/60 rounded-2xl p-4 backdrop-blur-sm border border-white/40 dark:border-gray-700/40">
-              {visualizationTypes.map((type) => (
-                <button
-                  key={type.key}
-                  onClick={() => setVizType(type.key)}
-                  className={`
-                    group relative flex items-center space-x-3 px-5 py-3 rounded-2xl text-sm font-semibold transition-all duration-300
-                    shadow-lg hover:shadow-xl hover:-translate-y-0.5 transform border backdrop-blur-sm
-                    ${
-                      vizType === type.key
-                        ? `bg-gradient-to-r ${type.color} text-white shadow-lg scale-105`
-                        : "bg-white/70 dark:bg-gray-800/70 text-gray-700 dark:text-gray-300 hover:bg-white/90 dark:hover:bg-gray-700/90 border-gray-200/50 dark:border-gray-600/50"
-                    }
-                  `}
-                >
-                  <div
-                    className={
-                      vizType === type.key
-                        ? "text-white"
-                        : `text-${type.color.split("-")[1]}-500`
-                    }
-                  >
-                    {type.icon}
-                  </div>
-                  <span>{type.label}</span>
-                  {vizType === type.key && (
-                    <div className="absolute -top-1 -right-1 w-3 h-3 bg-green-400 rounded-full animate-ping"></div>
-                  )}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {/* Visualization Content */}
-          <div className="p-8 overflow-auto max-h-[calc(95vh-280px)] bg-gradient-to-br from-gray-50/30 to-white/30 dark:from-gray-900/20 dark:to-gray-800/20">
-            <div className="h-full w-full bg-gradient-to-br from-white/80 to-gray-50/80 dark:from-gray-900/50 dark:to-gray-800/50 rounded-3xl border border-gray-200/50 dark:border-gray-700/50 shadow-inner">
-              <VizComponent data={vizData} />
-            </div>
-          </div>
-        </div>
-      </div>
-    );
+  const deleteGuide = async (id) => {
+    if (!window.confirm("Are you sure you want to delete this guide?")) return;
+    try {
+      const res = await fetch(`/api/guides?id=${id}`, { method: "DELETE" });
+      if (res.ok) {
+        setGuides((prev) => prev.filter((g) => g._id !== id));
+        toast.success("Guide deleted");
+      } else {
+        toast.error("Failed to delete guide");
+      }
+    } catch (err) {
+      console.error("Delete error:", err);
+      toast.error("Error deleting guide");
+    }
   };
 
   if (loading) {
@@ -250,15 +178,14 @@ export default function Guides({ setActiveContent }) {
               >
                 {/* Animated background */}
                 <div
-                  className={`absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500 ${
-                    index % 4 === 0
-                      ? "bg-gradient-to-br from-blue-500/5 to-cyan-500/5"
-                      : index % 4 === 1
-                        ? "bg-gradient-to-br from-indigo-500/5 to-purple-500/5"
-                        : index % 4 === 2
-                          ? "bg-gradient-to-br from-purple-500/5 to-pink-500/5"
-                          : "bg-gradient-to-br from-emerald-500/5 to-teal-500/5"
-                  }`}
+                  className={`absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500 ${index % 4 === 0
+                    ? "bg-gradient-to-br from-blue-500/5 to-cyan-500/5"
+                    : index % 4 === 1
+                      ? "bg-gradient-to-br from-indigo-500/5 to-purple-500/5"
+                      : index % 4 === 2
+                        ? "bg-gradient-to-br from-purple-500/5 to-pink-500/5"
+                        : "bg-gradient-to-br from-emerald-500/5 to-teal-500/5"
+                    }`}
                 />
 
                 {/* Enhanced Badge */}
@@ -343,7 +270,7 @@ export default function Guides({ setActiveContent }) {
                   <div className="flex items-center space-x-3">
                     {/* Visualization action removed */}
                     <button
-                      onClick={() => downloadGuideAsPDF(guide)}
+                      onClick={() => downloadCourseAsPDF(guide)}
                       className="flex items-center space-x-2 px-4 py-2.5 bg-gradient-to-r from-green-500 to-emerald-600 text-white rounded-2xl text-sm font-semibold shadow-lg hover:shadow-xl hover:scale-105 transition-all duration-300"
                       title="Download PDF"
                     >

@@ -26,7 +26,7 @@ import { Keyboard } from "@capacitor/keyboard";
 import { Capacitor } from "@capacitor/core";
 
 import { toast } from "sonner";
-import { downloadCourseAsPDF } from "@/lib/pdfUtils";
+import { downloadCourseAsPDF, downloadLessonAsPDF } from "@/lib/pdfUtils";
 import { authenticatedFetch } from "@/lib/apiConfig";
 import { useAuth } from "./AuthProvider";
 import { useEnsureSession } from "./SessionGuard";
@@ -1277,7 +1277,7 @@ export default function LearnContent() {
 
     toast.loading("Preparing your study notes PDF...", { id: "downloading-notes" });
     try {
-      await downloadCourseAsPDF(notesData, "notes");
+      await downloadLessonAsPDF(notesData);
       toast.success("Notes downloaded successfully!", { id: "downloading-notes" });
     } catch (err) {
       console.error("PDF download error:", err);
@@ -2477,7 +2477,7 @@ export default function LearnContent() {
                 return;
               }
               if (!currentLesson?.content) return;
-              downloadCourseAsPDF({ title: currentLesson.title, content: currentLesson.content }, "notes");
+              downloadLessonAsPDF({ title: currentLesson.title, content: currentLesson.content });
               toast.success("Downloading...");
             }}
             className="flex flex-col items-center justify-center w-full h-full space-y-1 text-gray-500 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400"

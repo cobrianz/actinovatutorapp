@@ -22,7 +22,7 @@ import {
     Clock,
     ChevronRight
 } from "lucide-react";
-import { downloadCourseAsPDF } from "../lib/pdfUtils";
+import { downloadCourseAsPDF, downloadQuizAsPDF } from "../lib/pdfUtils";
 import { toast } from "sonner";
 
 export default function DashboardContent() {
@@ -176,7 +176,11 @@ export default function DashboardContent() {
             const data = await res.json();
             if (!data.item) throw new Error("Course data not found");
 
-            await downloadCourseAsPDF(data.item, course.format);
+            if (course.format === "quiz" || course.format === "questions") {
+                await downloadQuizAsPDF(data.item);
+            } else {
+                await downloadCourseAsPDF(data.item, course.format);
+            }
             toast.success("Download started!", { id: toastId });
         } catch (err) {
             console.error("Download error:", err);
