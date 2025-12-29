@@ -183,7 +183,7 @@ async function signupHandler(request) {
     return NextResponse.json(
       {
         success: true,
-        message: \"Account created successfully! Please check your email to verify your account.\",
+        message: "Account created successfully! Please check your email to verify your account.",
         requiresVerification: true,
         user: {
           id: user._id.toString(),
