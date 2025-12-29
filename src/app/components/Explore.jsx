@@ -965,7 +965,7 @@ export default function Explore({ setHideNavs }) {
     try {
       setLoading(true);
       // Fetch AI-generated trending topics (auth via HttpOnly cookie)
-      const trendingResponse = await authenticatedFetch("/api/explore/trending-topics");
+      const trendingResponse = await authenticatedFetch("/api/explore");
       if (trendingResponse.ok) {
         const trendingData = await trendingResponse.json();
         setTrendingTopics((trendingData.topics || []).slice(0, 9));
@@ -1081,14 +1081,31 @@ export default function Explore({ setHideNavs }) {
       return;
     }
 
-    // Generate a unique ID for this category exploration
+    // Check if category courses are already in state (loaded from local storage)
+    const existingSet = generatedCourses.find(set => set.category === category.name);
+    if (existingSet) {
+      const now = new Date();
+      const generatedAt = new Date(existingSet.generatedAt);
+      const hoursDiff = (now - generatedAt) / (1000 * 60 * 60);
+
+      if (hoursDiff < 24) {
+        toast.info(`Showing cached courses for ${category.name}`);
+        const section = document.getElementById(existingSet.id);
+        if (section) {
+          section.scrollIntoView({ behavior: "smooth", block: "start" });
+          return;
+        }
+      }
+    }
+
+    // Generate a unique ID for this category exploration if not found in cache
     const categoryId = `category-${category.name}-${Date.now()}`;
 
     setExploringCategory(category.name);
 
     try {
       const response = await authenticatedFetch(
-        `/api/explore/category-courses?category=${encodeURIComponent(category.name)}`,
+        `/api/explore?category=${encodeURIComponent(category.name)}`,
         {
           method: "GET",
         }

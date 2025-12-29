@@ -38,7 +38,7 @@ export default function VerifyEmailContent() {
         setLoading(true);
 
         try {
-            const res = await authenticatedFetch("/api/verify-email", {
+            const res = await authenticatedFetch("/api/auth/verify-email", {
                 method: "POST",
                 body: JSON.stringify({ token }),
             });
@@ -55,7 +55,7 @@ export default function VerifyEmailContent() {
 
                 // Send welcome email
                 try {
-                    await authenticatedFetch("/api/send-welcome-email", {
+                    await authenticatedFetch("/api/auth/welcome-email", {
                         method: "POST",
                         body: JSON.stringify({
                             email: data.user.email,
@@ -88,7 +88,7 @@ export default function VerifyEmailContent() {
 
         setResendLoading(true);
         try {
-            const response = await authenticatedFetch("/api/resend-verification", {
+            const response = await authenticatedFetch("/api/auth/resend-verification", {
                 method: "POST",
                 body: JSON.stringify({ email: userEmail }),
             });
@@ -128,7 +128,7 @@ export default function VerifyEmailContent() {
         setLoading(true);
 
         try {
-            const res = await authenticatedFetch("/api/verify-email", {
+            const res = await authenticatedFetch("/api/auth/verify-email", {
                 method: "POST",
                 body: JSON.stringify({ code }),
             });

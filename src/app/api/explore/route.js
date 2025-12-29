@@ -1,151 +1,206 @@
 // src/app/api/explore/route.js
 
 import { NextResponse } from "next/server";
+import { cookies } from "next/headers";
+import OpenAI from "openai";
 import { connectToDatabase } from "@/lib/mongodb";
+import { verifyToken } from "@/lib/auth";
+import { ObjectId } from "mongodb";
+import User from "@/models/User";
 
-// === Seed Trending Topics (Only if collection is empty) ===
-async function seedTrendingIfEmpty(db) {
-  const trendingCol = db.collection("explore_trending");
-  const count = await trendingCol.countDocuments();
+const openai = new OpenAI({
+  apiKey: process.env.OPENAI_API_KEY,
+});
 
-  if (count === 0) {
-    await trendingCol.insertMany([
-      {
-        title: "Artificial Intelligence Fundamentals",
-        students: 2340,
-        rating: 4.8,
-        duration: "6 weeks",
-        level: "Beginner",
-        category: "AI/ML",
-        instructor: "Dr. Sarah Johnson",
-        thumbnail: "/placeholder.svg?height=200&width=300",
-        description:
-          "Learn the basics of AI and machine learning with hands-on projects",
-        tags: ["Python", "TensorFlow", "Neural Networks", "Data Science"],
-        price: 99,
-        isPremium: false,
-        createdAt: new Date(),
-      },
-      {
-        title: "Full Stack Web Development",
-        students: 1890,
-        rating: 4.9,
-        duration: "12 weeks",
-        level: "Intermediate",
-        category: "Programming",
-        instructor: "Mike Chen",
-        thumbnail: "/placeholder.svg?height=200&width=300",
-        description:
-          "Master both frontend and backend with modern technologies",
-        tags: ["React", "Node.js", "MongoDB", "Express"],
-        price: 149,
-        isPremium: true,
-        createdAt: new Date(),
-      },
-      {
-        title: "Data Analysis with Python",
-        students: 1560,
-        rating: 4.7,
-        duration: "8 weeks",
-        level: "Beginner",
-        category: "Data Science",
-        instructor: "Emily Rodriguez",
-        thumbnail: "/placeholder.svg?height=200&width=300",
-        description: "Analyze data and create visualizations using Python",
-        tags: ["Python", "Pandas", "Matplotlib", "Seaborn"],
-        price: 79,
-        isPremium: false,
-        createdAt: new Date(),
-      },
-      {
-        title: "Mobile App Development with React Native",
-        students: 1230,
-        rating: 4.6,
-        duration: "10 weeks",
-        level: "Intermediate",
-        category: "Mobile Development",
-        instructor: "Alex Kim",
-        thumbnail: "/placeholder.svg?height=200&width=300",
-        description: "Build cross-platform mobile apps using React Native",
-        tags: ["React Native", "JavaScript", "iOS", "Android"],
-        price: 129,
-        isPremium: true,
-        createdAt: new Date(),
-      },
-      {
-        title: "Cloud Architecture with AWS",
-        students: 980,
-        rating: 4.8,
-        duration: "9 weeks",
-        level: "Intermediate",
-        category: "Cloud & DevOps",
-        instructor: "David Wilson",
-        thumbnail: "/placeholder.svg?height=200&width=300",
-        description: "Design scalable applications on AWS",
-        tags: ["AWS", "EC2", "S3", "Lambda", "Docker"],
-        price: 179,
-        isPremium: true,
-        createdAt: new Date(),
-      },
-      {
-        title: "UI/UX Design Masterclass",
-        students: 1450,
-        rating: 4.9,
-        duration: "7 weeks",
-        level: "Beginner",
-        category: "Design",
-        instructor: "Lisa Park",
-        thumbnail: "/placeholder.svg?height=200&width=300",
-        description: "Create beautiful and user-friendly interfaces",
-        tags: ["Figma", "User Research", "Prototyping", "Design Systems"],
-        price: 119,
-        isPremium: true,
-        createdAt: new Date(),
-      },
-    ]);
+const CURRENT_YEAR = new Date().getFullYear();
+const CATEGORY_CACHE_TTL = 24; // Hours
+const TRENDING_CACHE_TTL = 7 * 24; // Hours
+const COURSES_PER_CATEGORY = 10;
 
-    console.log("Seeded explore_trending with 6 courses");
+export async function GET(request) {
+  const { searchParams } = new URL(request.url);
+  const category = searchParams.get("category")?.trim();
+  const { db } = await connectToDatabase();
+
+  // 1. Auth & Personalization Context
+  let token = request.headers.get("authorization")?.split("Bearer ")[1];
+  let userId;
+  let userProfile = null;
+
+  if (!token) {
+    token = (await cookies()).get("token")?.value;
   }
+
+  if (token) {
+    try {
+      const decoded = verifyToken(token);
+      userId = decoded.id;
+      userProfile = await db.collection("users").findOne({ _id: new ObjectId(userId) });
+    } catch (e) {
+      console.warn("[Explore API] Token invalid or user not found");
+    }
+  }
+
+  // --- CASE A: Category Discovery ---
+  if (category) {
+    try {
+      // 1. Check cache for this category
+      const cacheCutoff = new Date(Date.now() - CATEGORY_CACHE_TTL * 60 * 60 * 1000);
+      const cached = await db.collection("explore_category_courses").findOne({
+        category: category,
+        createdAt: { $gte: cacheCutoff },
+      });
+
+      if (cached?.courses?.length >= COURSES_PER_CATEGORY) {
+        return NextResponse.json({
+          success: true,
+          courses: cached.courses,
+          category,
+          cached: true
+        });
+      }
+
+      // 2. Generate via AI
+      const completion = await openai.chat.completions.create({
+        model: "gpt-4o-mini",
+        temperature: 0.85,
+        messages: [
+          {
+            role: "system",
+            content: `You are a world-class online course curator for ${CURRENT_YEAR}.
+Generate EXACTLY ${COURSES_PER_CATEGORY} premium-quality courses in the "${category}" category.
+
+Each course must have this exact structure:
+{
+  "title": "Catchy, specific title",
+  "description": "Engaging description",
+  "difficulty": "beginner" | "intermediate" | "advanced",
+  "estimatedDuration": "4-12 weeks",
+  "tags": ["tag1", "tag2", "tag3"],
+  "instructor": "Name",
+  "rating": 4.5,
+  "students": 1000,
+  "isPremium": true|false,
+  "modules": [{ "title": "Module 1", "lessons": ["Lesson 1"] }]
 }
 
-// === GET /api/explore → Returns only trending topics ===
-export async function GET() {
+Return ONLY a clean JSON array.`
+          },
+          {
+            role: "user",
+            content: `Generate ${COURSES_PER_CATEGORY} amazing "${category}" courses.`
+          }
+        ]
+      });
+
+      let courses = [];
+      try {
+        const raw = completion.choices[0].message.content.replace(/```json/gi, "").replace(/```/g, "").trim();
+        courses = JSON.parse(raw);
+      } catch (e) {
+        console.error("[Explore API] AI JSON fail", e);
+        // Fallback or empty
+      }
+
+      if (courses.length > 0) {
+        await db.collection("explore_category_courses").updateOne(
+          { category },
+          {
+            $set: {
+              courses: courses.slice(0, COURSES_PER_CATEGORY),
+              createdAt: new Date(),
+              userId: userId ? new ObjectId(userId) : null
+            }
+          },
+          { upsert: true }
+        );
+      }
+
+      return NextResponse.json({
+        success: true,
+        category,
+        courses: courses.slice(0, COURSES_PER_CATEGORY),
+        cached: false
+      });
+    } catch (error) {
+      console.error("[Explore API] Category fail:", error);
+      return NextResponse.json({ error: "Failed to generate category courses" }, { status: 500 });
+    }
+  }
+
+  // --- CASE B: Trending Topics (Default) ---
   try {
-    const { db } = await connectToDatabase();
-    await seedTrendingIfEmpty(db);
+    const userIdKey = userId || "anonymous";
+    const cacheCutoff = new Date(Date.now() - TRENDING_CACHE_TTL * 60 * 60 * 1000);
 
-    const trendingTopics = await db
-      .collection("explore_trending")
-      .find({})
-      .sort({ students: -1 })
-      .limit(6)
-      .toArray();
+    const cached = await db.collection("explore_trending").findOne({
+      userId: userIdKey,
+      createdAt: { $gte: cacheCutoff }
+    });
 
-    // Clean output — no MongoDB internals
-    const cleanTopics = trendingTopics.map((t) => ({
-      title: t.title,
-      students: t.students,
-      rating: t.rating,
-      duration: t.duration,
-      level: t.level,
-      category: t.category,
-      instructor: t.instructor,
-      thumbnail: t.thumbnail,
-      description: t.description,
-      tags: t.tags,
-      price: t.price,
-      isPremium: t.isPremium,
-    }));
+    if (cached?.topics?.length >= 6) {
+      return NextResponse.json({
+        success: true,
+        topics: cached.topics.slice(0, 6),
+        source: "cache"
+      });
+    }
+
+    // Personalization logic
+    let personalization = "";
+    if (userProfile) {
+      const interests = userProfile.interests || [];
+      if (interests.length > 0) {
+        personalization = `\n\nLearner Interests: ${interests.join(", ")}. Tailor some topics to these areas.`;
+      }
+    }
+
+    const completion = await openai.chat.completions.create({
+      model: "gpt-4o-mini",
+      messages: [
+        {
+          role: "system",
+          content: `Generate 6 trending online course topics for ${CURRENT_YEAR}. 
+Fields: AI, Business, Health, Creative Arts, Humanities, Science, Lifestyle.
+Format: { title, description, category, difficulty, estimatedDuration, tags, whyTrending, hook, questions: [{question, answer}] }
+Return ONLY a clean JSON array.${personalization}`
+        },
+        {
+          role: "user",
+          content: "What's trending in learning today?"
+        }
+      ],
+      temperature: 0.9
+    });
+
+    let topics = [];
+    try {
+      const raw = completion.choices[0].message.content.replace(/```json/gi, "").replace(/```/g, "").trim();
+      topics = JSON.parse(raw);
+    } catch (e) {
+      console.error("[Explore API] Trending AI JSON fail", e);
+    }
+
+    if (topics.length > 0) {
+      await db.collection("explore_trending").updateOne(
+        { userId: userIdKey },
+        {
+          $set: {
+            topics: topics.slice(0, 6),
+            createdAt: new Date()
+          }
+        },
+        { upsert: true }
+      );
+    }
 
     return NextResponse.json({
       success: true,
-      trendingTopics: cleanTopics,
+      topics: topics.slice(0, 6),
+      source: "ai-generated"
     });
   } catch (error) {
-    console.error("Explore API failed:", error);
-    return NextResponse.json(
-      { error: "Failed to load trending courses" },
-      { status: 500 }
-    );
+    console.error("[Explore API] Trending fail:", error);
+    return NextResponse.json({ error: "Failed to load trending topics" }, { status: 500 });
   }
 }

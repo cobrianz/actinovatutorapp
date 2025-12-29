@@ -402,7 +402,7 @@ export default function DashboardContent() {
                     </div>
                 ) : (
                     <div className="space-y-6 pb-32">
-                        {courses.slice(0, 5).map((course, idx) => (
+                        {[...courses].sort((a, b) => (b.isPinned ? 1 : 0) - (a.isPinned ? 1 : 0)).slice(0, 5).map((course, idx) => (
                             <motion.div
                                 key={course.id || idx}
                                 initial={{ opacity: 0, y: 20 }}

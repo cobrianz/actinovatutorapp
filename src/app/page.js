@@ -17,7 +17,7 @@ export default function Home() {
     setOnboardingSeen(seen);
 
     // Increment visitor counter on page load
-    authenticatedFetch("/api/visitor-counter").catch(() => {
+    authenticatedFetch("/api/visitors").catch(() => {
       // Ignore errors for visitor counter in production
     });
 

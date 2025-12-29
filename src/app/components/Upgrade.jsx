@@ -42,10 +42,10 @@ export default function Upgrade() {
   useEffect(() => {
     const fetchUsage = async () => {
       try {
-        const res = await authenticatedFetch("/api/user/usage");
+        const res = await authenticatedFetch("/api/profile");
         if (res.ok) {
           const data = await res.json();
-          setUsage(data);
+          setUsage(data.usage);
         }
       } catch (error) {
         console.error("Failed to fetch usage:", error);

@@ -30,7 +30,7 @@ function ResetPasswordForm() {
     if (!formData.email || !formData.code) return;
 
     try {
-      const res = await authenticatedFetch("/api/verify-reset-code", {
+      const res = await authenticatedFetch("/api/auth/verify-reset-code", {
         method: "POST",
         body: JSON.stringify({ email: formData.email, code: formData.code }),
       });
@@ -74,7 +74,7 @@ function ResetPasswordForm() {
 
   const validateToken = async () => {
     try {
-      const res = await authenticatedFetch(`/api/validate-reset-token?token=${token}`);
+      const res = await authenticatedFetch(`/api/auth/validate-reset-token?token=${token}`);
       const data = await res.json();
 
       if (!res.ok) {
@@ -140,7 +140,7 @@ function ResetPasswordForm() {
         ? { token, password: formData.password }
         : { email: formData.email, code: formData.code, password: formData.password };
 
-      const res = await authenticatedFetch("/api/reset-password", {
+      const res = await authenticatedFetch("/api/auth/reset-password", {
         method: "POST",
         body: JSON.stringify(body),
       });

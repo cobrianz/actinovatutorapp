@@ -280,8 +280,8 @@ export default function PremiumCourses() {
 
       // Track that user generated this premium course (so it won't be deleted)
       try {
-        await authenticatedFetch("/api/profile/update", {
-          method: "POST",
+        await authenticatedFetch("/api/profile", {
+          method: "PUT",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             generatedPremiumCourse: {
@@ -292,8 +292,7 @@ export default function PremiumCourses() {
           }),
         });
       } catch (trackError) {
-        console.error("Error tracking generated course:", trackError);
-        // Don't fail the whole operation if tracking fails
+        // Error handled silently or logged if needed
       }
 
       let responseData = {};
@@ -396,10 +395,7 @@ export default function PremiumCourses() {
     }, 1500); // 1.5 seconds delay
   };
 
-  const handleDelete = async (courseId) => {
-    // TODO: Implement delete functionality
-    console.log("Delete course:", courseId);
-  };
+
 
   // Filter and search logic
   const coursesToDisplay =

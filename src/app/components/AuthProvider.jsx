@@ -54,7 +54,7 @@ export function AuthProvider({ children }) {
 
     refreshPromiseRef.current = (async () => {
       try {
-        const res = await authenticatedFetch("/api/refresh", {
+        const res = await authenticatedFetch("/api/auth/refresh", {
           method: "POST",
         });
 
@@ -90,11 +90,11 @@ export function AuthProvider({ children }) {
     try {
       setError(null);
 
-      console.log(`[Actinova] Fetching user from: ${getApiUrl("/api/me")}`);
+
 
       let res = await authenticatedFetch("/api/me");
 
-      console.log(`[Actinova] /api/me status: ${res.status}`);
+
       let data = null;
 
       if (res.ok) {
@@ -220,7 +220,7 @@ export function AuthProvider({ children }) {
       setError(null);
       setLoading(true);
 
-      const res = await fetch(getApiUrl("/api/login"), {
+      const res = await fetch(getApiUrl("/api/auth/login"), {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -252,12 +252,11 @@ export function AuthProvider({ children }) {
         throw new Error(data.error || "Login failed");
       }
 
-      console.log('[Actinova] Login successful, fetching user profile...');
+
 
       // For Capacitor, store the token from response
       if (IS_CAPACITOR && data.token) {
         localStorage.setItem('auth_token', data.token);
-        console.log('[Actinova] Token stored in localStorage for Capacitor');
       }
 
       // Sync client state from server-side secure cookie via `/api/me`
@@ -277,7 +276,7 @@ export function AuthProvider({ children }) {
       setError(null);
       setLoading(true);
 
-      const res = await authenticatedFetch("/api/signup", {
+      const res = await authenticatedFetch("/api/auth/signup", {
         method: "POST",
         body: JSON.stringify(userData),
       });
@@ -311,7 +310,7 @@ export function AuthProvider({ children }) {
   const logout = async () => {
     try {
       setError(null);
-      await authenticatedFetch("/api/logout", {
+      await authenticatedFetch("/api/auth/logout", {
         method: "POST",
         headers: {
           "X-CSRF-Token": getCsrfToken(),
@@ -334,7 +333,7 @@ export function AuthProvider({ children }) {
   const forgotPassword = async (email) => {
     try {
       setError(null);
-      const res = await authenticatedFetch("/api/forgot-password", {
+      const res = await authenticatedFetch("/api/auth/forgot-password", {
         method: "POST",
         body: JSON.stringify({ email }),
       });
@@ -355,7 +354,7 @@ export function AuthProvider({ children }) {
   const resetPassword = async (token, password, confirmPassword) => {
     try {
       setError(null);
-      const res = await authenticatedFetch("/api/reset-password", {
+      const res = await authenticatedFetch("/api/auth/reset-password", {
         method: "POST",
         body: JSON.stringify({ token, password, confirmPassword }),
       });
@@ -376,7 +375,7 @@ export function AuthProvider({ children }) {
   const verifyEmail = async (token) => {
     try {
       setError(null);
-      const res = await authenticatedFetch("/api/verify-email", {
+      const res = await authenticatedFetch("/api/auth/verify-email", {
         method: "POST",
         body: JSON.stringify({ token }),
       });

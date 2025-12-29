@@ -716,24 +716,23 @@ export default function Onboarding({ onComplete }) {
         onboardingCompleted: true,
       };
 
-      console.log("[Onboarding] Sending profile data:", profileData);
 
-      const response = await authenticatedFetch("/api/profile/update", {
-        method: "POST",
+
+      const response = await authenticatedFetch("/api/profile", {
+        method: "PUT",
         headers,
         body: JSON.stringify(profileData),
       });
 
-      console.log("[Onboarding] Response status:", response.status);
+
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
-        console.error("[Onboarding] Error response:", errorData);
+        // Error handled in catch block
         throw new Error(errorData.error || "Failed to save profile");
       }
 
       const data = await response.json();
-      console.log("[Onboarding] Success response:", data);
 
       // Update the user state in AuthProvider
       setUserData(data.user);

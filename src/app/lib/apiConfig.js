@@ -12,18 +12,12 @@ const IS_CAPACITOR = IS_BROWSER && (
     (window.location.hostname === 'localhost' && window.location.port !== '3000' && window.location.port !== '3001')
 );
 
-console.log('[Actinova] Environment:', {
-    origin: IS_BROWSER ? window.origin : 'N/A',
-    isCapacitor: IS_CAPACITOR,
-    protocol: IS_BROWSER ? window.location.protocol : 'N/A',
-    host: IS_BROWSER ? window.location.host : 'N/A'
-});
+
 
 // Replace with your actual production backend URL if NEXT_PUBLIC_API_URL is not set
 const DEFAULT_API_URL = 'https://actinovatutorapp.vercel.app';
 
 export const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || DEFAULT_API_URL;
-console.log('[Actinova] API_BASE_URL configured as:', API_BASE_URL);
 
 /**
  * Helper to get the absolute API URL for a given path.

@@ -24,10 +24,6 @@ export const saveAndSharePDF = async (pdf, fileName, logTitle, notificationBody,
             const { Share } = await import('@capacitor/share').catch(() => ({}));
             const { LocalNotifications } = await import('@capacitor/local-notifications').catch(() => ({}));
 
-            if (!Filesystem || !Share || !LocalNotifications) throw new Error("Capacitor plugins not available");
-
-            // Request permissions
-            try { await LocalNotifications.requestPermissions(); } catch (e) { }
             try {
                 const status = await Filesystem.requestPermissions();
                 if (status.publicStorage !== 'granted') {
@@ -35,30 +31,47 @@ export const saveAndSharePDF = async (pdf, fileName, logTitle, notificationBody,
                 }
             } catch (e) { }
 
+            console.log(`[PDF] Attempting to write ${fileName} to Downloads...`);
             const result = await Filesystem.writeFile({
                 path: fileName,
                 data: pdfBase64,
                 directory: Directory.Downloads || Directory.Documents,
+                recursive: true
             });
 
-            await LocalNotifications.schedule({
-                notifications: [{
-                    title: 'Download Successful',
-                    body: `The ${logType.toLowerCase()} for "${logTitle}" is now available in your downloads.`,
-                    id: Math.floor(Math.random() * 100000),
-                    schedule: { at: new Date(Date.now() + 500) },
-                    sound: null,
-                }]
-            });
+            console.log(`[PDF] File written successfully: ${result.uri}`);
 
-            await Share.share({
-                title: `${logType} Downloaded`,
-                text: `Successfully downloaded ${logTitle}. You can find it in your device's Downloads folder.`,
-                url: result.uri,
-                dialogTitle: 'Share or Open Document',
-            });
+            // These are optional - failure here shouldn't stop the download
+            if (LocalNotifications) {
+                try {
+                    await LocalNotifications.schedule({
+                        notifications: [{
+                            title: 'Download Successful',
+                            body: notificationBody || `The ${logType.toLowerCase()} for "${logTitle}" is now available in your downloads.`,
+                            id: Math.floor(Math.random() * 100000),
+                            schedule: { at: new Date(Date.now() + 500) },
+                            sound: null,
+                            attachments: [],
+                            smallIcon: 'res://ic_stat_name',
+                            iconColor: '#2563EB'
+                        }]
+                    });
+                } catch (err) { console.error("[PDF] Notification error:", err); }
+            }
+
+            if (Share) {
+                try {
+                    await Share.share({
+                        title: `${logType} Downloaded`,
+                        text: `Successfully downloaded ${logTitle}. Find it in your device's Downloads folder.`,
+                        url: result.uri,
+                        dialogTitle: 'Share or Open Document',
+                    });
+                    console.log(`[PDF] Share sheet opened for ${result.uri}`);
+                } catch (err) { console.error("[PDF] Share error:", err); }
+            }
         } catch (error) {
-            console.error('Capacitor PDF error:', error);
+            console.error('Capacitor PDF error (falling back to web save):', error);
             pdf.save(fileName);
         }
     } else {
@@ -287,6 +300,30 @@ export const processContent = async (pdf, content, currentY, options = {}) => {
             const text = trimmed.substring(4).replace(/[\*_]/g, '').trim();
             pdf.text(text, margin, y);
             y += 8;
+        } else if (trimmed.startsWith("#### ")) {
+            y += SECTION_GAP / 3;
+            pdf.setFont("helvetica", "bold");
+            pdf.setFontSize(13);
+            pdf.setTextColor(...COLORS.text);
+            const text = trimmed.substring(5).replace(/[\*_]/g, '').trim();
+            pdf.text(text, margin, y);
+            y += 6;
+        } else if (trimmed.startsWith("##### ")) {
+            y += SECTION_GAP / 4;
+            pdf.setFont("helvetica", "bold");
+            pdf.setFontSize(11);
+            pdf.setTextColor(...COLORS.text);
+            const text = trimmed.substring(6).replace(/[\*_]/g, '').trim();
+            pdf.text(text, margin, y);
+            y += 5;
+        } else if (trimmed.startsWith("###### ")) {
+            y += SECTION_GAP / 5;
+            pdf.setFont("helvetica", "bold");
+            pdf.setFontSize(10);
+            pdf.setTextColor(...COLORS.text);
+            const text = trimmed.substring(7).replace(/[\*_]/g, '').trim();
+            pdf.text(text, margin, y);
+            y += 4;
         } else if (trimmed.startsWith("> ")) {
             const quote = trimmed.substring(2).trim();
             pdf.setFont("helvetica", "italic");

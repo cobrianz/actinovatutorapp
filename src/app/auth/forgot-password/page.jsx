@@ -38,7 +38,7 @@ export default function ForgotPasswordPage() {
           return;
         }
 
-        const res = await authenticatedFetch("/api/forgot-password", {
+        const res = await authenticatedFetch("/api/auth/forgot-password", {
           method: "POST",
           body: JSON.stringify({ email }),
         });
@@ -66,7 +66,7 @@ export default function ForgotPasswordPage() {
           return;
         }
 
-        const res = await authenticatedFetch("/api/verify-reset-code", {
+        const res = await authenticatedFetch("/api/auth/verify-reset-code", {
           method: "POST",
           body: JSON.stringify({ email, code }),
         });
@@ -97,7 +97,7 @@ export default function ForgotPasswordPage() {
           return;
         }
 
-        const res = await authenticatedFetch("/api/reset-password", {
+        const res = await authenticatedFetch("/api/auth/reset-password", {
           method: "POST",
           body: JSON.stringify({ email, code, password }),
         });

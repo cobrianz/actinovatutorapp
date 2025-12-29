@@ -28,6 +28,11 @@ export const downloadReceiptAsPDF = async (data, userName = "Scholar") => {
     pdf.setTextColor(255, 255, 255);
     pdf.text("Payment Receipt", pageWidth / 2, 28, { align: "center" });
 
+    // Logo
+    try {
+        pdf.addImage("/logo.png", "PNG", (pageWidth - 20) / 2, 33, 20, 20);
+    } catch (e) { }
+
     // --- BRANDING ---
     y = 45;
     pdf.setTextColor(0, 0, 0);
