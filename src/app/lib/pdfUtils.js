@@ -48,22 +48,19 @@ const saveAndSharePDF = async (pdf, fileName, logTitle, notificationBody, logTyp
             // Schedule notification
             await LocalNotifications.schedule({
                 notifications: [{
-                    title: 'Download Complete',
-                    body: notificationBody,
+                    title: 'Download Successful',
+                    body: `The ${logType.toLowerCase()} for "${logTitle}" is now available in your documents.`,
                     id: Math.floor(Math.random() * 100000),
-                    schedule: { at: new Date(Date.now() + 100) },
+                    schedule: { at: new Date(Date.now() + 500) },
                     sound: null,
-                    attachments: null,
-                    actionTypeId: "",
-                    extra: null
                 }]
             });
 
             await Share.share({
-                title: `Actinova ${logType} Download`,
-                text: `${logType} for ${logTitle}`,
+                title: `${logType} Downloaded`,
+                text: `Successfully downloaded ${logTitle}`,
                 url: result.uri,
-                dialogTitle: 'Save or Open PDF',
+                dialogTitle: 'Share or Open Document',
             });
         } catch (error) {
             console.error('Capacitor PDF error:', error);
@@ -180,15 +177,35 @@ export const downloadCourseAsPDF = async (data, mode = "course") => {
 
             // Simple Bold processing within a line
             // This is a basic implementation for Actinova's typical content
-            const parts = line.split(/(\*\*.*?\*\*)/g);
+            // Handle multi-format processing (Bold and Italic)
+            // Regex to match **bold**, __bold__, *italic*, _italic_, or ~~strikethrough~~
+            const parts = line.split(/(\*\*.*?\*\*|__.*?__|(?<!\*)\*.*?\*(?!\*)|(?<!_)_.*?_(?!_)|~~.*?~~)/g);
             let currentX = x;
 
             parts.forEach(part => {
-                if (part.startsWith('**') && part.endsWith('**')) {
+                const isBold = (part.startsWith('**') && part.endsWith('**')) || (part.startsWith('__') && part.endsWith('__'));
+                const isItalic = (part.startsWith('*') && part.endsWith('*')) || (part.startsWith('_') && part.endsWith('_'));
+                const isStrikethrough = part.startsWith('~~') && part.endsWith('~~');
+
+                if (isBold) {
                     pdf.setFont("helvetica", "bold");
                     const cleanPart = part.slice(2, -2);
                     pdf.text(cleanPart, currentX, y);
                     currentX += pdf.getTextWidth(cleanPart);
+                } else if (isItalic) {
+                    pdf.setFont("helvetica", "italic");
+                    const cleanPart = part.slice(1, -1);
+                    pdf.text(cleanPart, currentX, y);
+                    currentX += pdf.getTextWidth(cleanPart);
+                } else if (isStrikethrough) {
+                    const cleanPart = part.slice(2, -2);
+                    pdf.setFont("helvetica", "normal");
+                    pdf.text(cleanPart, currentX, y);
+                    const textWidth = pdf.getTextWidth(cleanPart);
+                    // Draw strikethrough line
+                    pdf.setLineWidth(0.2);
+                    pdf.line(currentX, y - (size * 0.12), currentX + textWidth, y - (size * 0.12));
+                    currentX += textWidth;
                 } else {
                     pdf.setFont("helvetica", "normal");
                     pdf.text(part, currentX, y);
@@ -438,6 +455,8 @@ export const downloadCourseAsPDF = async (data, mode = "course") => {
     };
 
     if (mode === "course") {
+        pdf.addPage();
+        y = 25;
         const modules = data.modules || data.courseData?.modules || [];
         // Table of Contents
         pdf.setFont("helvetica", "bold");
@@ -445,15 +464,28 @@ export const downloadCourseAsPDF = async (data, mode = "course") => {
         pdf.setTextColor(...COLORS.primary);
         pdf.text("Table of Contents", margin, y);
         y += 15;
+
         modules.forEach((mod, idx) => {
-            checkNewPage(12);
-            pdf.setFontSize(12);
-            pdf.setFont("helvetica", "normal");
+            checkNewPage(15);
+            pdf.setFontSize(14);
+            pdf.setFont("helvetica", "bold");
             pdf.setTextColor(...COLORS.text);
             pdf.text(`Module ${idx + 1}: ${mod.title}`, margin, y);
-            y += 10;
-        });
+            y += 8;
 
+            if (mod.lessons) {
+                mod.lessons.forEach((lesson, lIdx) => {
+                    checkNewPage(10);
+                    pdf.setFontSize(11);
+                    pdf.setFont("helvetica", "normal");
+                    pdf.setTextColor(...COLORS.textLight);
+                    const lessonTitle = lesson.title || lesson;
+                    pdf.text(`  ${idx + 1}.${lIdx + 1} ${lessonTitle}`, margin, y);
+                    y += 7;
+                });
+            }
+            y += 4;
+        });
         for (let idx = 0; idx < modules.length; idx++) {
             const mod = modules[idx];
             pdf.addPage();
