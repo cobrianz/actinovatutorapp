@@ -32,18 +32,18 @@ export const downloadCourseAsPDF = async (data) => {
     pdf.text("AI TUTOR PLATFORM", pageWidth / 2, y, { align: "center" });
 
     y = 150;
-    const titleLines = pdf.splitTextToSize(data.title || "Full Course Material", contentWidth - 20);
+    const titleLines = pdf.splitTextToSize(data.title || "Full Course Material", contentWidth - 40);
     const boxHeight = 40 + (titleLines.length * 12) + 20;
     pdf.setDrawColor(...COLORS.primary);
     pdf.setLineWidth(0.5);
-    pdf.roundedRect(MARGIN - 5, y - 15, contentWidth + 10, boxHeight, 2, 2, "D");
+    pdf.roundedRect(MARGIN, y - 15, contentWidth, boxHeight, 2, 2, "D");
     pdf.setTextColor(...COLORS.primary);
     pdf.setFontSize(14);
     pdf.text("PERSONALIZED COURSE TEXTBOOK", pageWidth / 2, y, { align: "center" });
     y += 15;
     pdf.setTextColor(...COLORS.text);
     pdf.setFontSize(28);
-    pdf.text(titleLines, pageWidth / 2, y, { align: "center" });
+    pdf.text(titleLines, pageWidth / 2, y, { align: "center", maxWidth: contentWidth - 40 });
     y += (titleLines.length * 12) + 10;
     pdf.setFontSize(12);
     pdf.setTextColor(...COLORS.textLight);

@@ -90,7 +90,8 @@ export const addPageDecoration = (pdf, pageNum, totalPages) => {
     pdf.setFont("helvetica", "normal");
     pdf.setFontSize(8);
     pdf.setTextColor(...COLORS.textLight);
-    pdf.text("Actinova AI Tutor - Premium Study Material", MARGIN, pageHeight - 10);
+    const currentYear = new Date().getFullYear();
+    pdf.text(`© ${currentYear} Actinova AI Tutor - Premium Study Material`, MARGIN, pageHeight - 10);
     pdf.text(`Page ${pageNum} of ${totalPages}`, pageWidth - MARGIN, pageHeight - 10, { align: "right" });
 };
 

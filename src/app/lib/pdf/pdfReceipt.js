@@ -17,24 +17,27 @@ export const downloadReceiptAsPDF = async (data, userName = "Scholar") => {
         success: [0, 128, 0]
     };
 
-    let y = 0;
+    let y = 20;
+
+    // --- LOGO (ABOVE HEADER) ---
+    try {
+        pdf.addImage("/logo.png", "PNG", (pageWidth - 25) / 2, y, 25, 25);
+        y += 30;
+    } catch (e) {
+        y += 5;
+    }
 
     // --- HEADER BAR ---
     pdf.setFillColor(...COLORS_LATEX.primary);
-    pdf.rect(margin, 20, pageWidth - (margin * 2), 12, "F");
+    pdf.rect(margin, y, pageWidth - (margin * 2), 12, "F");
 
     pdf.setFont("helvetica", "bold");
     pdf.setFontSize(14);
     pdf.setTextColor(255, 255, 255);
-    pdf.text("Payment Receipt", pageWidth / 2, 28, { align: "center" });
-
-    // Logo
-    try {
-        pdf.addImage("/logo.png", "PNG", (pageWidth - 20) / 2, 33, 20, 20);
-    } catch (e) { }
+    pdf.text("Payment Receipt", pageWidth / 2, y + 8, { align: "center" });
+    y += 15;
 
     // --- BRANDING ---
-    y = 45;
     pdf.setTextColor(0, 0, 0);
     pdf.setFontSize(18);
     pdf.text("Actinova AI Tutor", pageWidth / 2, y, { align: "center" });
