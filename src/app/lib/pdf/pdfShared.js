@@ -98,7 +98,11 @@ export const addPageDecoration = (pdf, pageNum, totalPages) => {
     pdf.text(`Page ${pageNum} of ${totalPages}`, pageWidth - MARGIN, pageHeight - 10, { align: "right" });
 };
 
-export const renderFormattedText = (pdf, text, x, y, contentWidth, size = 11, checkNewPage) => {
+// Helper to determine if we are in list context for 'checkNewPage' callbacks if needed.
+// But mostly we just need loop update.
+
+// NOTE: renderFormattedText is now ASYNC to support LaTeX image generation
+export const renderFormattedText = async (pdf, text, x, y, contentWidth, size = 11, checkNewPage, options = {}) => {
     const maxWidth = contentWidth - (x - MARGIN);
     pdf.setFontSize(size);
     pdf.setTextColor(...COLORS.text);
@@ -112,24 +116,53 @@ export const renderFormattedText = (pdf, text, x, y, contentWidth, size = 11, ch
 
     const wrappedLines = pdf.splitTextToSize(cleanText, maxWidth);
 
-    wrappedLines.forEach((line) => {
+    // We must process lines sequentially due to async
+    for (const line of wrappedLines) {
         const currentLineHeight = size * 0.3527 * LINE_HEIGHT_RATIO;
         y = checkNewPage(currentLineHeight + 2, y);
 
         // Regex Explanation:
-        // 1. Links: \[(.*?)\]\((.*?)\) -> Matches [text](url)
-        // 2. Inline Code: `([^`]+)` -> Matches `code`
-        // 3. Bold: \*\*.*?\*\* or __.*?__
-        // 4. Italic: \*.*?\* or _.*?_ (negative lookbehind/ahead to avoid matching within ** or __)
-        // 5. Strikethrough: ~~.*?~~
+        // 1. Latex: \\\(.*?\\\) OR \$[^$]+\$
+        // 2. Links: \[(.*?)\]\((.*?)\) -> Matches [text](url)
+        // 3. Inline Code: `([^`]+)` -> Matches `code`
+        // 4. Bold: \*\*.*?\*\* or __.*?__
+        // 5. Italic: \*.*?\* or _.*?_ (negative lookbehind/ahead to avoid matching within ** or __)
+        // 6. Strikethrough: ~~.*?~~
 
         // We split by capturing groups. The split will include the delimiters in the result array.
         // Priority: Links/Code first as they are most distinct, then formatting.
-        const parts = line.split(/(\[.*?\]\(.*?\)|`[^`]+`|\*\*.*?\*\*|__.*?__|(?<!\*)\*.*?\*(?!\*)|(?<!_)_.*?_(?!_)|~~.*?~~)/g);
+        const parts = line.split(/(\\\\(?:[\s\S]*?)\\\\|\$(?:[^$]+?)\$|\[.*?\]\(.*?\)|`[^`]+`|\*\*.*?\*\*|__.*?__|(?<!\*)\*.*?\*(?!\*)|(?<!_)_.*?_(?!_)|~~.*?~~)/g);
 
         let currentX = x;
 
-        parts.forEach(part => {
+        for (const part of parts) {
+            // -- LATEX START --
+            const latexMatch = part.match(/^(\\\(([\s\S]*?)\\\)|\$([^$]+?)\$)$/);
+            // Group 2 is \( content \), Group 3 is $ content $
+            if (latexMatch) {
+                const latexContent = latexMatch[2] || latexMatch[3];
+                if (latexContent) {
+                    const image = await renderLatexToPng(latexContent.trim());
+                    if (image) {
+                        // Scale for inline text height (approx size mm)
+                        const targetHeight = size * 0.3527 * 1.2; // slightly larger than text
+                        const ratio = image.width / image.height;
+                        const targetWidth = targetHeight * ratio;
+
+                        // Check bounds
+                        if (currentX + targetWidth > MARGIN + contentWidth) {
+                            // potential wrap issue, but handling wrap mid-line is hard. 
+                            // We'll just print it.
+                        }
+
+                        pdf.addImage(image.dataUrl, 'PNG', currentX, y - targetHeight + 1, targetWidth, targetHeight);
+                        currentX += targetWidth + 1;
+                    }
+                }
+                continue;
+            }
+            // -- LATEX END --
+
             // -- LINK START --
             const linkMatch = part.match(/^\[(.*?)\]\((.*?)\)$/);
             if (linkMatch) {
@@ -153,7 +186,7 @@ export const renderFormattedText = (pdf, text, x, y, contentWidth, size = 11, ch
 
                 // Reset Color
                 pdf.setTextColor(...COLORS.text);
-                return;
+                continue;
             }
             // -- LINK END --
 
@@ -176,7 +209,7 @@ export const renderFormattedText = (pdf, text, x, y, contentWidth, size = 11, ch
                 // Reset Font/Color
                 pdf.setFont("helvetica", "normal");
                 pdf.setTextColor(...COLORS.text);
-                return;
+                continue;
             }
             // -- INLINE CODE END --
 
@@ -208,9 +241,9 @@ export const renderFormattedText = (pdf, text, x, y, contentWidth, size = 11, ch
                 pdf.text(part, currentX, y);
                 currentX += pdf.getTextWidth(part);
             }
-        });
+        }
         y += currentLineHeight;
-    });
+    }
     return y;
 };
 
@@ -466,23 +499,23 @@ export const processContent = async (pdf, content, currentY, options = {}) => {
                 pdf.setFont("helvetica", "bold");
                 pdf.setTextColor(0, 0, 0);
                 pdf.text("\u2713", margin + 2, y);
-                y = renderFormattedText(pdf, trimmed.replace(/^[-*•]\s/, ""), margin + 10, y, contentWidth, 11, (space, cy) => checkNewPage(pdf, space, cy));
+                y = await renderFormattedText(pdf, trimmed.replace(/^[-*•]\s/, ""), margin + 10, y, contentWidth, 11, (space, cy) => checkNewPage(pdf, space, cy));
             } else {
                 pdf.setFont("helvetica", "bold");
                 pdf.setTextColor(...COLORS.primary);
                 pdf.text("•", margin + 2, y);
-                y = renderFormattedText(pdf, trimmed.replace(/^[-*•]\s/, ""), margin + 8, y, contentWidth, 11, (space, cy) => checkNewPage(pdf, space, cy));
+                y = await renderFormattedText(pdf, trimmed.replace(/^[-*•]\s/, ""), margin + 8, y, contentWidth, 11, (space, cy) => checkNewPage(pdf, space, cy));
             }
         } else if (trimmed.match(/^\d+\.\s/)) {
             const num = trimmed.match(/^\d+\./)[0];
             pdf.setFont("helvetica", "bold");
             pdf.setTextColor(...COLORS.primary);
             pdf.text(num, margin, y);
-            y = renderFormattedText(pdf, trimmed.replace(/^\d+\.\s/, ""), margin + 10, y, contentWidth, 11, (space, cy) => checkNewPage(pdf, space, cy));
+            y = await renderFormattedText(pdf, trimmed.replace(/^\d+\.\s/, ""), margin + 10, y, contentWidth, 11, (space, cy) => checkNewPage(pdf, space, cy));
         } else if (line.startsWith("    ") || line.startsWith("\t")) {
-            y = renderFormattedText(pdf, trimmed, margin + 10, y, contentWidth, 11, (space, cy) => checkNewPage(pdf, space, cy));
+            y = await renderFormattedText(pdf, trimmed, margin + 10, y, contentWidth, 11, (space, cy) => checkNewPage(pdf, space, cy));
         } else {
-            y = renderFormattedText(pdf, trimmed, margin, y, contentWidth, 11, (space, cy) => checkNewPage(pdf, space, cy));
+            y = await renderFormattedText(pdf, trimmed, margin, y, contentWidth, 11, (space, cy) => checkNewPage(pdf, space, cy));
         }
     }
     flushTable();

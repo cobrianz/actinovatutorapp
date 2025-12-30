@@ -991,11 +991,23 @@ export default function LearnContent() {
       }
     });
 
-    // Handle Inline math: $ ... $ or \( ... \)
-    html = html.replace(/(\$|\\\() ([\s\S]*?) ([\s\S]*?)(\$|\\\))/g, (match, op, content1, content2, cl) => {
-      const content = (content1 + content2).trim();
+    // Handle Inline math: \( ... \) or $ ... $
+    // We handle \( ... \) specifically first to avoid confusion with $
+    html = html.replace(/\\\(([\s\S]+?)\\\)/g, (match, content) => {
       try {
-        return katex.renderToString(content, { displayMode: false, throwOnError: false });
+        return katex.renderToString(content.trim(), { displayMode: false, throwOnError: false });
+      } catch (err) {
+        return match;
+      }
+    });
+
+    // Handle Inline math: $ ... $ (excluding $$ blocks which are already handled)
+    // We use a negative lookbehind/ahead to ensure we don't match $$
+    html = html.replace(/(?<!\$)\$(?!\$)([^$]+?)(?<!\$)\$(?!\$)/g, (match, content) => {
+      try {
+        // Prevent matching if content contains HTML tags (e.g., span from previous replacements)
+        if (content.includes('<')) return match;
+        return katex.renderToString(content.trim(), { displayMode: false, throwOnError: false });
       } catch (err) {
         return match;
       }
