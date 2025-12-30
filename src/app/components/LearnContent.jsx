@@ -995,6 +995,10 @@ export default function LearnContent() {
       /^#### (.*$)/gm,
       '<h4 class="text-lg font-semibold text-gray-800 dark:text-gray-200 mb-2 mt-4">$1</h4>'
     );
+    html = html.replace(
+      /^##### (.*$)/gm,
+      '<h4 class="text-lg font-semibold text-gray-800 dark:text-gray-200 mb-2 mt-4">$1</h4>'
+    );
 
     // Handle blockquotes
     html = html.replace(
