@@ -187,83 +187,26 @@ export async function cleanupOldTrendingCourses() {
   }
 }
 
+import { getUserIdFromRequest } from "@/lib/userUtils";
+
 export async function GET(request) {
   let user = null;
-  let token = request.headers.get("authorization")?.split("Bearer ")[1];
-  const headerUserId = request.headers.get("x-user-id");
+  const userId = await getUserIdFromRequest(request);
 
-  if (token) {
-    try {
-      const { verifyToken } = await import("@/lib/auth");
-      const decoded = verifyToken(token);
-      if (decoded?.id) {
-        const { db } = await connectToDatabase();
-        user = await db.collection("users").findOne(
-          { _id: new ObjectId(decoded.id) },
-          {
-            projection: {
-              interests: 1,
-              goals: 1,
-              skillLevel: 1,
-              isPremium: 1,
-              subscription: 1
-            },
-          }
-        );
+  if (userId) {
+    const { db } = await connectToDatabase();
+    user = await db.collection("users").findOne(
+      { _id: new ObjectId(userId) },
+      {
+        projection: {
+          interests: 1,
+          goals: 1,
+          skillLevel: 1,
+          isPremium: 1,
+          subscription: 1
+        },
       }
-    } catch (e) {
-      console.error("Auth header failed for trending:", e);
-      // Fallback to cookie check below
-    }
-  }
-
-  // If header auth failed or was missing, check cookies
-  if (!user) {
-    token = (await cookies()).get("token")?.value;
-    if (token) {
-      try {
-        const { verifyToken } = await import("@/lib/auth");
-        const decoded = verifyToken(token);
-        if (decoded?.id) {
-          const { db } = await connectToDatabase();
-          user = await db.collection("users").findOne(
-            { _id: new ObjectId(decoded.id) },
-            {
-              projection: {
-                interests: 1,
-                goals: 1,
-                skillLevel: 1,
-                isPremium: 1,
-                subscription: 1
-              },
-            }
-          );
-        }
-      } catch (e) {
-        console.error("Cookie auth failed for trending:", e);
-      }
-    }
-  }
-
-  // Final fallback to x-user-id if provided (for discovery/testing or specific flows)
-  if (!user && headerUserId) {
-    try {
-      const { db } = await connectToDatabase();
-      user = await db.collection("users").findOne(
-        { _id: new ObjectId(headerUserId) },
-        {
-          projection: {
-            interests: 1,
-            goals: 1,
-            skillLevel: 1,
-            isPremium: 1,
-            subscription: 1
-          },
-        }
-      );
-    } catch (e) {
-      console.error("Header userId lookup failed:", e);
-    }
+    );
   }
 
   if (!user) {

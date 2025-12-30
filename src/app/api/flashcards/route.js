@@ -4,31 +4,10 @@ import { connectToDatabase } from "@/lib/mongodb";
 import { verifyToken } from "@/lib/auth";
 import { ObjectId } from "mongodb";
 
-// Shared auth extractor
-async function getUserId(request) {
-  let token = null;
-
-  const authHeader = request.headers.get("authorization");
-  if (authHeader?.startsWith("Bearer ")) {
-    token = authHeader.substring(7);
-  } else {
-    const cookieStore = await cookies();
-    token = cookieStore.get("token")?.value;
-  }
-
-  if (!token) return null;
-
-  try {
-    const decoded = verifyToken(token);
-    return decoded?.id ? new ObjectId(decoded.id) : null;
-  } catch (err) {
-    console.warn("Invalid token in flashcards route:", err.message);
-    return null;
-  }
-}
+import { getUserIdFromRequest } from "@/lib/userUtils";
 
 export async function GET(request) {
-  const userId = await getUserId(request);
+  const userId = await getUserIdFromRequest(request);
   if (!userId) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }

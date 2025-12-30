@@ -4,7 +4,7 @@ import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import OpenAI from "openai";
 import { connectToDatabase } from "@/lib/mongodb";
-import { verifyToken } from "@/lib/auth";
+import { getUserIdFromRequest } from "@/lib/userUtils";
 import { ObjectId } from "mongodb";
 import User from "@/models/User";
 
@@ -23,22 +23,11 @@ export async function GET(request) {
   const { db } = await connectToDatabase();
 
   // 1. Auth & Personalization Context
-  let token = request.headers.get("authorization")?.split("Bearer ")[1];
-  let userId;
+  const userId = await getUserIdFromRequest(request);
   let userProfile = null;
 
-  if (!token) {
-    token = (await cookies()).get("token")?.value;
-  }
-
-  if (token) {
-    try {
-      const decoded = verifyToken(token);
-      userId = decoded.id;
-      userProfile = await db.collection("users").findOne({ _id: new ObjectId(userId) });
-    } catch (e) {
-      console.warn("[Explore API] Token invalid or user not found");
-    }
+  if (userId) {
+    userProfile = await db.collection("users").findOne({ _id: userId });
   }
 
   // --- CASE A: Category Discovery ---

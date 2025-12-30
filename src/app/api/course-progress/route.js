@@ -7,31 +7,8 @@ import { connectToDatabase } from "@/lib/mongodb";
 import { ObjectId } from "mongodb";
 
 async function handlePost(request) {
-  await connectToDatabase();
-
   const user = request.user;
-  let effectiveUser = user;
-
-  // If middleware didn't attach a user (cookie/token mismatch), allow header fallback
-  if (!effectiveUser) {
-    try {
-      const headerUserId = request.headers.get("x-user-id");
-      if (headerUserId) {
-        // Try native DB lookup to operate on user's courses atomically
-        const { db } = await connectToDatabase();
-        const userDoc = await db
-          .collection("users")
-          .findOne({ _id: new ObjectId(headerUserId) });
-        if (userDoc) {
-          effectiveUser = userDoc;
-        }
-      }
-    } catch (e) {
-      // ignore and fall through to unauthorized
-    }
-  }
-
-  if (!effectiveUser) {
+  if (!user) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
@@ -63,10 +40,10 @@ async function handlePost(request) {
 
     // === Atomic Update: Create if not exists, update if exists ===
     // If we have a Mongoose user model instance, prefer Mongoose updates
-    if (effectiveUser._id && effectiveUser.__v !== undefined) {
-      // effectiveUser looks like a Mongoose doc
+    if (user._id && user.__v !== undefined) {
+      // user looks like a Mongoose doc
       const result = await User.updateOne(
-        { _id: effectiveUser._id, "courses.courseId": courseId },
+        { _id: user._id, "courses.courseId": courseId },
         {
           $set: {
             "courses.$.progress": Math.round(progress),
@@ -79,7 +56,7 @@ async function handlePost(request) {
       // If no document was matched → insert new entry
       if (result.matchedCount === 0) {
         await User.updateOne(
-          { _id: effectiveUser._id },
+          { _id: user._id },
           {
             $push: {
               courses: {
@@ -96,7 +73,7 @@ async function handlePost(request) {
     } else {
       // Native DB update when we only have a plain user document
       const { db } = await connectToDatabase();
-      const userObjId = new ObjectId(effectiveUser._id || effectiveUser.id);
+      const userObjId = new ObjectId(user._id || user.id);
 
       const result = await db.collection("users").updateOne(
         { _id: userObjId, "courses.courseId": courseId },
@@ -132,7 +109,7 @@ async function handlePost(request) {
       try {
         const { db } = await connectToDatabase();
         const courseObjId = new ObjectId(courseId);
-        const userObjId = new ObjectId(effectiveUser._id || effectiveUser.id);
+        const userObjId = new ObjectId(user._id || user.id);
         const [modNum, lessonNum] = String(lessonId).split("-");
         const moduleId = parseInt(modNum, 10);
 
@@ -143,7 +120,7 @@ async function handlePost(request) {
             : completed;
 
         if (!Number.isNaN(moduleId)) {
-          const updateResult = await db.collection("library").updateOne(
+          await db.collection("library").updateOne(
             { _id: courseObjId, userId: userObjId },
             {
               $set: {

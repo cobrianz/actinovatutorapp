@@ -11,24 +11,7 @@ const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
 });
 
-// === Shared Auth Helper ===
-async function getUserId(request) {
-  let token = request.headers.get("authorization")?.split("Bearer ")?.[1];
-
-  if (!token) {
-    token = (await cookies()).get("token")?.value;
-  }
-
-  if (!token) return null;
-
-  try {
-    const decoded = verifyToken(token);
-    return decoded?.id ? decoded.id : null;
-  } catch (err) {
-    console.warn("Invalid token in AI route:", err.message);
-    return null;
-  }
-}
+import { getUserIdFromRequest } from "@/lib/userUtils";
 
 // === Helper: Get Premium Status ===
 async function getPremiumStatus(db, userId) {
@@ -56,7 +39,7 @@ async function getPremiumStatus(db, userId) {
 
 // === MAIN HANDLER ===
 export async function POST(request) {
-  const userId = await getUserId(request);
+  const userId = await getUserIdFromRequest(request);
   const { db } = await connectToDatabase();
 
   try {

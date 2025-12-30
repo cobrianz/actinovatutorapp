@@ -123,9 +123,6 @@ export default function LearnContent() {
     try {
       authenticatedFetch("/api/library", {
         method: "POST",
-        headers: {
-          "x-user-id": user?._id || user?.id || user?.idString || "",
-        },
         body: JSON.stringify({
           action: "saveConversation",
           courseId: courseData?._id || null,
@@ -151,9 +148,6 @@ export default function LearnContent() {
     try {
       const res = await authenticatedFetch("/api/library", {
         method: "POST",
-        headers: {
-          "x-user-id": user?._id || user?.id || user?.idString || "",
-        },
         body: JSON.stringify({
           action: "getConversation",
           courseId: courseData?._id || null,
@@ -210,14 +204,35 @@ export default function LearnContent() {
   useEffect(() => {
     if (courseData?._id) {
       restoreConversation();
-      // Restore progress from local storage
+
+      // 1. Sync completed lessons from backend if available, fallback to localStorage
+      const backendCompleted = new Set();
+      if (courseData.modules) {
+        courseData.modules.forEach(m => {
+          if (m.lessons) {
+            m.lessons.forEach(l => {
+              if (l.completed) {
+                backendCompleted.add(l.id || `${m.id}-${m.lessons.indexOf(l)}`);
+              }
+            });
+          }
+        });
+      }
+
       const savedProgress = localStorage.getItem(progressKey());
-      if (savedProgress) {
-        setCompletedLessons(new Set(JSON.parse(savedProgress)));
+      const localCompleted = savedProgress ? new Set(JSON.parse(savedProgress)) : new Set();
+
+      // Merge: Preference to whatever has more items (or Union)
+      const merged = new Set([...backendCompleted, ...localCompleted]);
+      setCompletedLessons(merged);
+
+      // Sync back to localStorage if it was empty or different
+      if (merged.size > 0) {
+        localStorage.setItem(progressKey(), JSON.stringify(Array.from(merged)));
       }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [courseData?._id]);
+  }, [courseData?._id, courseData?.modules]);
 
   // Save current lesson position to local storage for "Resume" functionality
   useEffect(() => {
@@ -537,6 +552,28 @@ export default function LearnContent() {
         module.title
       );
     }
+
+    // ─── Fetch User Notes for this lesson ───
+    fetchNotesForLesson(moduleId, lessonIndex);
+  };
+
+  const fetchNotesForLesson = async (moduleId, lessonIndex) => {
+    if (!courseData?._id) return;
+    try {
+      setNotes(""); // Clear first
+      const itemId = `course_${courseData._id}`;
+      const lessonId = `${moduleId}-${lessonIndex}`;
+
+      const res = await authenticatedFetch(`/api/notes?itemId=${itemId}&lessonId=${lessonId}`);
+      if (res.ok) {
+        const data = await res.json();
+        if (data.notes && data.notes.length > 0) {
+          setNotes(data.notes[0].content);
+        }
+      }
+    } catch (e) {
+      console.warn("Failed to fetch lesson notes:", e);
+    }
   };
 
   const fetchLessonContent = async (
@@ -628,7 +665,9 @@ export default function LearnContent() {
   };
 
   const toggleLessonCompletion = async (moduleId, lessonIndex) => {
-    const lessonId = `${moduleId}-${lessonIndex}`;
+    const module = courseData.modules.find(m => m.id === moduleId);
+    const lesson = module?.lessons[lessonIndex];
+    const lessonId = lesson?.id || `${moduleId}-${lessonIndex + 1}`;
     const newCompleted = new Set(completedLessons);
 
     if (newCompleted.has(lessonId)) {
@@ -654,19 +693,13 @@ export default function LearnContent() {
             ? Math.round((newCompleted.size / totalLessons) * 100)
             : 0;
 
-        const response = await fetch("/api/course-progress", {
+        const response = await authenticatedFetch("/api/course-progress", {
           method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "x-user-id": user?._id || user?.id || user?.idString || "",
-          },
-          credentials: "include",
           body: JSON.stringify({
             courseId: courseData._id,
             progress,
             completed: progress === 100,
             isLessonCompleted: newCompleted.has(lessonId),
-            userId: user?._id || user?.id || null,
             lessonId: lessonId,
           }),
         });
@@ -1374,7 +1407,7 @@ export default function LearnContent() {
       if (courseIdParam) {
         try {
           const res = await authenticatedFetch(`/api/library?id=${courseIdParam}`, {
-            headers: { "x-user-id": user?._id || user?.id || "" },
+            headers: { "Content-Type": "application/json" },
           });
           if (res.ok) {
             const data = await res.json();
@@ -1396,11 +1429,7 @@ export default function LearnContent() {
 
       // Search specifically for this topic to avoid pagination issues
       try {
-        const libraryResponse = await authenticatedFetch(`/api/library?search=${encodeURIComponent(actualTopic)}&limit=50`, {
-          headers: {
-            "x-user-id": user?._id || user?.id || user?.idString || "",
-          },
-        });
+        const libraryResponse = await authenticatedFetch(`/api/library?search=${encodeURIComponent(actualTopic)}&limit=50`);
 
         if (libraryResponse.ok) {
           const libraryData = await libraryResponse.json();
@@ -1452,7 +1481,7 @@ export default function LearnContent() {
                 if (module.lessons) {
                   module.lessons.forEach((lesson, lIdx) => {
                     // Fallback ID if lesson.id is missing, matching the toggleLessonCompletion logic
-                    const lId = lesson.id || `${module.id}-${lIdx}`;
+                    const lId = lesson.id || `${module.id}-${lIdx + 1}`;
                     if (lesson.completed) {
                       completedLessonsFromDB.add(lId);
                     }
@@ -1737,9 +1766,6 @@ export default function LearnContent() {
           try {
             const libRes = await authenticatedFetch("/api/library", {
               method: "POST",
-              headers: {
-                "x-user-id": user?._id || user?.id || user?.idString || "",
-              },
               body: JSON.stringify({
                 action: "add",
                 course: {
@@ -2097,7 +2123,7 @@ export default function LearnContent() {
                       {module.lessons.map((lesson, lessonIndex) => {
                         const lessonTitle =
                           typeof lesson === "string" ? lesson : lesson.title;
-                        const lessonId = `${module.id}-${lessonIndex}`;
+                        const lessonId = lesson?.id || `${module.id}-${lessonIndex + 1}`;
                         const isCompleted = completedLessons.has(lessonId);
                         const isActive =
                           activeLesson.moduleId === module.id &&
@@ -2460,7 +2486,9 @@ export default function LearnContent() {
           <button
             onClick={async () => {
               if (!activeLesson || lessonContentLoading) return;
-              const lessonId = `${activeLesson.moduleId}-${activeLesson.lessonIndex}`;
+              const module = courseData?.modules?.find(m => m.id === activeLesson.moduleId);
+              const lesson = module?.lessons?.[activeLesson.lessonIndex];
+              const lessonId = lesson?.id || `${activeLesson.moduleId}-${activeLesson.lessonIndex + 1}`;
               const isCurrentlyCompleted = completedLessons.has(lessonId);
               const action = isCurrentlyCompleted ? "incomplete" : "complete";
               toast.loading(`Marking lesson as ${action}...`, { id: "mark-complete" });
@@ -2471,10 +2499,10 @@ export default function LearnContent() {
                 toast.error(`Error: ${error.message}`, { id: "mark-complete" });
               }
             }}
-            className={`flex flex-col items-center justify-center w-full h-full space-y-1 ${completedLessons.has(`${activeLesson.moduleId}-${activeLesson.lessonIndex}`) ? "text-green-600 dark:text-green-400" : "text-gray-500 dark:text-gray-400"}`}
+            className={`flex flex-col items-center justify-center w-full h-full space-y-1 ${completedLessons.has(courseData?.modules?.find(m => m.id === activeLesson.moduleId)?.lessons?.[activeLesson.lessonIndex]?.id || `${activeLesson.moduleId}-${activeLesson.lessonIndex + 1}`) ? "text-green-600 dark:text-green-400" : "text-gray-500 dark:text-gray-400"}`}
             disabled={!currentLesson?.content || lessonContentLoading}
           >
-            <CheckCircle size={22} strokeWidth={2} className={completedLessons.has(`${activeLesson.moduleId}-${activeLesson.lessonIndex}`) ? "fill-current opacity-20" : ""} />
+            <CheckCircle size={22} strokeWidth={2} className={completedLessons.has(courseData?.modules?.find(m => m.id === activeLesson.moduleId)?.lessons?.[activeLesson.lessonIndex]?.id || `${activeLesson.moduleId}-${activeLesson.lessonIndex + 1}`) ? "fill-current opacity-20" : ""} />
             <span className="text-[10px] font-medium">Status</span>
           </button>
 

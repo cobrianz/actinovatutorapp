@@ -1,50 +1,57 @@
 import OpenAI from "openai";
 import { NextResponse } from "next/server";
-import { cookies } from "next/headers";
-import { verifyToken } from "@/lib/auth";
+import { getUserIdFromRequest } from "@/lib/userUtils";
+import { connectToDatabase } from "@/lib/mongodb";
+import User from "@/models/User";
 
 const openai = new OpenAI({
     apiKey: process.env.OPENAI_API_KEY,
 });
 
-// === Shared Auth Helper ===
-async function getUserId(request) {
-    let token = request.headers.get("authorization")?.split("Bearer ")?.[1];
-
-    if (!token) {
-        token = (await cookies()).get("token")?.value;
-    }
-
-    if (!token) return null;
-
-    try {
-        const decoded = verifyToken(token);
-        return decoded?.id ? decoded.id : null;
-    } catch (err) {
-        console.warn("Invalid token in DALL·E route:", err.message);
-        return null;
-    }
-}
-
 export async function POST(request) {
-    const userId = await getUserId(request);
-
-    if (!userId) {
-        return NextResponse.json(
-            { error: "Unauthorized" },
-            { status: 401 }
-        );
-    }
-
     try {
+        await connectToDatabase();
+        const userId = await getUserIdFromRequest(request);
+
+        if (!userId) {
+            return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+        }
+
+        const user = await User.findById(userId);
+        if (!user) return NextResponse.json({ error: "User not found" }, { status: 404 });
+
+        // === Safeguard: Plan Limits & Premium Check ===
+        const planName = user.subscription?.plan || "free";
+        const isPremium = planName === "pro" || planName === "enterprise" || user.isPremium;
+
+        if (!isPremium) {
+            return NextResponse.json({
+                error: "DALL-E image generation is a premium feature. Please upgrade to Pro.",
+                upgrade: true
+            }, { status: 403 });
+        }
+
+        // === Rate Limiting (Basic) ===
+        // Limit to 5 images per day even for pro to prevent major abuse
+        const today = new Date().toISOString().split('T')[0];
+        const dailyLimit = 5;
+
+        // Find if user already generated images today
+        const userWithUsage = await User.findById(userId).select('usage');
+        const usage = userWithUsage.usage || {};
+        const todayUsage = usage.imageGen?.[today] || 0;
+
+        if (todayUsage >= dailyLimit) {
+            return NextResponse.json({
+                error: `Daily limit of ${dailyLimit} images reached. Try again tomorrow!`
+            }, { status: 429 });
+        }
+
         const body = await request.json();
         const { prompt } = body;
 
         if (!prompt?.trim()) {
-            return NextResponse.json(
-                { error: "Prompt is required" },
-                { status: 400 }
-            );
+            return NextResponse.json({ error: "Prompt is required" }, { status: 400 });
         }
 
         // Generate image using DALL·E 3
@@ -59,17 +66,21 @@ export async function POST(request) {
         const imageUrl = response.data[0]?.url;
 
         if (!imageUrl) {
-            return NextResponse.json(
-                { error: "Failed to generate image" },
-                { status: 500 }
-            );
+            throw new Error("Failed to generate image from OpenAI");
         }
+
+        // Update usage
+        await User.updateOne(
+            { _id: userId },
+            { $inc: { [`usage.imageGen.${today}`]: 1 } }
+        );
 
         return NextResponse.json({
             success: true,
             imageUrl,
             prompt,
         });
+
     } catch (error) {
         console.error("DALL·E API Error:", error);
         return NextResponse.json(

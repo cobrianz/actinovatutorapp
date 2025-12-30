@@ -4,25 +4,11 @@ import { connectToDatabase } from "@/lib/mongodb";
 import { verifyToken } from "@/lib/auth";
 import { ObjectId } from "mongodb";
 
-async function getUserId(request) {
-  let token = request.headers.get("authorization")?.split("Bearer ")[1];
-  if (!token) {
-    const cookieStore = await cookies();
-    token = cookieStore.get("token")?.value;
-  }
-  if (!token) return null;
-
-  try {
-    const decoded = verifyToken(token);
-    return decoded.id;
-  } catch {
-    return null;
-  }
-}
+import { getUserIdFromRequest } from "@/lib/userUtils";
 
 // ─── GET: Fetch all notes (with filters) ───
 export async function GET(request) {
-  const userId = await getUserId(request);
+  const userId = await getUserIdFromRequest(request);
   if (!userId)
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
@@ -74,7 +60,7 @@ export async function GET(request) {
 
 // ─── POST: Save or update note (smart upsert) ───
 export async function POST(request) {
-  const userId = await getUserId(request);
+  const userId = await getUserIdFromRequest(request);
   if (!userId)
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
@@ -145,7 +131,7 @@ export async function POST(request) {
 
 // ─── DELETE: Remove a note ───
 export async function DELETE(request) {
-  const userId = await getUserId(request);
+  const userId = await getUserIdFromRequest(request);
   if (!userId)
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 

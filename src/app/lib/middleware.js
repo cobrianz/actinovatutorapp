@@ -71,65 +71,16 @@ export function withAuth(handler, options = {}) {
       }
 
       if (!token) {
-        // Try fallback header-based user id (useful for client-side fallbacks)
-        const fallbackUserId = req.headers?.get?.("x-user-id");
-        if (fallbackUserId) {
-          try {
-            const user = await findUserById(fallbackUserId);
-            if (user) {
-              req.user = user;
-              return handler(req, context);
-            }
-            // If Mongoose lookup failed, try native DB lookup as a last resort
-            try {
-              const { db } = await connectToDatabase();
-              const native = await db
-                .collection("users")
-                .findOne({ _id: new ObjectId(fallbackUserId) });
-              if (native) {
-                req.user = native;
-                return handler(req, context);
-              }
-            } catch (e) {
-              // ignore native fallback errors
-            }
-          } catch (e) {
-            // ignore and return auth error below
-          }
-        }
-
-        await safeAuthDebug(req, "no-token-and-no-valid-x-user-id");
+        await safeAuthDebug(req, "no-token");
         return NextResponse.json({ error: "Authentication required" }, { status: 401 });
       }
 
-      // Verify token (if present). If verification fails, allow x-user-id fallback.
+      // Verify token
       let decoded;
       try {
         decoded = verifyToken(token);
       } catch (err) {
-        // Token invalid/expired — attempt header fallback
-        const fallbackUserId = req.headers?.get?.("x-user-id");
-        if (fallbackUserId) {
-          try {
-            const user = await findUserById(fallbackUserId);
-            if (user) {
-              req.user = user;
-              return handler(req, context);
-            }
-            // Try native lookup
-            const { db } = await connectToDatabase();
-            const native = await db
-              .collection("users")
-              .findOne({ _id: new ObjectId(fallbackUserId) });
-            if (native) {
-              req.user = native;
-              return handler(req, context);
-            }
-          } catch (e) {
-            // continue to return invalid token below
-          }
-        }
-        await safeAuthDebug(req, "invalid-token-and-fallback-failed");
+        await safeAuthDebug(req, "invalid-token");
         return NextResponse.json({ error: "Invalid token" }, { status: 401 });
       }
 

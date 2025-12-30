@@ -22,48 +22,51 @@ export const saveAndSharePDF = async (pdf, fileName, logTitle, notificationBody,
     if (isCapacitor) {
         try {
             const pdfBase64 = pdf.output('datauristring').split(',')[1];
-            const { Filesystem, Directory } = await import('@capacitor/filesystem').catch(() => ({}));
-            const { Share } = await import('@capacitor/share').catch(() => ({}));
-            const { LocalNotifications } = await import('@capacitor/local-notifications').catch(() => ({}));
+            const [{ Filesystem, Directory }, { Share }, { LocalNotifications }] = await Promise.all([
+                import('@capacitor/filesystem'),
+                import('@capacitor/share'),
+                import('@capacitor/local-notifications')
+            ]);
 
-            const result = await Filesystem.writeFile({
+            // For mobile, we try to save to a visible directory
+            // Directory.Downloads is often restricted, so we use Directory.Documents which is visible in Files app on iOS
+            // and usable on Android as well.
+            const savedFile = await Filesystem.writeFile({
                 path: fileName,
                 data: pdfBase64,
-                directory: Directory.Downloads,
+                directory: Directory.Documents,
                 recursive: true
             });
 
+            // Trigger local notification
             if (LocalNotifications) {
                 try {
-                    const perm = await LocalNotifications.checkPermissions();
-                    if (perm.display !== 'granted') {
-                        await LocalNotifications.requestPermissions();
-                    }
+                    await LocalNotifications.requestPermissions();
                     await LocalNotifications.schedule({
                         notifications: [{
-                            title: 'Download Complete',
-                            body: notificationBody || `Your ${logType.toLowerCase()} "${logTitle}" is ready.`,
-                            id: Math.floor(Math.random() * 1000000),
-                            schedule: { at: new Date(Date.now() + 500) },
-                            iconColor: '#1E40AF',
-                            actionTypeId: 'OPEN_FILE'
+                            title: 'Download Successful',
+                            body: notificationBody || `Your ${logType.toLowerCase()} "${logTitle}" has been saved to your documents.`,
+                            id: Date.now(),
+                            schedule: { at: new Date(Date.now() + 500) }
                         }]
                     });
-                } catch (err) { console.error("[PDF] Notification error:", err); }
+                } catch (e) { console.warn("Notifications failed", e); }
             }
 
+            // Also trigger share so the user can open it immediately
             if (Share) {
-                try {
-                    await Share.share({
-                        title: `${logType} Ready`,
-                        text: `Your ${logTitle} has been downloaded.`,
-                        url: result.uri,
-                        dialogTitle: 'Open/Share Document',
-                    });
-                } catch (err) { console.error("[PDF] Share error:", err); }
+                await Share.share({
+                    title: `Your ${logType}: ${logTitle}`,
+                    text: `Download complete: ${logTitle}`,
+                    url: savedFile.uri,
+                    dialogTitle: 'Open Document',
+                });
             }
+
+            return true;
         } catch (error) {
             console.error('Capacitor PDF error:', error);
+            // Fallback for non-compliant plugins
             pdf.save(fileName);
         }
     } else {

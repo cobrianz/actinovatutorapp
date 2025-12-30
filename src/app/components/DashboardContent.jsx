@@ -278,6 +278,13 @@ export default function DashboardContent() {
         fetchTrending();
     }, [user]);
 
+    // Signal Dashboard Ready
+    useEffect(() => {
+        if (!loadingCourses && !loadingTrending) {
+            window.dispatchEvent(new CustomEvent("actinova:dashboard-ready"));
+        }
+    }, [loadingCourses, loadingTrending]);
+
     return (
         <div className="px-5 py-6 space-y-8 pb-32 pb-safe-bottom">
 

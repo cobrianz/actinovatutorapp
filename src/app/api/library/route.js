@@ -6,45 +6,14 @@ import { ObjectId } from "mongodb";
 
 const PIN_LIMIT = 3;
 
+import { getUserIdFromRequest } from "@/lib/userUtils";
+
 export async function GET(request) {
-  let token = request.headers.get("authorization")?.split("Bearer ")[1];
-  let userId;
+  const { db } = await connectToDatabase();
+  const userId = await getUserIdFromRequest(request);
 
-  const headerUserId = request.headers.get("x-user-id");
-
-  if (token) {
-    try {
-      const decoded = verifyToken(token);
-      userId = decoded.id;
-    } catch {
-      token = (await cookies()).get("token")?.value;
-      if (token) {
-        try {
-          const decoded = verifyToken(token);
-          userId = decoded.id;
-        } catch {
-          return NextResponse.json({ error: "Invalid token" }, { status: 401 });
-        }
-      } else if (headerUserId) {
-        userId = headerUserId;
-      } else {
-        return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-      }
-    }
-  } else if (headerUserId) {
-    userId = headerUserId;
-  } else {
-    token = (await cookies()).get("token")?.value;
-    if (token) {
-      try {
-        const decoded = verifyToken(token);
-        userId = decoded.id;
-      } catch {
-        return NextResponse.json({ error: "Invalid token" }, { status: 401 });
-      }
-    } else {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+  if (!userId) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
   const { searchParams } = new URL(request.url);
@@ -206,43 +175,11 @@ export async function GET(request) {
 }
 
 export async function POST(request) {
-  let token = request.headers.get("authorization")?.split("Bearer ")[1];
-  let userId;
-  const headerUserId = request.headers.get("x-user-id");
+  const { db } = await connectToDatabase();
+  const userId = await getUserIdFromRequest(request);
 
-  if (token) {
-    try {
-      const decoded = verifyToken(token);
-      userId = decoded.id;
-    } catch {
-      token = (await cookies()).get("token")?.value;
-      if (token) {
-        try {
-          const decoded = verifyToken(token);
-          userId = decoded.id;
-        } catch {
-          return NextResponse.json({ error: "Invalid token" }, { status: 401 });
-        }
-      } else if (headerUserId) {
-        userId = headerUserId;
-      } else {
-        return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-      }
-    }
-  } else if (headerUserId) {
-    userId = headerUserId;
-  } else {
-    token = (await cookies()).get("token")?.value;
-    if (token) {
-      try {
-        const decoded = verifyToken(token);
-        userId = decoded.id;
-      } catch {
-        return NextResponse.json({ error: "Invalid token" }, { status: 401 });
-      }
-    } else {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+  if (!userId) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
   const body = await request.json();

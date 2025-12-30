@@ -4,10 +4,9 @@ import { NextResponse } from "next/server";
 import { connectToDatabase } from "@/lib/mongodb";
 import VisitorCounter from "@/models/VisitorCounter";
 
-/**
- * GET: Increments and returns the visitor count
- */
-export async function GET() {
+import { withRateLimit } from "@/lib/middleware";
+
+async function handleGet() {
     try {
         await connectToDatabase();
         const counter = await VisitorCounter.incrementCounter();
@@ -26,9 +25,6 @@ export async function GET() {
     }
 }
 
-/**
- * POST: Same as GET (fallback for older implementations)
- */
-export async function POST() {
-    return GET();
-}
+// 1 request per 5 minutes per IP for visitors counter
+export const GET = withRateLimit({ max: 1, windowMs: 5 * 60 * 1000 })(handleGet);
+export const POST = GET;

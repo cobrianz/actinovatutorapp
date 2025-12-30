@@ -21,6 +21,8 @@ export const metadata = {
   },
 };
 
+import InitializationWrapper from "./components/InitializationWrapper";
+
 export default function RootLayout({ children }) {
   return (
     <html lang="en" dir="ltr" suppressHydrationWarning>
@@ -30,9 +32,11 @@ export default function RootLayout({ children }) {
         dir="ltr"
       >
         <AuthProvider>
-          <Suspense fallback={null}>
-            {children}
-          </Suspense>
+          <InitializationWrapper>
+            <Suspense fallback={null}>
+              {children}
+            </Suspense>
+          </InitializationWrapper>
         </AuthProvider>
       </body>
     </html>

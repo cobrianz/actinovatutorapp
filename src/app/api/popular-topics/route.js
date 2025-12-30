@@ -7,24 +7,11 @@ import OpenAI from "openai";
 
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
+import { getUserIdFromRequest } from "@/lib/userUtils";
+
 export async function GET(request) {
-    let userId = null;
     let user = null;
-
-    // Get user from auth token
-    try {
-        const authHeader = request.headers.get("authorization");
-        let token = authHeader?.startsWith("Bearer ")
-            ? authHeader.slice(7)
-            : (await cookies()).get("token")?.value;
-
-        if (token) {
-            const decoded = verifyToken(token);
-            userId = decoded.id;
-        }
-    } catch (e) {
-        // Continue as anonymous user
-    }
+    const userId = await getUserIdFromRequest(request);
 
     try {
         const { db } = await connectToDatabase();
