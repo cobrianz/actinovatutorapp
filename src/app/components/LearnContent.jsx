@@ -37,6 +37,8 @@ import Flashcards from "./Flashcards";
 import QuizInterface from "./QuizInterface";
 import mermaid from "mermaid";
 import { getWikipediaDiagram } from "@/lib/wikipediaDiagrams";
+import katex from "katex";
+import "katex/dist/katex.min.css";
 
 // Mermaid will be initialized dynamically based on theme
 
@@ -946,29 +948,35 @@ export default function LearnContent() {
       return placeholder;
     });
 
-    // Handle equations - LaTeX display mode \[...\]
-    html = html.replace(
-      /\\\[([^\]]*?)\\\]/g,
-      '<div class="my-4 p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg text-center overflow-x-auto"><span class="text-lg font-serif italic text-gray-900 dark:text-gray-100">$1</span></div>'
-    );
+    // Unified Math/LaTeX processing (KaTeX)
+    // Handle Block math: $$ ... $$ or \[ ... \]
+    html = html.replace(/(\$\$|\\\[)([\s\S]*?)(\$\$|\\\])/g, (match, op, content) => {
+      try {
+        return `<div class="my-6 overflow-x-auto flex justify-center">${katex.renderToString(content.trim(), { displayMode: true, throwOnError: false })}</div>`;
+      } catch (err) {
+        return match;
+      }
+    });
 
-    // Handle equations - LaTeX inline mode \(...\)
-    html = html.replace(
-      /\\\(([^\)]*?)\\\)/g,
-      '<span class="font-serif italic text-blue-600 dark:text-blue-400 mx-1">$1</span>'
-    );
+    // Handle Inline math: $ ... $ or \( ... \)
+    html = html.replace(/(\$|\\\() ([\s\S]*?) ([\s\S]*?)(\$|\\\))/g, (match, op, content1, content2, cl) => {
+      const content = (content1 + content2).trim();
+      try {
+        return katex.renderToString(content, { displayMode: false, throwOnError: false });
+      } catch (err) {
+        return match;
+      }
+    });
 
-    // Handle equations - display mode $$...$$
-    html = html.replace(
-      /\$\$([\s\S]*?)\$\$/g,
-      '<div class="my-4 p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg text-center overflow-x-auto"><span class="text-lg font-serif italic text-gray-900 dark:text-gray-100">$1</span></div>'
-    );
+    // Safer Inline math for single $
+    html = html.replace(/(?<!\\)\$([^\$\n]+?)\$/g, (match, content) => {
+      try {
+        return katex.renderToString(content.trim(), { displayMode: false, throwOnError: false });
+      } catch (err) {
+        return match;
+      }
+    });
 
-    // Handle equations - inline mode $...$
-    html = html.replace(
-      /\$([^\$\n]+)\$/g,
-      '<span class="font-serif italic text-blue-600 dark:text-blue-400 mx-1">$1</span>'
-    );
 
     // Handle headers
     html = html.replace(
@@ -1136,8 +1144,9 @@ export default function LearnContent() {
       '<div class="my-4"></div>'
     );
 
-    // Filter out "Module: X" title lines
+    // Filter out "Module: X" title lines and Mermaid labels
     html = html.replace(/^#? ?Module:.*$/igm, '');
+    html = html.replace(/^#? ?Mermaid diagram for.*$/igm, '');
 
     // Handle Tables
     const tables = [];

@@ -35,17 +35,18 @@ export const saveAndSharePDF = async (pdf, fileName, logTitle, notificationBody,
 
             if (LocalNotifications) {
                 try {
+                    const perm = await LocalNotifications.checkPermissions();
+                    if (perm.display !== 'granted') {
+                        await LocalNotifications.requestPermissions();
+                    }
                     await LocalNotifications.schedule({
                         notifications: [{
                             title: 'Download Complete',
                             body: notificationBody || `Your ${logType.toLowerCase()} "${logTitle}" is ready.`,
-                            id: Math.floor(Math.random() * 100000),
+                            id: Math.floor(Math.random() * 1000000),
                             schedule: { at: new Date(Date.now() + 500) },
                             iconColor: '#1E40AF',
-                            smallIcon: 'ic_launcher',
-                            largeIcon: 'logo',
-                            sound: null,
-                            attachments: []
+                            actionTypeId: 'OPEN_FILE'
                         }]
                     });
                 } catch (err) { console.error("[PDF] Notification error:", err); }
@@ -57,7 +58,7 @@ export const saveAndSharePDF = async (pdf, fileName, logTitle, notificationBody,
                         title: `${logType} Ready`,
                         text: `Your ${logTitle} has been downloaded.`,
                         url: result.uri,
-                        dialogTitle: 'Share Document',
+                        dialogTitle: 'Open/Share Document',
                     });
                 } catch (err) { console.error("[PDF] Share error:", err); }
             }
@@ -105,7 +106,11 @@ export const renderFormattedText = (pdf, text, x, y, contentWidth, size = 11, ch
     pdf.setFontSize(size);
     pdf.setTextColor(...COLORS.text);
 
-    const cleanText = text.trim().replace(/^[#\s]+/, '').replace(/\\\[(.*?)\\\]/g, '$1');
+    const cleanText = text.trim()
+        .replace(/^[#\s]+/, '')
+        .replace(/\\\[(.*?)\\\]/g, '$1')
+        .replace(/\$\$(.*?)\$\$/g, '$1') // Strip LaTeX delimiters for text rendering
+        .replace(/\\\( (.*?) \\\)/g, '$1');
     const wrappedLines = pdf.splitTextToSize(cleanText, maxWidth);
 
     wrappedLines.forEach((line) => {
@@ -207,6 +212,9 @@ export const processContent = async (pdf, content, currentY, options = {}) => {
     for (const line of lines) {
         const trimmed = line.trim();
         if (!trimmed && !isInCodeBlock) { y += PARAGRAPH_GAP; continue; }
+
+        // Skip Mermaid titles
+        if (trimmed.toLowerCase().includes("mermaid diagram for")) continue;
 
         if (trimmed.startsWith("```")) {
             flushTable();
