@@ -159,10 +159,22 @@ async function generateCourseHandler(request) {
       if (fullExisting) {
         // Scenario 1: Course exists, user is premium, but course is NOT premium. Upgrade it.
         if (isPremium && !fullExisting.isPremium) {
-          // Regenerate as a premium course and update
-          // Since isPremium is true, 'limits' (fetched at top) contains premium limits
-          const { modules, lessonsPerModule, totalLessons } = limits;
+          // --- LIMIT CHECK BEFORE UPGRADE ---
+          if (userId) {
+            const monthlyLimit = limits.monthlyGenerations;
+            if (monthlyLimit !== -1 && monthlyUsage >= monthlyLimit) {
+              return NextResponse.json({
+                error: `Monthly generation limit reached (${monthlyLimit}). Upgrade for more!`,
+                used: monthlyUsage,
+                limit: monthlyLimit,
+                resetsOn: resetDate.toLocaleDateString(),
+                upgrade: true,
+              }, { status: 429 });
+            }
+          }
 
+          // Regenerate as a premium course and update
+          const { modules, lessonsPerModule, totalLessons } = limits;
           const completion = await openai.chat.completions.create({
             model: "gpt-4o-mini",
             temperature: 0.7,
@@ -215,17 +227,6 @@ Exactly ${modules} modules, exactly ${lessonsPerModule} lessons each. No content
           try {
             course = JSON.parse(completion.choices[0].message.content.trim());
           } catch (e) {
-            console.warn("AI JSON failed, using fallback for upgrade");
-            course = fallbackCourse(topic, difficulty, modules, lessonsPerModule);
-          }
-
-          if (
-            !course.modules ||
-            course.modules.length !== modules ||
-            course.modules.some(
-              (m) => !m.lessons || m.lessons.length !== lessonsPerModule
-            )
-          ) {
             course = fallbackCourse(topic, difficulty, modules, lessonsPerModule);
           }
 
@@ -236,157 +237,75 @@ Exactly ${modules} modules, exactly ${lessonsPerModule} lessons each. No content
             modules: course.modules.map((m, i) => ({
               ...m,
               id: i + 1,
-              lessons: m.lessons.map((l, j) => ({
+              lessons: (m.lessons || []).map((l, j) => ({
                 ...l,
                 id: `${i + 1}-${j + 1}`,
                 content: "",
                 completed: false,
-                srs: {
-                  interval: 1,
-                  repetitions: 0,
-                  ease: 2.5,
-                  dueDate: new Date().toISOString(),
-                },
+                srs: { interval: 1, repetitions: 0, ease: 2.5, dueDate: new Date().toISOString() },
               })),
             })),
-            isPremium: true, // Mark as premium
+            isPremium: true,
             lastAccessed: new Date(),
           };
 
-          await db
-            .collection("library")
-            .updateOne({ _id: fullExisting._id }, { $set: updatedCourseDoc });
-
-          const finalCourse = { ...fullExisting, ...updatedCourseDoc };
-
-          // Increment usage for upgrade
+          // ATOMIC UPDATE: Increment usage while updating library
+          await db.collection("library").updateOne({ _id: fullExisting._id }, { $set: updatedCourseDoc });
           if (userId) {
-            try {
-              await db.collection("users").updateOne(
-                { _id: new ObjectId(userId) },
-                { $inc: { monthlyUsage: 1 } }
-              );
-              monthlyUsage++; // Update local variable for response
-            } catch (e) {
-              console.error("Failed to increment monthly usage for upgrade", e);
-            }
+            await db.collection("users").updateOne(
+              { _id: new ObjectId(userId) },
+              { $inc: { monthlyUsage: 1 } }
+            );
           }
 
           return NextResponse.json({
             success: true,
-            courseId: finalCourse._id.toString(),
-            content: {
-              title: finalCourse.title,
-              level: difficulty,
-              totalModules: finalCourse.totalModules,
-              totalLessons: finalCourse.totalLessons,
-              modules: finalCourse.modules,
-            },
+            courseId: fullExisting._id.toString(),
+            content: updatedCourseDoc,
             isExisting: true,
             wasUpgraded: true,
-            message: "Course upgraded to premium version!",
+            message: "Course upgraded to premium!",
           });
         }
 
-        // Scenario 2: Course exists, no upgrade needed. Return existing course.
         return NextResponse.json({
           success: true,
           courseId: fullExisting._id.toString(),
-          content: {
-            title: fullExisting.title,
-            level: fullExisting.level || difficulty,
-            totalModules: fullExisting.totalModules,
-            totalLessons: fullExisting.totalLessons,
-            modules: fullExisting.modules,
-          },
+          content: fullExisting,
           isExisting: true,
-          message: "Course already exists. Loaded from library.",
+          message: "Loaded from library.",
         });
       }
     }
 
-    // ─── MONTHLY LIMITS (Only for NEW generation) ───
-    const isEnterprise = user?.subscription?.plan === "enterprise" && user?.subscription?.status === "active";
-    const planName = getUserPlanName(user);
-
+    // ─── LIMIT CHECK FOR NEW GENERATION ───
     if (userId) {
-      // Check global monthly generation limit
       const monthlyLimit = limits.monthlyGenerations;
       if (monthlyLimit !== -1 && monthlyUsage >= monthlyLimit) {
-        return NextResponse.json(
-          {
-            error: `Monthly generation limit reached (${monthlyLimit}). ${isEnterprise ? "Contact support." : "Upgrade for more!"}`,
-            used: monthlyUsage,
-            limit: monthlyLimit,
-            remaining: 0,
-            plan: planName,
-            isPremium,
-            isEnterprise,
-            resetsOn: resetDate.toLocaleDateString(),
-            upgrade: !isPremium && !isEnterprise,
-          },
-          { status: 429 }
-        );
+        return NextResponse.json({
+          error: `Monthly generation limit reached (${monthlyLimit}). Upgrade for more!`,
+          used: monthlyUsage,
+          limit: monthlyLimit,
+          resetsOn: resetDate.toLocaleDateString(),
+          upgrade: !isPremium,
+        }, { status: 429 });
       }
 
       const startOfMonth = new Date(new Date().getFullYear(), new Date().getMonth(), 1);
-
-      // Check specific course limit
       if (format === "course") {
-        const courseCount = await db.collection("library").countDocuments({
-          userId: new ObjectId(userId),
-          format: "course",
-          createdAt: { $gte: startOfMonth }
-        });
-
-        const limitCheck = checkLimit(user, "courses", courseCount);
-
-        if (!limitCheck.allowed) {
-          return NextResponse.json(
-            {
-              error: `Monthly course limit reached (${limitCheck.limit}). ${isEnterprise ? "Contact support." : "Upgrade for more!"}`,
-              used: courseCount,
-              limit: limitCheck.limit,
-              remaining: limitCheck.remaining,
-              plan: planName,
-              isPremium,
-              isEnterprise,
-              resetsOn: resetDate.toLocaleDateString(),
-              upgrade: !isPremium && !isEnterprise,
-            },
-            { status: 429 }
-          );
-        }
+        const count = await db.collection("library").countDocuments({ userId: new ObjectId(userId), format: "course", createdAt: { $gte: startOfMonth } });
+        const check = checkLimit(user, "courses", count);
+        if (!check.allowed) return NextResponse.json({ error: `Monthly course limit reached (${check.limit}).`, used: count, limit: check.limit, upgrade: !isPremium }, { status: 429 });
       } else if (format === "quiz") {
-        const quizCount = await db.collection("library").countDocuments({
-          userId: new ObjectId(userId),
-          format: "quiz",
-          createdAt: { $gte: startOfMonth }
-        });
-
-        const limitCheck = checkLimit(user, "quizzes", quizCount);
-
-        if (!limitCheck.allowed) {
-          return NextResponse.json(
-            {
-              error: `Monthly quiz limit reached (${limitCheck.limit}). ${isEnterprise ? "Contact support." : "Upgrade for more!"}`,
-              used: quizCount,
-              limit: limitCheck.limit,
-              remaining: limitCheck.remaining,
-              plan: planName,
-              isPremium,
-              isEnterprise,
-              resetsOn: resetDate.toLocaleDateString(),
-              upgrade: !isPremium && !isEnterprise,
-            },
-            { status: 429 }
-          );
-        }
+        // Handled in generateQuiz, but let's check here too for consistency
+        const count = await db.collection("library").countDocuments({ userId: new ObjectId(userId), format: "quiz", createdAt: { $gte: startOfMonth } });
+        const check = checkLimit(user, "quizzes", count);
+        if (!check.allowed) return NextResponse.json({ error: `Monthly quiz limit reached (${check.limit}).`, used: count, limit: check.limit, upgrade: !isPremium }, { status: 429 });
       }
     }
 
     if (format === "quiz") {
-      return generateQuiz(topic, difficulty, questions, userId, db, monthlyUsage, resetDate, isPremium);
+      return generateQuiz(topic, difficulty, questions, user, db, monthlyUsage, resetDate, limits);
     }
 
 
@@ -605,16 +524,17 @@ export const OPTIONS = withCORS()(async () => {
   return new NextResponse(null, { status: 200 });
 });
 
-async function generateQuiz(topic, difficulty, questions, userId, db, monthlyUsage, resetDate, isPremium) {
+async function generateQuiz(topic, difficulty, questions, user, db, monthlyUsage, resetDate, limits) {
+  const userId = user?._id;
+  const isPremium = limits.courses > 3; // Simple way to check if it's pro/enterprise
   const questionsCount = questions || 10;
+
   try {
-    // If db wasn't passed, connect now (fallback)
     if (!db) {
       const conn = await connectToDatabase();
       db = conn.db;
     }
 
-    // Check for existing test with same topic and difficulty
     const normalizedTopic = topic.trim().toLowerCase();
     const existingTest = await db.collection("tests").findOne({
       $or: [
@@ -626,47 +546,32 @@ async function generateQuiz(topic, difficulty, questions, userId, db, monthlyUsa
     });
 
     if (existingTest) {
-      // Return existing test instead of generating new one
       return NextResponse.json({
         success: true,
         quizId: existingTest._id.toString(),
-        content: {
-          title: existingTest.title,
-          course: existingTest.course,
-          questions: existingTest.questions,
-        },
+        content: existingTest,
         exists: true,
-        message: "Test already exists for this topic and difficulty level.",
+        message: "Loaded from library.",
       });
     }
 
-    // Check user limits for quiz generation BEFORE calling OpenAI (saves tokens!)
-    let quizCount = 0;
+    // --- LIMIT CHECK BEFORE AI ---
     if (userId) {
-      const user = await db
-        .collection("users")
-        .findOne({ _id: new ObjectId(userId) });
-      const now = new Date();
-      const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
-      // Count existing tests for this user created this month
-      quizCount = await db.collection("tests").countDocuments({
+      const startOfMonth = new Date(new Date().getFullYear(), new Date().getMonth(), 1);
+      const quizCount = await db.collection("tests").countDocuments({
         createdBy: new ObjectId(userId),
         createdAt: { $gte: startOfMonth }
       });
 
-      const limit = isPremium ? 20 : 1;
-      if (quizCount >= limit) {
-        return NextResponse.json(
-          {
-            error: `Monthly test limit reached (${limit}). ${!isPremium ? "Upgrade to premium for up to 20 tests/mo." : ""}`,
-            limit,
-            used: quizCount,
-            current: quizCount,
-            isPremium: isPremium,
-            resetsOn: resetDate ? resetDate.toLocaleDateString() : new Date().toLocaleDateString(),
-          },
-          { status: 429 }
-        );
+      const check = checkLimit(user, "quizzes", quizCount);
+      if (!check.allowed) {
+        return NextResponse.json({
+          error: `Monthly quiz limit reached (${check.limit}).`,
+          limit: check.limit,
+          used: quizCount,
+          resetsOn: resetDate.toLocaleDateString(),
+          upgrade: !isPremium,
+        }, { status: 429 });
       }
     }
 
@@ -725,38 +630,24 @@ Return ONLY valid JSON with this exact structure:
     try {
       quiz = JSON.parse(completion.choices[0].message.content.trim());
     } catch (e) {
-      return NextResponse.json(
-        { error: "Failed to parse quiz from AI response" },
-        { status: 500 }
-      );
+      return NextResponse.json({ error: "Failed to parse quiz" }, { status: 500 });
     }
-
-
-    // Limit check already performed before AI call (lines 540-567)
-
 
     const testDoc = {
       ...quiz,
-      createdBy: userId ? new ObjectId(userId) : null, // Mongoose Schema compatible
-      userId: userId ? new ObjectId(userId) : null,    // Backward compatibility
+      createdBy: userId ? new ObjectId(userId) : null,
+      userId: userId ? new ObjectId(userId) : null,
       difficulty,
       createdAt: new Date(),
     };
 
     const result = await db.collection("tests").insertOne(testDoc);
 
-    // Increment API Usage for User
     if (userId) {
-      try {
-        await db
-          .collection("users")
-          .updateOne(
-            { _id: new ObjectId(userId) },
-            { $inc: { monthlyUsage: 1 } }
-          );
-      } catch (e) {
-        console.error("Failed to increment monthly usage for quiz", e);
-      }
+      await db.collection("users").updateOne(
+        { _id: new ObjectId(userId) },
+        { $inc: { monthlyUsage: 1 } }
+      );
     }
 
     return NextResponse.json({
@@ -765,20 +656,13 @@ Return ONLY valid JSON with this exact structure:
       content: quiz,
       monthly: {
         used: (monthlyUsage || 0) + 1,
-        limit: isPremium ? 20 : 1, // Fallback hardcoded as limits not passed to quiz generator correctly
-        resetsOn: resetDate ? resetDate.toLocaleDateString() : new Date().toLocaleDateString(),
+        limit: limits.monthlyGenerations,
+        resetsOn: resetDate.toLocaleDateString(),
       },
     });
   } catch (error) {
     console.error("Quiz generation failed:", error);
-    return NextResponse.json(
-      {
-        error: "Failed to generate quiz",
-        details:
-          process.env.NODE_ENV === "development" ? error.message : undefined,
-      },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Failed to generate quiz", details: error.message }, { status: 500 });
   }
 }
 

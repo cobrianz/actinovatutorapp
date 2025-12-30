@@ -6,6 +6,7 @@ export const downloadCourseAsPDF = async (data) => {
 
     const pdf = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
     const pageWidth = 210;
+    const pageHeight = 297;
     const contentWidth = pageWidth - (MARGIN * 2);
     let y = 30;
 

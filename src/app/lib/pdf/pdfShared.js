@@ -110,7 +110,7 @@ export const renderFormattedText = (pdf, text, x, y, contentWidth, size = 11, ch
 
     wrappedLines.forEach((line) => {
         const lineHeight = size * 0.3527 * LINE_HEIGHT_RATIO;
-        y = checkNewPageFn(lineHeight + 2, y);
+        y = checkNewPageFn(pdf, lineHeight + 2, y);
 
         const parts = line.split(/(\*\*.*?\*\*|__.*?__|(?<!\*)\*.*?\*(?!\*)|(?<!_)_.*?_(?!_)|~~.*?~~)/g);
         let currentX = x;
@@ -123,22 +123,28 @@ export const renderFormattedText = (pdf, text, x, y, contentWidth, size = 11, ch
             if (isBold) {
                 pdf.setFont("helvetica", "bold");
                 const clean = part.slice(2, -2);
-                pdf.text(clean, currentX, y);
-                currentX += pdf.getTextWidth(clean);
+                if (clean) {
+                    pdf.text(clean, currentX, y);
+                    currentX += pdf.getTextWidth(clean);
+                }
             } else if (isItalic) {
                 pdf.setFont("helvetica", "italic");
                 const clean = part.slice(1, -1);
-                pdf.text(clean, currentX, y);
-                currentX += pdf.getTextWidth(clean);
+                if (clean) {
+                    pdf.text(clean, currentX, y);
+                    currentX += pdf.getTextWidth(clean);
+                }
             } else if (isStrikethrough) {
                 const clean = part.slice(2, -2);
-                pdf.setFont("helvetica", "normal");
-                pdf.text(clean, currentX, y);
-                const w = pdf.getTextWidth(clean);
-                pdf.setLineWidth(0.2);
-                pdf.line(currentX, y - (size * 0.12), currentX + w, y - (size * 0.12));
-                currentX += w;
-            } else {
+                if (clean) {
+                    pdf.setFont("helvetica", "normal");
+                    pdf.text(clean, currentX, y);
+                    const w = pdf.getTextWidth(clean);
+                    pdf.setLineWidth(0.2);
+                    pdf.line(currentX, y - (size * 0.12), currentX + w, y - (size * 0.12));
+                    currentX += w;
+                }
+            } else if (part) {
                 pdf.setFont("helvetica", "normal");
                 pdf.text(part, currentX, y);
                 currentX += pdf.getTextWidth(part);
@@ -249,6 +255,8 @@ export const processContent = async (pdf, content, currentY, options = {}) => {
 
         if (trimmed.startsWith("# ")) {
             const text = trimmed.substring(2).replace(/[\*_]/g, '').trim();
+            // SKIP if it's a duplicate of the lesson/module title
+            if (titleToSkip && text.toLowerCase() === titleToSkip.toLowerCase()) continue;
             // For lesson PDFs, skip ALL H1 headings (course/module titles)
             // For course PDFs, only skip on first lesson
             if (titleToSkip && isFirstLesson) continue;
@@ -263,11 +271,15 @@ export const processContent = async (pdf, content, currentY, options = {}) => {
             pdf.text(text, margin, y + 10);
             y += 35;
         } else if (trimmed.startsWith("## ")) {
+            const text = trimmed.substring(3).replace(/[\*_]/g, '').trim();
+            // SKIP if it's a duplicate of the lesson/module title
+            if (titleToSkip && text.toLowerCase() === titleToSkip.toLowerCase()) continue;
+
             y += SECTION_GAP;
             pdf.setFont("helvetica", "bold");
             pdf.setFontSize(22);
             pdf.setTextColor(...COLORS.primary);
-            pdf.text(trimmed.substring(3).replace(/[\*_]/g, '').trim(), margin, y);
+            pdf.text(text, margin, y);
             y += 12;
         } else if (trimmed.startsWith("### ")) {
             y += 10;

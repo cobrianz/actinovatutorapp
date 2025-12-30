@@ -60,7 +60,12 @@ export async function POST(request) {
   const { db } = await connectToDatabase();
 
   try {
-    const body = await request.json();
+    let body;
+    try {
+      body = await request.json();
+    } catch (e) {
+      return NextResponse.json({ error: "Request body is required" }, { status: 400 });
+    }
     const { action } = body;
 
     // === 1. Generate Lesson Content ===
@@ -270,14 +275,16 @@ async function handleGenerateLesson(body, userId, db) {
   if (userTier === "enterprise") {
     visualInstructions = `- **Visual Content (ENTERPRISE/PRO TIER)**:
     - You represent a premium learning experience. Use high-quality visual suggestions for any complex concept, especially structural biological or physical systems (e.g., Cell Structure, Human Heart, Atomic Models).
-    - For flowcharts or processes: Use Mermaid.js code blocks (\`\`\`mermaid\n...\n\`\`\`). Use \`graph TD\` or \`graph LR\`.
+    - **HEAVY MERMAID USAGE**: When explaining processes, algorithms, or data relationships, always use Mermaid.js code blocks (\`\`\`mermaid\n...\n\`\`\`). Use \`graph TD\`, \`graph LR\`, \`pie\`, \`sequenceDiagram\`, etc.
+    - **MATHEMATICAL GRAPHS**: For mathematical graphs and relationships, use LaTeX equations and point tables.
     - **CRITICAL**: Do NOT output any "Justification" text. Just provide the visual tag or code block directly where it fits naturally.
     - **NEVER use ASCII art.**
     - **NO DALL-E/Image Generation** tags.`;
   } else if (userTier === "pro") {
     visualInstructions = `- **Visual Content (PRO TIER)**:
      - You represent a premium learning experience. Use high-quality visual suggestions for any complex concept, especially structural biological or physical systems (e.g., Cell Structure, Human Heart, Atomic Models).
-    - For flowcharts or processes: Use Mermaid.js code blocks (\`\`\`mermaid\n...\n\`\`\`). Use \`graph TD\` or \`graph LR\`.
+    - **HEAVY MERMAID USAGE**: When explaining processes, algorithms, or data relationships, always use Mermaid.js code blocks (\`\`\`mermaid\n...\n\`\`\`). Use \`graph TD\`, \`graph LR\`, \`pie\`, \`sequenceDiagram\`, etc.
+    - **MATHEMATICAL GRAPHS**: For mathematical graphs and relationships, use LaTeX equations and point tables.
     - **CRITICAL**: Do NOT output any "Justification" text. Just provide the visual tag or code block directly where it fits naturally.
     - **NEVER use ASCII art.**
     - **NO DALL-E/Image Generation** tags.`;
@@ -297,10 +304,12 @@ The lesson should be scholarly, professional, and intellectually rigorous, akin 
 - Adopt a formal, academic tone: Precise, objective, and evidence-based, as if authored by a tenured professor.
 - Provide beautifully structured content: Use hierarchical headers (## for main sections, ### for subsections, #### for sub-subsections) for logical flow.
 - Ensure well-explained concepts: Dive deeply into each idea with layered explanations, building from fundamentals to advanced insights. Use analogies, real-world applications, and critical evaluations (e.g., strengths, limitations, debates in the field).
-- Break down complex topics: Employ step-by-step breakdowns, with transitional phrases for seamless readability.
+- Break down complex topics: Employ step-by-step breakdowns, with transitional phrases for seamless readability. Use **LaTeX equations** for all mathematical formulas and scientific notation (e.g., \`$$ E=mc^2 $$\`).
 - Incorporate scholarly elements: Include inline citations (e.g., (Smith, 2020)) where relevant, historical overviews, and forward-looking implications.
 - Enhance readability: Use **bold** for key terms, *italics* for emphasis, numbered/bulleted lists for enumerations, > blockquotes for key quotes or definitions, and code blocks for examples.
-- **NEVER use tables** - express all comparisons, data, or lists in richly detailed paragraph form or bulleted/numbered lists with full explanations.
+- **Tables**: Use professional point tables for technical comparisons, data sets, or mathematical point tables. For general thematic comparisons, prefer richly detailed paragraphs.
+- **Mermaid**: Use Mermaid diagrams heavily to visualize relationships, hierarchies, and flows. Always wrap mermaid node labels in quotes if they contain special characters.
+- **LaTeX**: Use LaTeX for all mathematical expressions and graphs.
 
 Topic: ${courseTopic}
 Module: ${moduleTitle || "Core Concepts"}
