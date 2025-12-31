@@ -489,23 +489,17 @@ export const processContent = async (pdf, content, currentY, options = {}) => {
             pdf.setFont("helvetica", "bold");
             pdf.setFontSize(20);
             pdf.setTextColor(...COLORS.primary);
-            pdf.setFontSize(20);
-            pdf.setTextColor(...COLORS.primary);
             const text = stripMarkdown(trimmed);
             pdf.text(text, margin, y);
             y += 5;
             pdf.setDrawColor(...COLORS.primaryLight);
             pdf.setLineWidth(0.4);
             pdf.line(margin, y - 2, margin + contentWidth, y - 2);
-            y += 4;
         } else if (trimmed.startsWith("### ")) {
             await flushParagraph();
             y += SECTION_GAP / 2;
             pdf.setFont("helvetica", "bold");
             pdf.setFontSize(16);
-            pdf.setTextColor(...COLORS.text);
-            pdf.setFontSize(16);
-            pdf.setTextColor(...COLORS.text);
             const text = stripMarkdown(trimmed);
             pdf.text(text, margin, y);
             y += 5;
@@ -514,7 +508,6 @@ export const processContent = async (pdf, content, currentY, options = {}) => {
             y += SECTION_GAP / 3;
             pdf.setFont("helvetica", "bold");
             pdf.setFontSize(13);
-            pdf.setTextColor(...COLORS.text);
             pdf.setTextColor(...COLORS.text);
             const text = stripMarkdown(trimmed);
             pdf.text(text, margin, y);
@@ -525,7 +518,6 @@ export const processContent = async (pdf, content, currentY, options = {}) => {
             pdf.setFont("helvetica", "bold");
             pdf.setFontSize(11);
             pdf.setTextColor(...COLORS.text);
-            pdf.setTextColor(...COLORS.text);
             const text = stripMarkdown(trimmed);
             pdf.text(text, margin, y);
             y += 4;
@@ -534,7 +526,6 @@ export const processContent = async (pdf, content, currentY, options = {}) => {
             y += SECTION_GAP / 5;
             pdf.setFont("helvetica", "bold");
             pdf.setFontSize(10);
-            pdf.setTextColor(...COLORS.text);
             pdf.setTextColor(...COLORS.text);
             const text = stripMarkdown(trimmed);
             pdf.text(text, margin, y);

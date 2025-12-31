@@ -102,7 +102,17 @@ export const downloadCourseAsPDF = async (data) => {
         if (mod.lessons) {
             for (let lIdx = 0; lIdx < mod.lessons.length; lIdx++) {
                 const lesson = mod.lessons[lIdx];
-                y = checkNewPage(pdf, 50, y);
+                if (idx === 0 && lIdx === 0) {
+                    // First lesson of first module can stay on same page if it fits? 
+                    // Users prefer fresh start usually.
+                    pdf.addPage();
+                } else {
+                    pdf.addPage();
+                }
+
+                // Reset Y to top margin
+                y = 40;
+                addPageDecoration(pdf, pdf.getNumberOfPages(), totalPages); // Re-calculated later but good to haveplaceholder
 
                 pdf.setFont("helvetica", "bold");
                 pdf.setFontSize(20);

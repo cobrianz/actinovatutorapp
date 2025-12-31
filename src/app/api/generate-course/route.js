@@ -507,10 +507,19 @@ Exactly ${modules} modules, exactly ${lessonsPerModule} lessons each. No content
     });
   } catch (error) {
     console.error("Course generation failed:", error);
+
+    // Mask Quota/Rate Limit Errors
+    if (error.status === 429 || error.message?.includes("quota") || error.code === "insufficient_quota") {
+      return NextResponse.json(
+        { error: "Our AI systems are currently experiencing high traffic. Please try again in a few minutes." },
+        { status: 429 } // 429 is appropriate but message is friendly
+      );
+    }
+
     return NextResponse.json(
       {
         error: "Failed to generate course",
-        details: error.message,
+        // details: error.message, // Do not leak details
       },
       { status: 500 }
     );
@@ -662,7 +671,16 @@ Return ONLY valid JSON with this exact structure:
     });
   } catch (error) {
     console.error("Quiz generation failed:", error);
-    return NextResponse.json({ error: "Failed to generate quiz", details: error.message }, { status: 500 });
+
+    // Mask Quota/Rate Limit Errors
+    if (error.status === 429 || error.message?.includes("quota") || error.code === "insufficient_quota") {
+      return NextResponse.json(
+        { error: "Our AI systems are currently experiencing high traffic. Please try again in a few minutes." },
+        { status: 429 }
+      );
+    }
+
+    return NextResponse.json({ error: "Failed to generate quiz" }, { status: 500 });
   }
 }
 
