@@ -1,4 +1,3 @@
-```javascript
 import jsPDF from "jspdf";
 import mermaid from "mermaid";
 import katex from "katex";
@@ -14,8 +13,21 @@ export const COLORS = {
 
 export const LINE_HEIGHT_RATIO = 2.0;
 export const PARAGRAPH_GAP = 6;
-export const SECTION_GAP = 5; // Reduced from 10
+export const SECTION_GAP = 5;
 export const MARGIN = 20;
+
+export const stripMarkdown = (text) => {
+    if (!text) return "";
+    return text
+        .replace(/(\*\*|__)(.*?)\1/g, '$2') // Bold
+        .replace(/(\*|_)(.*?)\1/g, '$2')     // Italic
+        .replace(/~~(.*?)~~/g, '$1')         // Strikethrough
+        .replace(/`([^`]+)`/g, '$1')         // Inline Code
+        .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1') // Links [text](url) -> text
+        .replace(/\\\[(.*?)\\\]/g, '$1')     // LaTeX \[...\] -> ...
+        .replace(/^\s*#+\s*/, '')            // Headers #
+        .trim();
+};
 
 export const saveAndSharePDF = async (pdf, fileName, logTitle, notificationBody, logType = 'File') => {
     const isCapacitor = typeof window !== 'undefined' && (window.Capacitor || window.location.protocol === 'capacitor:');
@@ -34,7 +46,6 @@ export const saveAndSharePDF = async (pdf, fileName, logTitle, notificationBody,
                 }
             } catch (e) { }
 
-
             const result = await Filesystem.writeFile({
                 path: fileName,
                 data: pdfBase64,
@@ -42,15 +53,12 @@ export const saveAndSharePDF = async (pdf, fileName, logTitle, notificationBody,
                 recursive: true
             });
 
-
-
-            // These are optional - failure here shouldn't stop the download
             if (LocalNotifications) {
                 try {
                     await LocalNotifications.schedule({
                         notifications: [{
                             title: 'Download Successful',
-                            body: notificationBody || `The ${ logType.toLowerCase() } for "${logTitle}" is ready.`,
+                            body: notificationBody || `The ${logType.toLowerCase()} for "${logTitle}" is ready.`,
                             id: Math.floor(Math.random() * 100000),
                             schedule: { at: new Date(Date.now() + 500) },
                             sound: null,
@@ -65,21 +73,21 @@ export const saveAndSharePDF = async (pdf, fileName, logTitle, notificationBody,
             if (Share) {
                 try {
                     await Share.share({
-                        title: `${ logType } Downloaded`,
-                        text: `Successfully downloaded ${ logTitle }. Find it in your device's Downloads folder.`,
-url: result.uri,
-    dialogTitle: 'Share or Open Document',
+                        title: `${logType} Downloaded`,
+                        text: `Successfully downloaded ${logTitle}. Find it in your device's Downloads folder.`,
+                        url: result.uri,
+                        dialogTitle: 'Share or Open Document',
                     });
 
                 } catch (err) { console.error("[PDF] Share error:", err); }
             }
         } catch (error) {
-    console.error('Capacitor PDF error (falling back to web save):', error);
-    pdf.save(fileName);
-}
+            console.error('Capacitor PDF error (falling back to web save):', error);
+            pdf.save(fileName);
+        }
     } else {
-    pdf.save(fileName);
-}
+        pdf.save(fileName);
+    }
 };
 
 export const addPageDecoration = (pdf, pageNum, totalPages) => {
@@ -98,162 +106,178 @@ export const addPageDecoration = (pdf, pageNum, totalPages) => {
     pdf.text(`Page ${pageNum} of ${totalPages}`, pageWidth - MARGIN, pageHeight - 10, { align: "right" });
 };
 
-// Helper to determine if we are in list context for 'checkNewPage' callbacks if needed.
-// But mostly we just need loop update.
-
-// NOTE: renderFormattedText is now ASYNC to support LaTeX image generation
-export const renderFormattedText = async (pdf, text, x, y, contentWidth, size = 11, checkNewPage, options = {}) => {
-    const maxWidth = contentWidth - (x - MARGIN);
-    pdf.setFontSize(size);
-    pdf.setTextColor(...COLORS.text);
-
-    // Filter out common markdown artifacts that might bleed through but keep structure we want
-    // We only clean up leading # (headers) and escaped brackets here. 
-    // Note: We used to remove []() links here but now we want to parse them.
-    const cleanText = text.trim()
-        .replace(/^[#\s]+/, '') // Strip leading #
-        .replace(/\\\[(.*?)\\\]/g, '$1'); // Unescape matches like \[text\]
-
-    const wrappedLines = pdf.splitTextToSize(cleanText, maxWidth);
-
-    // We must process lines sequentially due to async
-    for (const line of wrappedLines) {
-        const currentLineHeight = size * 0.3527 * LINE_HEIGHT_RATIO;
-        y = checkNewPage(currentLineHeight + 2, y);
-
-        // Regex Explanation:
-        // 1. Latex: \\\(.*?\\\) OR \$[^$]+\$
-        // 2. Links: \[(.*?)\]\((.*?)\) -> Matches [text](url)
-        // 3. Inline Code: `([^`]+)` -> Matches `code`
-        // 4. Bold: \*\*.*?\*\* or __.*?__
-        // 5. Italic: \*.*?\* or _.*?_ (negative lookbehind/ahead to avoid matching within ** or __)
-        // 6. Strikethrough: ~~.*?~~
-
-        // We split by capturing groups. The split will include the delimiters in the result array.
-        // Priority: Links/Code first as they are most distinct, then formatting.
-        const parts = line.split(/(\\\\(?:[\s\S]*?)\\\\|\$(?:[^$]+?)\$|\[.*?\]\(.*?\)|`[^`]+`|\*\*.*?\*\*|__.*?__|(?<!\*)\*.*?\*(?!\*)|(?<!_)_.*?_(?!_)|~~.*?~~)/g);
-
-        let currentX = x;
-
-        for (const part of parts) {
-            // -- LATEX START --
-            const latexMatch = part.match(/^(\\\(([\s\S]*?)\\\)|\$([^$]+?)\$)$/);
-            // Group 2 is \( content \), Group 3 is $ content $
-            if (latexMatch) {
-                const latexContent = latexMatch[2] || latexMatch[3];
-                if (latexContent) {
-                    const image = await renderLatexToPng(latexContent.trim());
-                    if (image) {
-                        // Scale for inline text height (approx size mm)
-                        const targetHeight = size * 0.3527 * 1.2; // slightly larger than text
-                        const ratio = image.width / image.height;
-                        const targetWidth = targetHeight * ratio;
-
-                        // Check bounds
-                        if (currentX + targetWidth > MARGIN + contentWidth) {
-                            // potential wrap issue, but handling wrap mid-line is hard. 
-                            // We'll just print it.
-                        }
-
-                        pdf.addImage(image.dataUrl, 'PNG', currentX, y - targetHeight + 1, targetWidth, targetHeight);
-                        currentX += targetWidth + 1;
-                    }
-                }
-                continue;
-            }
-            // -- LATEX END --
-
-            // -- LINK START --
-            const linkMatch = part.match(/^\[(.*?)\]\((.*?)\)$/);
-            if (linkMatch) {
-                const linkText = linkMatch[1];
-                const linkUrl = linkMatch[2];
-
-                pdf.setFont("helvetica", "normal");
-                pdf.setTextColor(...COLORS.primary); // Blue
-
-                // Optional: Underline (manual because jsPDF text options are limited sometimes)
-                const textWidth = pdf.getTextWidth(linkText);
-                pdf.text(linkText, currentX, y);
-                pdf.setLineWidth(0.1);
-                pdf.setDrawColor(...COLORS.primary);
-                pdf.line(currentX, y + 1.5, currentX + textWidth, y + 1.5); // Underline
-
-                // Add clickable link
-                pdf.link(currentX, y - size / 2, textWidth, size, { url: linkUrl });
-
-                currentX += textWidth;
-
-                // Reset Color
-                pdf.setTextColor(...COLORS.text);
-                continue;
-            }
-            // -- LINK END --
-
-            // -- INLINE CODE START --
-            const codeMatch = part.match(/^`([^`]+)`$/);
-            if (codeMatch) {
-                const codeText = codeMatch[1];
-                // Use a monospaced font if available (Courier is standard PDF font)
-                pdf.setFont("courier", "normal");
-                // Optional: Light background for code
-                const textWidth = pdf.getTextWidth(codeText);
-                pdf.setFillColor(240, 240, 240); // Light gray
-                pdf.rect(currentX, y - size / 1.5, textWidth, size, 'F');
-
-                pdf.setTextColor(220, 38, 38); // Red-ish for code
-                pdf.text(codeText, currentX, y);
-
-                currentX += textWidth;
-
-                // Reset Font/Color
-                pdf.setFont("helvetica", "normal");
-                pdf.setTextColor(...COLORS.text);
-                continue;
-            }
-            // -- INLINE CODE END --
-
-            const isBold = (part.startsWith('**') && part.endsWith('**')) || (part.startsWith('__') && part.endsWith('__'));
-            const isItalic = (part.startsWith('*') && part.endsWith('*')) || (part.startsWith('_') && part.endsWith('_'));
-            const isStrikethrough = part.startsWith('~~') && part.endsWith('~~');
-
-            if (isBold) {
-                pdf.setFont("helvetica", "bold");
-                const cleanPart = part.slice(2, -2);
-                pdf.text(cleanPart, currentX, y);
-                currentX += pdf.getTextWidth(cleanPart);
-            } else if (isItalic) {
-                pdf.setFont("helvetica", "italic");
-                const cleanPart = part.slice(1, -1);
-                pdf.text(cleanPart, currentX, y);
-                currentX += pdf.getTextWidth(cleanPart);
-            } else if (isStrikethrough) {
-                const cleanPart = part.slice(2, -2);
-                pdf.setFont("helvetica", "normal");
-                pdf.text(cleanPart, currentX, y);
-                const textWidth = pdf.getTextWidth(cleanPart);
-                pdf.setLineWidth(0.2);
-                pdf.setDrawColor(...COLORS.text); // Ensure strikethrough is text color
-                pdf.line(currentX, y - (size * 0.12), currentX + textWidth, y - (size * 0.12));
-                currentX += textWidth;
-            } else {
-                pdf.setFont("helvetica", "normal");
-                pdf.text(part, currentX, y);
-                currentX += pdf.getTextWidth(part);
-            }
-        }
-        y += currentLineHeight;
-    }
-    return y;
-};
-
 export const checkNewPage = (pdf, neededSpace, currentY) => {
     const pageHeight = 297;
     if (currentY + neededSpace > pageHeight - 25) {
         pdf.addPage();
+        addPageDecoration(pdf, pdf.internal.getNumberOfPages(), pdf.internal.getNumberOfPages());
         return 25;
     }
     return currentY;
+};
+
+// Async function to measure and render text with mixed content (LaTeX, Code, Links)
+export const renderFormattedText = async (pdf, text, x, y, contentWidth, size = 11, checkNewPage) => {
+    const maxWidth = contentWidth - (x - MARGIN);
+    pdf.setFontSize(size);
+    pdf.setTextColor(...COLORS.text);
+
+    // 1. Cleanup
+    const cleanText = text.trim()
+        .replace(/^[#\s]+/, '')
+        .replace(/\\\[(.*?)\\\]/g, '$1');
+
+    if (!cleanText) return y;
+
+    // 2. Tokenize
+    const regex = /(\\\\(?:[\s\S]*?)\\\\|\$(?:[^$]+?)\$|\[.*?\]\(.*?\)|`[^`]+`|\*\*.*?\*\*|__.*?__|(?<!\*)\*.*?\*(?!\*)|(?<!_)_.*?_(?!_)|~~.*?~~)/g;
+
+    const rawParts = cleanText.split(regex).filter(p => p);
+
+    // 3. Process Tokens (Measure & Pre-render Images)
+    const tokens = [];
+
+    for (const part of rawParts) {
+        // -- LATEX --
+        const latexMatch = part.match(/^(\\\(([\s\S]*?)\\\)|\$([^$]+?)\$)$/);
+        if (latexMatch) {
+            const content = latexMatch[2] || latexMatch[3];
+            const image = await renderLatexToPng(content.trim());
+            if (image) {
+                const targetH = size * 0.3527 * 1.5;
+                const ratio = image.width / image.height;
+                const targetW = targetH * ratio;
+
+                tokens.push({ type: 'image', data: image.dataUrl, width: targetW, height: targetH, text: part });
+            } else {
+                tokens.push({ type: 'text', text: part, width: pdf.getTextWidth(part) });
+            }
+            continue;
+        }
+
+        // -- LINK --
+        const linkMatch = part.match(/^\[(.*?)\]\((.*?)\)$/);
+        if (linkMatch) {
+            const label = linkMatch[1];
+            const url = linkMatch[2];
+            tokens.push({ type: 'link', text: label, url: url, width: pdf.getTextWidth(label) });
+            continue;
+        }
+
+        // -- CODE --
+        const codeMatch = part.match(/^`([^`]+)`$/);
+        if (codeMatch) {
+            const content = codeMatch[1];
+            pdf.setFont("courier", "normal");
+            const w = pdf.getTextWidth(content);
+            pdf.setFont("helvetica", "normal");
+            tokens.push({ type: 'code', text: content, width: w });
+            continue;
+        }
+
+        // -- FORMATTING --
+        let isBold = (part.startsWith('**') && part.endsWith('**')) || (part.startsWith('__') && part.endsWith('__'));
+        let isItalic = (part.startsWith('*') && part.endsWith('*')) || (part.startsWith('_') && part.endsWith('_'));
+        let isStrike = part.startsWith('~~') && part.endsWith('~~');
+
+        let content = part;
+        if (isBold) { content = part.slice(2, -2); pdf.setFont("helvetica", "bold"); }
+        else if (isItalic) { content = part.slice(1, -1); pdf.setFont("helvetica", "italic"); }
+        else if (isStrike) { content = part.slice(2, -2); }
+
+        const w = pdf.getTextWidth(content);
+        if (isBold || isItalic) pdf.setFont("helvetica", "normal");
+
+        const words = content.split(/(\s+)/);
+        words.forEach(word => {
+            if (!word) return;
+            const wordW = pdf.getTextWidth(word);
+            tokens.push({
+                type: 'text',
+                text: word,
+                width: wordW,
+                bold: isBold,
+                italic: isItalic,
+                strike: isStrike
+            });
+        });
+    }
+
+    // 4. Wrap Lines
+    const lines = [];
+    let currentLine = [];
+    let currentLineWidth = 0;
+
+    for (const token of tokens) {
+        if (token.text === '\n') {
+            lines.push(currentLine); currentLine = []; currentLineWidth = 0; continue;
+        }
+
+        if (currentLineWidth + token.width > maxWidth) {
+            if (currentLine.length === 0) {
+                lines.push([token]);
+            } else {
+                lines.push(currentLine);
+                currentLine = [token];
+                currentLineWidth = token.width;
+            }
+        } else {
+            currentLine.push(token);
+            currentLineWidth += token.width;
+        }
+    }
+    if (currentLine.length > 0) lines.push(currentLine);
+
+    // 5. Render
+    const lineHeight = size * 0.3527 * LINE_HEIGHT_RATIO;
+
+    for (const lineTokens of lines) {
+        y = checkNewPage(pdf, lineHeight + 2, y);
+
+        let lineX = x;
+
+        for (const token of lineTokens) {
+            if (token.type === 'image') {
+                pdf.addImage(token.data, 'PNG', lineX, y - token.height + 1, token.width, token.height);
+                lineX += token.width;
+            } else if (token.type === 'code') {
+                pdf.setFont("courier", "normal");
+                pdf.setFillColor(248, 250, 252);
+                pdf.rect(lineX, y - size / 1.5, token.width, size, 'F');
+                pdf.setTextColor(220, 38, 38);
+                pdf.text(token.text, lineX, y);
+                pdf.setTextColor(...COLORS.text);
+                pdf.setFont("helvetica", "normal");
+                lineX += token.width;
+            } else if (token.type === 'link') {
+                pdf.setTextColor(...COLORS.primary);
+                pdf.text(token.text, lineX, y);
+                pdf.setDrawColor(...COLORS.primary);
+                pdf.setLineWidth(0.1);
+                pdf.line(lineX, y + 1, lineX + token.width, y + 1);
+                pdf.link(lineX, y - size, token.width, size, { url: token.url });
+                pdf.setTextColor(...COLORS.text);
+                lineX += token.width;
+            } else {
+                if (token.bold) pdf.setFont("helvetica", "bold");
+                else if (token.italic) pdf.setFont("helvetica", "italic");
+                else pdf.setFont("helvetica", "normal");
+
+                pdf.text(token.text, lineX, y);
+
+                if (token.strike) {
+                    pdf.setDrawColor(...COLORS.text);
+                    pdf.setLineWidth(0.2);
+                    pdf.line(lineX, y - size * 0.25, lineX + token.width, y - size * 0.25);
+                }
+
+                pdf.setFont("helvetica", "normal");
+                lineX += token.width;
+            }
+        }
+        y += lineHeight;
+    }
+    return y;
 };
 
 export const processContent = async (pdf, content, currentY, options = {}) => {
@@ -267,14 +291,23 @@ export const processContent = async (pdf, content, currentY, options = {}) => {
     if (!content) return currentY;
     const lines = content.split('\n');
     let y = currentY;
-    let isInCodeBlock = false; // 'mermaid' | 'latex' | boolean
+    let isInCodeBlock = false;
     let tableBuffer = [];
     let mermaidBuffer = [];
     let latexBuffer = [];
+    let paragraphBuffer = [];
     let currentSection = "";
 
-    const flushTable = () => {
+    const flushParagraph = async () => {
+        if (paragraphBuffer.length === 0) return;
+        const text = paragraphBuffer.join(' ');
+        y = await renderFormattedText(pdf, text, margin, y, contentWidth, 11, (space, cy) => checkNewPage(pdf, space, cy));
+        paragraphBuffer = [];
+    };
+
+    const flushTable = async () => {
         if (tableBuffer.length === 0) return;
+        await flushParagraph();
         y = checkNewPage(pdf, 25, y);
         y += 5;
         const rows = tableBuffer.map(row => row.split('|').map(c => c.trim()).filter(c => c !== ''));
@@ -310,14 +343,18 @@ export const processContent = async (pdf, content, currentY, options = {}) => {
 
     for (const line of lines) {
         const trimmed = line.trim();
+
+        // Empty Line = Paragraph Break
         if (!trimmed && !isInCodeBlock) {
+            await flushParagraph();
             y += PARAGRAPH_GAP;
             continue;
         }
 
         // --- MERMAID BLOCK START ---
         if (trimmed.startsWith("```mermaid")) {
-            flushTable();
+            await flushTable();
+            await flushParagraph();
             isInCodeBlock = 'mermaid';
             mermaidBuffer = [];
             continue;
@@ -328,11 +365,21 @@ export const processContent = async (pdf, content, currentY, options = {}) => {
             if (code.trim()) {
                 const image = await renderMermaidToPng(code);
                 if (image) {
-                    const ratio = image.height / image.width;
-                    const displayW = Math.min(contentWidth, image.width * 0.2);
-                    const displayH = displayW * ratio;
+                    const pxToMm = 0.264583;
+                    const naturalWidthMM = (image.width / 3) * pxToMm;
+                    const naturalHeightMM = (image.height / 3) * pxToMm;
+
+                    let displayW = naturalWidthMM;
+                    let displayH = naturalHeightMM;
+
+                    if (displayW > contentWidth) {
+                        const ratio = displayH / displayW;
+                        displayW = contentWidth;
+                        displayH = displayW * ratio;
+                    }
+
                     y = checkNewPage(pdf, displayH + 15, y);
-                    pdf.addImage(image.dataUrl, 'PNG', (210 - displayW) / 2, y, displayW, displayH);
+                    pdf.addImage(image.dataUrl, 'PNG', margin + (contentWidth - displayW) / 2, y, displayW, displayH);
                     y += displayH + 10;
                 }
             }
@@ -342,11 +389,11 @@ export const processContent = async (pdf, content, currentY, options = {}) => {
             mermaidBuffer.push(line);
             continue;
         }
-        // --- MERMAID BLOCK END ---
 
         // --- LATEX BLOCK START ---
         if (trimmed === "$$" || trimmed === "\\[") {
-            flushTable();
+            await flushTable();
+            await flushParagraph();
             isInCodeBlock = 'latex';
             latexBuffer = [];
             continue;
@@ -357,12 +404,10 @@ export const processContent = async (pdf, content, currentY, options = {}) => {
             if (latex.trim()) {
                 const image = await renderLatexToPng(latex);
                 if (image) {
-                    // Adjust scale
-                    const scale = 0.24; // approx px to mm ratio
+                    const scale = 0.24;
                     const displayW = image.width * scale;
                     const displayH = image.height * scale;
 
-                    // Don't let it be wider than content
                     let finalW = displayW;
                     let finalH = displayH;
                     if (finalW > contentWidth) {
@@ -382,18 +427,14 @@ export const processContent = async (pdf, content, currentY, options = {}) => {
             latexBuffer.push(line);
             continue;
         }
-        // --- LATEX BLOCK END ---
-
 
         // --- GENERIC CODE BLOCK START ---
         if (trimmed.startsWith("```")) {
-            flushTable();
-            // Just toggle it
+            await flushTable();
+            await flushParagraph();
             if (isInCodeBlock === true) {
-                // End
                 isInCodeBlock = false;
             } else {
-                // Start
                 isInCodeBlock = true;
             }
             continue;
@@ -409,77 +450,97 @@ export const processContent = async (pdf, content, currentY, options = {}) => {
             y += 6;
             continue;
         }
-        // --- GENERIC CODE BLOCK END ---
 
         if (trimmed.startsWith('|') && trimmed.endsWith('|')) {
+            await flushParagraph();
             tableBuffer.push(trimmed);
             continue;
-        } else flushTable();
+        } else await flushTable();
 
-        y = checkNewPage(pdf, 12, y);
+        // y = checkNewPage(pdf, 12, y); // This line is now handled by flushParagraph or specific elements
 
         if (trimmed.startsWith("# ") || trimmed.startsWith("## ")) {
-            currentSection = trimmed.replace(/^#+\s*/, "").replace(/[\*_]/g, "").trim();
+            currentSection = stripMarkdown(trimmed);
+        }
+
+        // Headers causing flush
+        if (trimmed.startsWith("#") && !trimmed.startsWith("# ")) {
+            // Handle #Header vs # Header? 
+            // Markdown requires space. But to be safe if we match our conditions:
         }
 
         if (trimmed.startsWith("# ")) {
-            const text = trimmed.substring(2).replace(/[\*_]/g, '').trim();
+            await flushParagraph();
+            const text = stripMarkdown(trimmed);
             if (titleToSkip && text.toLowerCase().includes(titleToSkip.toLowerCase()) && isFirstLesson) continue;
             y += SECTION_GAP;
             pdf.setFont("helvetica", "bold");
             pdf.setFontSize(26);
             pdf.setTextColor(...COLORS.primary);
             pdf.text(text, margin, y);
-            y += 5; // Reduced from 10
+            y += 5;
             pdf.setDrawColor(...COLORS.primary);
             pdf.setLineWidth(0.8);
-            pdf.line(margin, y - 2, margin + pdf.getTextWidth(text), y - 2); // Tightened line pos
+            pdf.line(margin, y - 2, margin + pdf.getTextWidth(text), y - 2);
             y += 5;
         } else if (trimmed.startsWith("## ")) {
+            await flushParagraph();
             y += SECTION_GAP;
             pdf.setFont("helvetica", "bold");
             pdf.setFontSize(20);
             pdf.setTextColor(...COLORS.primary);
-            const text = trimmed.substring(3).replace(/[\*_]/g, '').trim();
+            pdf.setFontSize(20);
+            pdf.setTextColor(...COLORS.primary);
+            const text = stripMarkdown(trimmed);
             pdf.text(text, margin, y);
-            y += 5; // Reduced from 8
+            y += 5;
             pdf.setDrawColor(...COLORS.primaryLight);
             pdf.setLineWidth(0.4);
             pdf.line(margin, y - 2, margin + contentWidth, y - 2);
             y += 4;
         } else if (trimmed.startsWith("### ")) {
+            await flushParagraph();
             y += SECTION_GAP / 2;
             pdf.setFont("helvetica", "bold");
             pdf.setFontSize(16);
             pdf.setTextColor(...COLORS.text);
-            const text = trimmed.substring(4).replace(/[\*_]/g, '').trim();
+            pdf.setFontSize(16);
+            pdf.setTextColor(...COLORS.text);
+            const text = stripMarkdown(trimmed);
             pdf.text(text, margin, y);
-            y += 5; // Reduced from 8
+            y += 5;
         } else if (trimmed.startsWith("#### ")) {
+            await flushParagraph();
             y += SECTION_GAP / 3;
             pdf.setFont("helvetica", "bold");
             pdf.setFontSize(13);
             pdf.setTextColor(...COLORS.text);
-            const text = trimmed.substring(5).replace(/[\*_]/g, '').trim();
+            pdf.setTextColor(...COLORS.text);
+            const text = stripMarkdown(trimmed);
             pdf.text(text, margin, y);
-            y += 4; // Reduced from 6
+            y += 4;
         } else if (trimmed.startsWith("##### ")) {
+            await flushParagraph();
             y += SECTION_GAP / 4;
             pdf.setFont("helvetica", "bold");
             pdf.setFontSize(11);
             pdf.setTextColor(...COLORS.text);
-            const text = trimmed.substring(6).replace(/[\*_]/g, '').trim();
+            pdf.setTextColor(...COLORS.text);
+            const text = stripMarkdown(trimmed);
             pdf.text(text, margin, y);
-            y += 4; // Reduced from 5
+            y += 4;
         } else if (trimmed.startsWith("###### ")) {
+            await flushParagraph();
             y += SECTION_GAP / 5;
             pdf.setFont("helvetica", "bold");
             pdf.setFontSize(10);
             pdf.setTextColor(...COLORS.text);
-            const text = trimmed.substring(7).replace(/[\*_]/g, '').trim();
+            pdf.setTextColor(...COLORS.text);
+            const text = stripMarkdown(trimmed);
             pdf.text(text, margin, y);
             y += 4;
         } else if (trimmed.startsWith("> ")) {
+            await flushParagraph();
             const quote = trimmed.substring(2).trim();
             pdf.setFont("helvetica", "italic");
             pdf.setTextColor(...COLORS.textLight);
@@ -494,6 +555,7 @@ export const processContent = async (pdf, content, currentY, options = {}) => {
             });
             y += 5;
         } else if (trimmed.match(/^[-*•]\s/)) {
+            await flushParagraph();
             const isExercise = currentSection.toLowerCase().includes("practice exercises");
             if (isExercise) {
                 pdf.setFont("helvetica", "bold");
@@ -507,18 +569,22 @@ export const processContent = async (pdf, content, currentY, options = {}) => {
                 y = await renderFormattedText(pdf, trimmed.replace(/^[-*•]\s/, ""), margin + 8, y, contentWidth, 11, (space, cy) => checkNewPage(pdf, space, cy));
             }
         } else if (trimmed.match(/^\d+\.\s/)) {
+            await flushParagraph();
             const num = trimmed.match(/^\d+\./)[0];
             pdf.setFont("helvetica", "bold");
             pdf.setTextColor(...COLORS.primary);
             pdf.text(num, margin, y);
             y = await renderFormattedText(pdf, trimmed.replace(/^\d+\.\s/, ""), margin + 10, y, contentWidth, 11, (space, cy) => checkNewPage(pdf, space, cy));
         } else if (line.startsWith("    ") || line.startsWith("\t")) {
+            await flushParagraph();
             y = await renderFormattedText(pdf, trimmed, margin + 10, y, contentWidth, 11, (space, cy) => checkNewPage(pdf, space, cy));
         } else {
-            y = await renderFormattedText(pdf, trimmed, margin, y, contentWidth, 11, (space, cy) => checkNewPage(pdf, space, cy));
+            // Normal text line - buffer it!
+            paragraphBuffer.push(trimmed);
         }
     }
-    flushTable();
+    await flushTable();
+    await flushParagraph();
     return y;
 };
 
@@ -566,20 +632,20 @@ export const renderLatexToPng = async (latex) => {
         container.style.position = 'absolute';
         container.style.left = '-9999px';
         container.style.top = '-9999px';
-        container.style.padding = '20px'; // Add padding for bounds
-        container.style.backgroundColor = '#ffffff'; // White bg
-        container.style.display = 'inline-block'; // Fit content
+        container.style.padding = '20px';
+        container.style.backgroundColor = '#ffffff';
+        container.style.display = 'inline-block';
         document.body.appendChild(container);
 
         katex.render(latex, container, {
             throwOnError: false,
             displayMode: true,
-            output: 'html' // Render as HTML so html2canvas can capture it
+            output: 'html'
         });
 
         const canvas = await html2canvas(container, {
             backgroundColor: '#ffffff',
-            scale: 3 // High resolution
+            scale: 3
         });
 
         const dataUrl = canvas.toDataURL('image/png');
@@ -591,4 +657,3 @@ export const renderLatexToPng = async (latex) => {
         return null;
     }
 };
-```

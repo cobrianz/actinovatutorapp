@@ -1,7 +1,7 @@
 import jsPDF from "jspdf";
 import {
     COLORS, MARGIN, checkNewPage, addPageDecoration,
-    processContent, saveAndSharePDF
+    processContent, saveAndSharePDF, stripMarkdown
 } from "./pdfShared";
 
 export const downloadLessonAsPDF = async (data) => {
@@ -29,7 +29,7 @@ export const downloadLessonAsPDF = async (data) => {
     pdf.text("STUDY NOTES", pageWidth / 2, y, { align: "center" });
 
     y = 150;
-    const titleLines = pdf.splitTextToSize(data.title || "Lesson Material", contentWidth - 40);
+    const titleLines = pdf.splitTextToSize(stripMarkdown(data.title) || "Lesson Material", contentWidth - 40);
     const boxHeight = 40 + (titleLines.length * 12) + 20;
 
     pdf.setDrawColor(...COLORS.primary);
@@ -57,12 +57,12 @@ export const downloadLessonAsPDF = async (data) => {
     pdf.setFontSize(22);
     pdf.setTextColor(...COLORS.primary);
     // Wrap lesson title to prevent overflow
-    const headerLines = pdf.splitTextToSize(data.title || "Lesson Material", contentWidth);
+    const headerLines = pdf.splitTextToSize(stripMarkdown(data.title) || "Lesson Material", contentWidth);
     pdf.text(headerLines, MARGIN, y);
     y += (headerLines.length * 8) + 6;
 
     y = await processContent(pdf, data.content, y, {
-        titleToSkip: data.title,
+        titleToSkip: stripMarkdown(data.title),
         isFirstLesson: true
     });
 
@@ -72,6 +72,6 @@ export const downloadLessonAsPDF = async (data) => {
         addPageDecoration(pdf, i, totalPages);
     }
 
-    const fileName = `${data.title?.replace(/\s+/g, "_").toLowerCase() || "lesson"}.pdf`;
-    await saveAndSharePDF(pdf, fileName, data.title, "Your lesson notes are ready.", 'Lesson');
+    const fileName = `${stripMarkdown(data.title)?.replace(/\s+/g, "_").toLowerCase() || "lesson"}.pdf`;
+    await saveAndSharePDF(pdf, fileName, stripMarkdown(data.title), "Your lesson notes are ready.", 'Lesson');
 };

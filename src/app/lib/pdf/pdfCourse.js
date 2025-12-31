@@ -1,5 +1,5 @@
 import jsPDF from "jspdf";
-import { COLORS, MARGIN, checkNewPage, addPageDecoration, processContent, saveAndSharePDF } from "./pdfShared";
+import { COLORS, MARGIN, checkNewPage, addPageDecoration, processContent, saveAndSharePDF, stripMarkdown } from "./pdfShared";
 
 export const downloadCourseAsPDF = async (data) => {
     if (!data) throw new Error("No data provided");
@@ -37,7 +37,8 @@ export const downloadCourseAsPDF = async (data) => {
 
     pdf.setTextColor(...COLORS.primary);
     pdf.setFontSize(32);
-    const titleLines = pdf.splitTextToSize(data.title || "Full Course Material", contentWidth - 40);
+    pdf.setFontSize(32);
+    const titleLines = pdf.splitTextToSize(stripMarkdown(data.title) || "Full Course Material", contentWidth - 40);
     pdf.text(titleLines, pageWidth / 2, y + 30, { align: "center" });
 
     pdf.setFontSize(14);
@@ -60,16 +61,18 @@ export const downloadCourseAsPDF = async (data) => {
     modules.forEach((mod, idx) => {
         y = checkNewPage(pdf, 20, y);
         pdf.setFontSize(16);
+        pdf.setFontSize(16);
         pdf.setTextColor(...COLORS.text);
-        pdf.text(`Module ${idx + 1}: ${mod.title}`, MARGIN, y);
+        pdf.text(`Module ${idx + 1}: ${stripMarkdown(mod.title)}`, MARGIN, y);
         y += 12;
 
         if (mod.lessons) {
             mod.lessons.forEach((lesson, lIdx) => {
                 y = checkNewPage(pdf, 10, y);
                 pdf.setFontSize(12);
+                pdf.setFontSize(12);
                 pdf.setTextColor(...COLORS.textLight);
-                pdf.text(`  ${idx + 1}.${lIdx + 1}  ${lesson.title || "Untitled Lesson"}`, MARGIN + 5, y);
+                pdf.text(`  ${idx + 1}.${lIdx + 1}  ${stripMarkdown(lesson.title) || "Untitled Lesson"}`, MARGIN + 5, y);
                 y += 8;
             });
         }
@@ -90,7 +93,9 @@ export const downloadCourseAsPDF = async (data) => {
 
         pdf.setFontSize(24);
         pdf.setTextColor(...COLORS.text);
-        const modLines = pdf.splitTextToSize(mod.title.toUpperCase(), contentWidth);
+        pdf.setFontSize(24);
+        pdf.setTextColor(...COLORS.text);
+        const modLines = pdf.splitTextToSize(stripMarkdown(mod.title).toUpperCase(), contentWidth);
         pdf.text(modLines, MARGIN, y);
         y += modLines.length * 12 + 20;
 
@@ -101,20 +106,21 @@ export const downloadCourseAsPDF = async (data) => {
 
                 pdf.setFont("helvetica", "bold");
                 pdf.setFontSize(20);
+                pdf.setFontSize(20);
                 pdf.setTextColor(...COLORS.primary);
-                const lessonTitle = `${idx + 1}.${lIdx + 1} ${lesson.title || "Lesson"}`;
+                const lessonTitle = `${idx + 1}.${lIdx + 1} ${stripMarkdown(lesson.title) || "Lesson"}`;
                 const lLines = pdf.splitTextToSize(lessonTitle, contentWidth);
                 pdf.text(lLines, MARGIN, y);
                 y += lLines.length * 10 + 15;
 
                 if (lesson.content) {
                     y = await processContent(pdf, lesson.content, y, {
-                        titleToSkip: lesson.title,
+                        titleToSkip: stripMarkdown(lesson.title),
                         isFirstLesson: true  // Always skip lesson titles in content for course PDFs
                     });
                 }
-                y += 20;
             }
+            y += 20;
         }
     }
 
@@ -124,6 +130,6 @@ export const downloadCourseAsPDF = async (data) => {
         addPageDecoration(pdf, i, totalPages);
     }
 
-    const fileName = `${(data.title || "course").replace(/\s+/g, "_").toLowerCase()}.pdf`;
-    await saveAndSharePDF(pdf, fileName, data.title, `Your full course textbook "${data.title}" is ready.`, 'Course');
+    const fileName = `${(stripMarkdown(data.title) || "course").replace(/\s+/g, "_").toLowerCase()}.pdf`;
+    await saveAndSharePDF(pdf, fileName, stripMarkdown(data.title), `Your full course textbook "${stripMarkdown(data.title)}" is ready.`, 'Course');
 };
